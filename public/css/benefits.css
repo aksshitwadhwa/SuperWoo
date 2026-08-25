@@ -1,0 +1,27 @@
+.superwoo-benefits-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin: 20px 0;
+}
+
+.superwoo-benefit-item {
+    align-items: center;
+    background: #f4f6f8;
+    border: 1px solid #e5e8eb;
+    border-radius: 999px;
+    color: #24313d;
+    display: inline-flex;
+    font-size: 14px;
+    font-weight: 600;
+    gap: 8px;
+    line-height: 1.2;
+    padding: 8px 14px;
+}
+
+.superwoo-benefit-icon img {
+    display: block;
+    height: 22px;
+    object-fit: contain;
+    width: 22px;
+}
