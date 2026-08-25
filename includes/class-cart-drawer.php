@@ -17,10 +17,12 @@ class SuperWoo_Cart_Drawer {
         add_action('wp_ajax_nopriv_superwoo_update_cart_item', [$this, 'ajax_update_cart_item']);
         add_action('wp_ajax_superwoo_remove_cart_item', [$this, 'ajax_remove_cart_item']);
         add_action('wp_ajax_nopriv_superwoo_remove_cart_item', [$this, 'ajax_remove_cart_item']);
+        add_action('wp_ajax_superwoo_refresh_cart_drawer', [$this, 'ajax_refresh_cart_drawer']);
+        add_action('wp_ajax_nopriv_superwoo_refresh_cart_drawer', [$this, 'ajax_refresh_cart_drawer']);
+        add_action('wc_ajax_superwoo_update_cart_item', [$this, 'ajax_update_cart_item']);
+        add_action('wc_ajax_superwoo_remove_cart_item', [$this, 'ajax_remove_cart_item']);
         add_action('wp_ajax_superwoo_add_cross_sell', [$this, 'ajax_add_cross_sell']);
         add_action('wp_ajax_nopriv_superwoo_add_cross_sell', [$this, 'ajax_add_cross_sell']);
-        add_action('wp_ajax_superwoo_add_product_to_cart', [$this, 'ajax_add_product_to_cart']);
-        add_action('wp_ajax_nopriv_superwoo_add_product_to_cart', [$this, 'ajax_add_product_to_cart']);
     }
 
     public function enqueue_assets() {
@@ -47,6 +49,7 @@ class SuperWoo_Cart_Drawer {
 
         wp_localize_script('superwoo-cart-drawer', 'SuperWooCart', [
             'ajaxUrl'       => admin_url('admin-ajax.php'),
+            'wcAjaxUrl'     => class_exists('WC_AJAX') ? WC_AJAX::get_endpoint('%%endpoint%%') : '',
             'nonce'         => wp_create_nonce('superwoo_cart_nonce'),
             'cartUrl'       => wc_get_cart_url(),
             'cartApiUrl'    => rest_url('wc/store/v1/cart'),
@@ -144,16 +147,14 @@ class SuperWoo_Cart_Drawer {
 
         $previous_offer_state = $this->get_offer_state();
 
-        WC()->cart->set_quantity($cart_item_key, $quantity, true);
-        $allowed_quantities = $this->get_customer_cart_quantities();
-
-        WC()->cart->calculate_totals();
-        WC()->cart->set_session();
-        if (WC()->session) {
-            WC()->session->set('cart', WC()->cart->get_cart_for_session());
+        if (!WC()->cart->set_quantity($cart_item_key, $quantity, true)) {
+            wp_send_json_error(['message' => __('This item could not be updated.', 'superwoo')], 400);
         }
 
-        $this->send_fragments($previous_offer_state, $allowed_quantities);
+        WC()->cart->calculate_totals();
+        $this->persist_cart_session();
+
+        $this->send_fragments($previous_offer_state);
     }
 
     public function ajax_remove_cart_item() {
@@ -167,15 +168,24 @@ class SuperWoo_Cart_Drawer {
 
         $previous_offer_state = $this->get_offer_state();
 
-        WC()->cart->remove_cart_item($cart_item_key);
-        $allowed_quantities = $this->get_customer_cart_quantities();
-        WC()->cart->calculate_totals();
-        WC()->cart->set_session();
-        if (WC()->session) {
-            WC()->session->set('cart', WC()->cart->get_cart_for_session());
+        if (!WC()->cart->remove_cart_item($cart_item_key)) {
+            wp_send_json_error(['message' => __('This item could not be removed from the cart.', 'superwoo')], 400);
         }
 
-        $this->send_fragments($previous_offer_state, $allowed_quantities);
+        WC()->cart->calculate_totals();
+        $this->persist_cart_session();
+
+        // A cart removal is already a complete WooCommerce state change. Do
+        // not restore a SuperWoo quantity snapshot afterwards.
+        $this->send_fragments($previous_offer_state);
+    }
+
+    /**
+     * Read-only endpoint used after WooCommerce Store API cart mutations.
+     */
+    public function ajax_refresh_cart_drawer() {
+        $this->verify_ajax();
+        $this->send_fragments();
     }
 
     public function ajax_add_cross_sell() {
@@ -198,82 +208,6 @@ class SuperWoo_Cart_Drawer {
         WC()->cart->calculate_totals();
         WC()->cart->set_session();
         $this->send_fragments($previous_offer_state, $allowed_quantities);
-    }
-
-    public function ajax_add_product_to_cart() {
-        $this->verify_ajax();
-
-        $product_id = isset($_POST['product_id']) ? absint($_POST['product_id']) : 0;
-        if (!$product_id && isset($_POST['add-to-cart'])) {
-            $product_id = absint($_POST['add-to-cart']);
-        }
-
-        $variation_id = isset($_POST['variation_id']) ? absint($_POST['variation_id']) : 0;
-        $quantity = isset($_POST['quantity']) && !is_array($_POST['quantity']) ? wc_stock_amount(wp_unslash($_POST['quantity'])) : 1;
-        $quantity = max(1, $quantity);
-        $variation = [];
-
-        foreach ($_POST as $key => $value) {
-            if (0 !== strpos($key, 'attribute_')) {
-                continue;
-            }
-
-            $variation[sanitize_key(wp_unslash($key))] = wc_clean(wp_unslash($value));
-        }
-
-        if (!$product_id && $variation_id) {
-            $variation_product = wc_get_product($variation_id);
-            if ($variation_product) {
-                $product_id = $variation_product->get_parent_id();
-            }
-        }
-
-        $product = wc_get_product($variation_id ? $variation_id : $product_id);
-        if (!$product || !$product_id) {
-            wp_send_json_error(['message' => __('Invalid product.', 'superwoo')], 400);
-        }
-
-        $action_id = isset($_POST['superwoo_action_id']) ? sanitize_key(wp_unslash($_POST['superwoo_action_id'])) : '';
-        $diagnostic_before = $this->get_matching_cart_quantity($product_id, $variation_id);
-        $this->log_product_add_diagnostic('received', $product_id, $variation_id, $quantity, $action_id);
-
-        if (in_array($product->get_type(), ['external', 'grouped'], true)) {
-            wp_send_json_error(['message' => __('This product should be added from the product page.', 'superwoo')], 400);
-        }
-
-        if ($this->is_duplicate_product_add_action($action_id)) {
-            $this->log_product_add_diagnostic('duplicate_skipped', $product_id, $variation_id, $quantity, $action_id);
-            $this->send_fragments(null, null, $this->get_product_add_diagnostic_data($action_id, $product_id, $variation_id, $quantity, $diagnostic_before, $diagnostic_before, 'duplicate_skipped'));
-        }
-
-        $previous_offer_state = $this->get_offer_state();
-
-        $filtered_quantity = null;
-        $quantity_trace = static function ($filtered, $filtered_product_id) use (&$filtered_quantity, $product_id) {
-            if (absint($filtered_product_id) === absint($product_id)) {
-                $filtered_quantity = absint($filtered);
-            }
-
-            return $filtered;
-        };
-        add_filter('woocommerce_add_to_cart_quantity', $quantity_trace, PHP_INT_MAX, 2);
-
-        $added = WC()->cart->add_to_cart($product_id, $quantity, $variation_id, $variation);
-        remove_filter('woocommerce_add_to_cart_quantity', $quantity_trace, PHP_INT_MAX);
-        if (!$added) {
-            wp_send_json_error(['message' => $this->get_cart_error_message()], 400);
-        }
-
-        $this->remember_product_add_action($action_id);
-        $this->log_product_add_diagnostic('added', $product_id, $variation_id, $quantity, $action_id);
-
-        $allowed_quantities = $this->get_customer_cart_quantities();
-
-        do_action('woocommerce_ajax_added_to_cart', $product_id);
-
-        WC()->cart->calculate_totals();
-        WC()->cart->set_session();
-        $this->send_fragments($previous_offer_state, $allowed_quantities, $this->get_product_add_diagnostic_data($action_id, $product_id, $variation_id, $quantity, $diagnostic_before, $this->get_matching_cart_quantity($product_id, $variation_id), 'added', $filtered_quantity));
     }
 
     public function get_cross_sell_products() {
@@ -652,21 +586,59 @@ class SuperWoo_Cart_Drawer {
         return $changed;
     }
 
-    private function send_fragments($previous_offer_state = null, $allowed_quantities = null, $diagnostic = null) {
-        wc_clear_notices();
-        WC()->cart->calculate_totals();
-        if (null !== $allowed_quantities && $this->restore_customer_cart_quantities($allowed_quantities)) {
-            WC()->cart->calculate_totals();
+    private function persist_cart_session() {
+        if (!WC()->cart) {
+            return;
         }
+
+        // Let WooCommerce persist the complete cart payload (cart, totals,
+        // coupons and chosen shipping), instead of writing an isolated `cart`
+        // session key that can leave an older state behind on the next request.
         WC()->cart->set_session();
-        if (WC()->session) {
-            WC()->session->set('cart', WC()->cart->get_cart_for_session());
+
+        if (WC()->session && is_callable([WC()->session, 'set_customer_session_cookie'])) {
+            WC()->session->set_customer_session_cookie(true);
         }
+    }
+
+    private function send_fragments($previous_offer_state = null, $allowed_quantities = null, $diagnostic = null, $protected_quantities = []) {
+        wc_clear_notices();
+
+        // Some third-party callbacks run during calculate_totals().  Run one
+        // calculation only and restore the cart line(s) owned by this request at
+        // the end of that hook, before WooCommerce derives totals and fragments.
+        $quantity_protector = null;
+        if (!empty($protected_quantities)) {
+            $quantity_protector = static function ($cart) use ($protected_quantities) {
+                if (!is_object($cart)) {
+                    return;
+                }
+
+                foreach ($protected_quantities as $cart_item_key => $expected_quantity) {
+                    if (isset($cart->cart_contents[$cart_item_key])) {
+                        $cart->set_quantity($cart_item_key, max(1, absint($expected_quantity)), false);
+                    }
+                }
+            };
+            add_action('woocommerce_before_calculate_totals', $quantity_protector, PHP_INT_MAX);
+        }
+
+        WC()->cart->calculate_totals();
+        if ($quantity_protector) {
+            remove_action('woocommerce_before_calculate_totals', $quantity_protector, PHP_INT_MAX);
+        }
+
+        if (null !== $allowed_quantities) {
+            $this->restore_customer_cart_quantities($allowed_quantities);
+        }
+        $this->persist_cart_session();
 
         $offer_state = $this->get_offer_state();
 
         $response = [
-            'fragments'   => superwoo_cart_drawer_fragments(),
+            // Totals were calculated above. Avoid re-running third-party cart
+            // hooks while merely rendering the AJAX response.
+            'fragments'   => superwoo_cart_drawer_fragments(false),
             'cart_hash'   => WC()->cart->get_cart_hash(),
             'count'       => superwoo_cart_count(),
             'offerState'  => $offer_state,

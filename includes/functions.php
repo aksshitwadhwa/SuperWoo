@@ -123,13 +123,15 @@ function superwoo_get_razorpay_magic_checkout_data() {
     ];
 }
 
-function superwoo_cart_drawer_fragments() {
+function superwoo_cart_drawer_fragments($calculate_totals = true) {
     $cart = superwoo_get_cart();
     if (!$cart) {
         return [];
     }
 
-    $cart->calculate_totals();
+    if ($calculate_totals) {
+        $cart->calculate_totals();
+    }
     if (WC()->session) {
         $cart->set_session();
         WC()->session->set('cart', $cart->get_cart_for_session());
