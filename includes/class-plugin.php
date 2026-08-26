@@ -60,13 +60,14 @@ class SuperWoo_Plugin {
             return;
         }
 
-        add_submenu_page(
-            'woocommerce',
+        add_menu_page(
             __('SuperWoo', 'superwoo'),
             __('SuperWoo', 'superwoo'),
             'manage_woocommerce',
             'superwoo-settings',
-            [$this, 'render_settings_page']
+            [$this, 'render_settings_page'],
+            'dashicons-cart',
+            56
         );
     }
 
@@ -116,7 +117,7 @@ class SuperWoo_Plugin {
     }
 
     public function enqueue_admin_assets($hook) {
-        if (in_array($hook, ['woocommerce_page_superwoo-settings', 'woocommerce_page_superwoo-bundle-offers'], true)) {
+        if (in_array($hook, ['toplevel_page_superwoo-settings', 'superwoo_page_superwoo-bundle-offers'], true)) {
             wp_enqueue_style('superwoo-admin', SUPERWOO_URL . 'public/css/admin.css', [], SUPERWOO_VERSION);
         }
     }

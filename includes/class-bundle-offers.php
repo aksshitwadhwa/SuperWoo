@@ -25,7 +25,7 @@ class SuperWoo_Bundle_Offers {
 
     public function admin_menu() {
         add_submenu_page(
-            'woocommerce',
+            'superwoo-settings',
             __('Offers', 'superwoo'),
             __('Offers', 'superwoo'),
             'manage_woocommerce',
@@ -35,7 +35,7 @@ class SuperWoo_Bundle_Offers {
     }
 
     public function enqueue_admin_assets($hook) {
-        if ('woocommerce_page_superwoo-bundle-offers' !== $hook) {
+        if ('superwoo_page_superwoo-bundle-offers' !== $hook) {
             return;
         }
 
