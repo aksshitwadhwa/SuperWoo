@@ -211,8 +211,18 @@ function superwoo_cart_total_html() {
     ob_start();
     ?>
     <div class="superwoo-cart-total">
-        <span><?php esc_html_e('Subtotal', 'superwoo'); ?></span>
-        <strong><?php echo wp_kses_post($cart->get_cart_subtotal()); ?></strong>
+        <div class="superwoo-cart-total__row">
+            <span><?php esc_html_e('Subtotal', 'superwoo'); ?></span>
+            <strong><?php echo wp_kses_post($cart->get_cart_subtotal()); ?></strong>
+        </div>
+        <div class="superwoo-cart-total__row">
+            <span><?php esc_html_e('Shipping', 'superwoo'); ?></span>
+            <strong><?php echo wp_kses_post(wc_price((float) $cart->get_shipping_total())); ?></strong>
+        </div>
+        <div class="superwoo-cart-total__row superwoo-cart-total__row--grand-total">
+            <span><?php esc_html_e('Total', 'superwoo'); ?></span>
+            <strong><?php echo wp_kses_post(wc_price((float) $cart->get_total('edit'))); ?></strong>
+        </div>
     </div>
     <?php
     return ob_get_clean();

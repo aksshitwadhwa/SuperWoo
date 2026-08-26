@@ -387,7 +387,7 @@ body.single-product form.cart .single_add_to_cart_button.superwoo-product-adding
     position: absolute !important;
     right: 0 !important;
     scrollbar-gutter: stable;
-    top: var(--superwoo-header-offset, 82px) !important;
+    top: var(--superwoo-header-offset, 60px);
     -webkit-overflow-scrolling: touch !important;
     width: 100% !important;
     writing-mode: horizontal-tb !important;
@@ -548,6 +548,12 @@ body.single-product form.cart .single_add_to_cart_button.superwoo-product-adding
     writing-mode: horizontal-tb !important;
     box-shadow: 0 -10px 28px rgba(15, 23, 42, 0.05);
 }
+
+.superwoo-cart-total { display: grid; gap: 7px; margin-bottom: 14px; }
+.superwoo-cart-total__row { align-items: center; color: var(--superwoo-drawer-muted); display: flex; font-size: 13px; justify-content: space-between; }
+.superwoo-cart-total__row strong { color: var(--superwoo-drawer-text); font-weight: 600; }
+.superwoo-cart-total__row--grand-total { border-top: 1px solid var(--superwoo-drawer-border); color: var(--superwoo-drawer-text); font-size: 16px; margin-top: 3px; padding-top: 9px; }
+.superwoo-cart-total__row--grand-total strong { font-weight: 800; }
 
 .superwoo-cart-shell .superwoo-cross-sells h3 {
     color: var(--superwoo-drawer-text);

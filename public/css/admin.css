@@ -187,7 +187,7 @@
 .superwoo-field select,
 .superwoo-field .select2-container {
     max-width: 100%;
-    width: 100% !important;
+    width: 100%;
 }
 
 .superwoo-offer-panel {

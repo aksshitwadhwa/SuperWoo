@@ -13,20 +13,20 @@
 }
 
 .superwoo-products-carousel-enabled ul.products.superwoo-carousel__track {
-    display: flex !important;
-    flex-wrap: nowrap !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    width: auto !important;
-    max-width: none !important;
+    display: flex;
+    flex-wrap: nowrap;
+    margin: 0;
+    padding: 0;
+    width: auto;
+    max-width: none;
     transition: transform 300ms ease;
     will-change: transform;
 }
 
 .superwoo-products-carousel-enabled ul.products.superwoo-carousel__track > li.product.superwoo-carousel__slide {
-    float: none !important;
-    clear: none !important;
-    margin: 0 !important;
+    float: none;
+    clear: none;
+    margin: 0;
     min-width: 0;
 }
 
