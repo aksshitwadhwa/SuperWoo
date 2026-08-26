@@ -1410,6 +1410,18 @@
     });
 
     $(document).on('click', '[data-superwoo-sticky-add-to-cart]', clickStickyBuyNow);
+    $(document).on('submit', 'body.single-product form.cart', function () {
+        // Native WooCommerce submissions normally reload the product page and
+        // do not emit `added_to_cart`. Preserve the user's intent so the
+        // drawer can be opened once the refreshed page is ready. A submit
+        // event is used instead of a click so invalid variation/required
+        // fields do not leave a stale auto-open flag behind.
+        try {
+            window.sessionStorage.setItem('superwoo-open-cart-after-native-product-submit', '1');
+        } catch (storageError) {
+            // Storage access is optional.
+        }
+    });
     $(document).on('click', '[data-superwoo-mobile-qty-minus]', function (event) {
         var current = parseInt(stickyBuyNowShell().find('[data-superwoo-mobile-qty-input]').val(), 10) || 1;
 
@@ -1439,6 +1451,12 @@
     });
 
     $(document.body).on('added_to_cart', function () {
+        try {
+            window.sessionStorage.removeItem('superwoo-open-cart-after-native-product-submit');
+        } catch (storageError) {
+            // Storage access is optional.
+        }
+
         window.setTimeout(function () {
             syncCartTriggerBadges();
             fetchCartCount();

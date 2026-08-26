@@ -3,7 +3,7 @@
  * Plugin Name: SuperWoo
  * Description: WooCommerce product benefits, how-to content, FAQs, modern reviews, offers, and AJAX cart drawer.
  * Version: 1.0.126
- * Author: Rakesh Raushan
+ * Author: Aksshit Wadhwa
  * Text Domain: superwoo
  * Requires at least: 6.2
  * Requires PHP: 7.4

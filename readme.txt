@@ -1,5 +1,5 @@
 === SuperWoo ===
-Contributors: Rakesh Raushan
+Contributors: Aksshit Wadhwa
 Tags: woocommerce, cart drawer, product benefits, faq, bundle discounts
 Requires at least: 6.2
 Tested up to: 6.6
