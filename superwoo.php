@@ -29,6 +29,10 @@ require_once SUPERWOO_PATH . 'includes/class-bundle-offers.php';
 require_once SUPERWOO_PATH . 'includes/class-cart-drawer.php';
 require_once SUPERWOO_PATH . 'includes/class-elementor-dynamic-tags.php';
 require_once SUPERWOO_PATH . 'includes/class-plugin.php';
+require_once SUPERWOO_PATH . 'includes/class-github-updater.php';
+
+$superwoo_github_updater = new SuperWoo_GitHub_Updater();
+$superwoo_github_updater->hooks();
 
 register_activation_hook(__FILE__, ['SuperWoo_Plugin', 'activate']);
 register_deactivation_hook(__FILE__, ['SuperWoo_Plugin', 'deactivate']);
