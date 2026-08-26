@@ -39,7 +39,8 @@ foreach ($manual_rates as $code => $rate) {
 }
 $exchange_rate_cache_hours = max(1, (int) ceil(absint($settings['exchange_rate_cache_minutes']) / 60));
 $suggested_currency_text = implode(', ', array_values($currency_labels));
-$active_tab = isset($_GET['tab']) && 'currency' === sanitize_key(wp_unslash($_GET['tab'])) ? 'currency' : 'general';
+$active_tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'general';
+$active_tab = in_array($active_tab, ['general', 'cart', 'currency'], true) ? $active_tab : 'general';
 ?>
 <div class="wrap superwoo-admin-page">
     <h1><?php esc_html_e('SuperWoo', 'superwoo'); ?></h1>
@@ -53,7 +54,8 @@ $active_tab = isset($_GET['tab']) && 'currency' === sanitize_key(wp_unslash($_GE
         <input type="hidden" name="superwoo_active_tab" value="<?php echo esc_attr($active_tab); ?>" data-superwoo-active-tab>
 
         <nav class="nav-tab-wrapper superwoo-settings-tabs" aria-label="<?php esc_attr_e('SuperWoo settings tabs', 'superwoo'); ?>">
-            <a href="#superwoo-general-settings" class="nav-tab <?php echo 'general' === $active_tab ? 'nav-tab-active' : ''; ?>" data-superwoo-settings-tab="general"><?php esc_html_e('General', 'superwoo'); ?></a>
+            <a href="#superwoo-general-settings" class="nav-tab <?php echo 'general' === $active_tab ? 'nav-tab-active' : ''; ?>" data-superwoo-settings-tab="general"><?php esc_html_e('Product Page', 'superwoo'); ?></a>
+            <a href="#superwoo-cart-settings" class="nav-tab <?php echo 'cart' === $active_tab ? 'nav-tab-active' : ''; ?>" data-superwoo-settings-tab="cart"><?php esc_html_e('Cart', 'superwoo'); ?></a>
             <a href="#superwoo-currency-settings" class="nav-tab <?php echo 'currency' === $active_tab ? 'nav-tab-active' : ''; ?>" data-superwoo-settings-tab="currency"><?php esc_html_e('Multi-Currency', 'superwoo'); ?></a>
         </nav>
 
@@ -74,6 +76,11 @@ $active_tab = isset($_GET['tab']) && 'currency' === sanitize_key(wp_unslash($_GE
                         </fieldset>
                     </td>
                 </tr>
+            </table>
+        </div>
+
+        <div id="superwoo-cart-settings" class="superwoo-settings-panel <?php echo 'cart' === $active_tab ? 'is-active' : ''; ?>" data-superwoo-settings-panel="cart">
+            <table class="form-table" role="presentation">
                 <tr>
                     <th scope="row"><?php esc_html_e('Cart Drawer', 'superwoo'); ?></th>
                     <td>
@@ -91,6 +98,9 @@ $active_tab = isset($_GET['tab']) && 'currency' === sanitize_key(wp_unslash($_GE
                             <label><input type="checkbox" name="enable_add_to_cart_diagnostics" value="1" <?php checked(!empty($settings['enable_add_to_cart_diagnostics'])); ?>> <?php esc_html_e('Temporarily log product Add to Cart diagnostics', 'superwoo'); ?></label>
                             <br>
                             <label><input type="checkbox" name="show_discount_percentage" value="1" <?php checked(!empty($settings['show_discount_percentage'])); ?>> <?php esc_html_e('Show sale discount percentage', 'superwoo'); ?></label>
+                            <br>
+                            <label><input type="checkbox" name="enable_logging" value="1" <?php checked(!empty($settings['enable_logging'])); ?>> <?php esc_html_e('Enable SuperWoo logs', 'superwoo'); ?></label>
+                            <p class="description"><?php esc_html_e('Logs are stored in WooCommerce → Status → Logs with source “superwoo”. Enable only while troubleshooting and disable afterward.', 'superwoo'); ?></p>
                         </fieldset>
                         <p class="description"><?php esc_html_e('Use shortcode [superwoo_cart_button] or add data-superwoo-open-cart to any button/link. Diagnostics log only request IDs, product IDs, requested quantities, and matching cart quantities to the PHP error log; disable it after testing.', 'superwoo'); ?></p>
                     </td>

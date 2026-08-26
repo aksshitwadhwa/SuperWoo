@@ -15,6 +15,7 @@ class SuperWoo_Plugin {
 
     private function __construct() {
         $this->guard = new SuperWoo_WooCommerce_Guard();
+        superwoo_log('Plugin loaded');
 
         add_action('init', [$this, 'load_textdomain']);
         add_action('admin_menu', [$this, 'register_settings_page']);
@@ -99,6 +100,7 @@ class SuperWoo_Plugin {
             'cart_drawer_crosssell' => !empty($_POST['cart_drawer_crosssell']),
             'cart_drawer_coupon'    => isset($_POST['cart_drawer_coupon']) && 'disabled' === $_POST['cart_drawer_coupon'] ? 'disabled' : 'checkout_link',
             'enable_add_to_cart_diagnostics' => !empty($_POST['enable_add_to_cart_diagnostics']),
+            'enable_logging'        => !empty($_POST['enable_logging']),
             'show_discount_percentage' => !empty($_POST['show_discount_percentage']),
             'enable_multi_currency' => !empty($_POST['enable_multi_currency']),
             'enabled_currency_codes' => $this->sanitize_currency_codes($_POST['enabled_currency_codes'] ?? ''),
@@ -112,7 +114,8 @@ class SuperWoo_Plugin {
 
         update_option('superwoo_settings', $settings);
 
-        $active_tab = isset($_POST['superwoo_active_tab']) && 'currency' === sanitize_key(wp_unslash($_POST['superwoo_active_tab'])) ? 'currency' : 'general';
+        $active_tab = isset($_POST['superwoo_active_tab']) ? sanitize_key(wp_unslash($_POST['superwoo_active_tab'])) : 'general';
+        $active_tab = in_array($active_tab, ['general', 'cart', 'currency'], true) ? $active_tab : 'general';
 
         wp_safe_redirect(add_query_arg(['page' => 'superwoo-settings', 'updated' => 'true', 'tab' => $active_tab], admin_url('admin.php')));
         exit;
