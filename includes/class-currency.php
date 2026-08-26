@@ -23,7 +23,7 @@ class SuperWoo_Currency {
     }
 
     public function filter_woocommerce_currency($currency) {
-        if (!$this->is_enabled() || !$this->is_runtime_context()) {
+        if (!$this->is_enabled() || !$this->is_runtime_context() || $this->is_payment_request()) {
             return $currency;
         }
 
@@ -58,7 +58,7 @@ class SuperWoo_Currency {
     }
 
     public function convert_cart_item_prices($cart) {
-        if (!$this->is_enabled() || !$this->is_runtime_context() || $this->cart_converting || !$cart || $cart->is_empty()) {
+        if (!$this->is_enabled() || !$this->is_runtime_context() || $this->is_payment_request() || $this->cart_converting || !$cart || $cart->is_empty()) {
             return;
         }
 
@@ -86,7 +86,7 @@ class SuperWoo_Currency {
     }
 
     public function restore_cart_item_prices($cart) {
-        if (!$this->is_enabled() || !$this->is_runtime_context() || !$cart || $cart->is_empty()) {
+        if (!$this->is_enabled() || !$this->is_runtime_context() || $this->is_payment_request() || !$cart || $cart->is_empty()) {
             return;
         }
 
@@ -107,7 +107,7 @@ class SuperWoo_Currency {
     }
 
     public function convert_cart_fees($cart) {
-        if (!$this->is_enabled() || !$this->is_runtime_context() || !$cart) {
+        if (!$this->is_enabled() || !$this->is_runtime_context() || $this->is_payment_request() || !$cart) {
             return;
         }
 
@@ -607,6 +607,19 @@ class SuperWoo_Currency {
 
     private function is_runtime_context() {
         return !is_admin() || wp_doing_ajax() || (defined('REST_REQUEST') && REST_REQUEST);
+    }
+
+    /**
+     * Razorpay 1CC calculates the payment amount from the WooCommerce cart.
+     * Do not mutate cart prices while its order endpoint is running.
+     */
+    private function is_payment_request() {
+        $request_uri = isset($_SERVER['REQUEST_URI']) ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI'])) : '';
+        $rest_route = defined('REST_REQUEST') && REST_REQUEST && isset($_REQUEST['rest_route'])
+            ? sanitize_text_field(wp_unslash($_REQUEST['rest_route']))
+            : '';
+
+        return false !== strpos($request_uri, '/1cc/v1/order/create') || false !== strpos($rest_route, '/1cc/v1/order/create');
     }
 
     private function sanitize_rates($rates) {
