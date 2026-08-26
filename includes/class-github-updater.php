@@ -43,7 +43,7 @@ class SuperWoo_GitHub_Updater {
     }
 
     public function plugin_information($result, $action, $args) {
-        if ('plugin_information' !== $action || empty($args->slug) || dirname(plugin_basename(SUPERWOO_FILE)) !== $args->slug) {
+        if ('plugin_information' !== $action || empty($args->slug) || strtolower(dirname(plugin_basename(SUPERWOO_FILE))) !== strtolower($args->slug)) {
             return $result;
         }
 
