@@ -2,7 +2,7 @@
 /**
  * Plugin Name: SuperWoo
  * Description: WooCommerce product benefits, how-to content, FAQs, modern reviews, offers, and AJAX cart drawer.
- * Version: 1.0.132
+ * Version: 1.0.133
  * Author: Aksshit Wadhwa
  * Author URI: https://digtize.com/
  * Update URI: https://github.com/aksshitwadhwa/SuperWoo
@@ -14,7 +14,7 @@
 
 defined('ABSPATH') || exit;
 
-define('SUPERWOO_VERSION', '1.0.132');
+define('SUPERWOO_VERSION', '1.0.133');
 define('SUPERWOO_FILE', __FILE__);
 define('SUPERWOO_PATH', plugin_dir_path(__FILE__));
 define('SUPERWOO_URL', plugin_dir_url(__FILE__));
@@ -30,7 +30,12 @@ require_once SUPERWOO_PATH . 'includes/class-shortcodes.php';
 require_once SUPERWOO_PATH . 'includes/class-bundle-offers.php';
 require_once SUPERWOO_PATH . 'includes/class-cart-drawer.php';
 require_once SUPERWOO_PATH . 'includes/class-elementor-dynamic-tags.php';
-require_once SUPERWOO_PATH . 'includes/class-elementor-products-carousel.php';
+// The carousel module is optional; never let a missing optional file prevent
+// the core plugin (admin menu, cart drawer, and product hooks) from loading.
+$superwoo_carousel_file = SUPERWOO_PATH . 'includes/class-elementor-products-carousel.php';
+if (file_exists($superwoo_carousel_file)) {
+    require_once $superwoo_carousel_file;
+}
 require_once SUPERWOO_PATH . 'includes/class-plugin.php';
 require_once SUPERWOO_PATH . 'includes/class-github-updater.php';
 

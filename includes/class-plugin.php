@@ -35,7 +35,7 @@ class SuperWoo_Plugin {
         (new SuperWoo_Bundle_Offers())->hooks();
         (new SuperWoo_Cart_Drawer())->hooks();
         (new SuperWoo_Elementor_Dynamic_Tags())->hooks();
-        if (!empty(superwoo_get_settings()['enable_elementor_products_carousel'])) {
+        if (!empty(superwoo_get_settings()['enable_elementor_products_carousel']) && class_exists('SuperWoo_Elementor_Products_Carousel')) {
             (new SuperWoo_Elementor_Products_Carousel())->hooks();
         }
 
