@@ -185,6 +185,7 @@ class SuperWoo_Cart_Drawer {
      */
     public function ajax_refresh_cart_drawer() {
         $this->verify_ajax();
+        superwoo_log('Cart drawer refresh requested', ['cart_count' => superwoo_cart_count()]);
         $this->send_fragments();
     }
 
@@ -199,6 +200,7 @@ class SuperWoo_Cart_Drawer {
         $previous_offer_state = $this->get_offer_state();
 
         $added = WC()->cart->add_to_cart($product_id, 1);
+        superwoo_log('Cross-sell add attempted', ['product_id' => $product_id, 'success' => (bool) $added]);
         if (!$added) {
             wp_send_json_error(['message' => __('Product could not be added.', 'superwoo')], 400);
         }

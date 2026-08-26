@@ -58,6 +58,7 @@ function superwoo_get_settings() {
         'cart_drawer_crosssell' => true,
         'cart_drawer_coupon'    => 'checkout_link',
         'enable_add_to_cart_diagnostics' => false,
+        'enable_logging'        => false,
         'show_discount_percentage' => false,
         'enable_multi_currency' => false,
         'enabled_currency_codes' => ['INR', 'USD', 'EUR'],
@@ -76,6 +77,20 @@ function superwoo_get_settings() {
     }
 
     return $settings;
+}
+
+function superwoo_log($message, $context = [], $level = 'info') {
+    if (empty(superwoo_get_settings()['enable_logging'])) {
+        return;
+    }
+
+    $context = is_array($context) ? $context : [];
+    $context['plugin_version'] = defined('SUPERWOO_VERSION') ? SUPERWOO_VERSION : '';
+    if (function_exists('wc_get_logger')) {
+        wc_get_logger()->log($level, (string) $message, ['source' => 'superwoo', 'context' => $context]);
+    } else {
+        error_log('SuperWoo [' . strtoupper($level) . '] ' . $message . ' ' . wp_json_encode($context));
+    }
 }
 
 function superwoo_format_selected_currency_amount($base_inr_amount) {
