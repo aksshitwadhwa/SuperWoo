@@ -1,0 +1,82 @@
+.superwoo-products-carousel-enabled {
+    position: relative;
+    max-width: 100%;
+}
+
+.superwoo-products-carousel-enabled .superwoo-carousel__viewport {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden;
+    touch-action: pan-y;
+}
+
+.superwoo-products-carousel-enabled ul.products.superwoo-carousel__track {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    transition: transform 300ms ease;
+    will-change: transform;
+}
+
+.superwoo-products-carousel-enabled ul.products.superwoo-carousel__track > li.product.superwoo-carousel__slide {
+    float: none !important;
+    clear: none !important;
+    margin: 0 !important;
+    min-width: 0;
+}
+
+.superwoo-products-carousel-enabled .woocommerce-pagination {
+    display: none;
+}
+
+.superwoo-carousel__arrow {
+    position: absolute;
+    z-index: 2;
+    top: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    border: 1px solid currentColor;
+    border-radius: 50%;
+    color: inherit;
+    background: var(--e-global-color-primary, Canvas);
+    transform: translateY(-50%);
+    cursor: pointer;
+}
+
+.superwoo-carousel__arrow--previous { left: .5rem; }
+.superwoo-carousel__arrow--next { right: .5rem; }
+.superwoo-carousel__arrow:disabled { cursor: default; opacity: .35; }
+.superwoo-carousel__arrow:focus-visible,
+.superwoo-carousel__dots button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.superwoo-carousel__arrow span { font-size: 2rem; line-height: 1; }
+
+.superwoo-carousel__dots {
+    display: flex;
+    justify-content: center;
+    gap: .5rem;
+    margin-top: 1rem;
+}
+
+.superwoo-carousel__dots button {
+    width: .625rem;
+    height: .625rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: .3;
+    cursor: pointer;
+}
+
+.superwoo-carousel__dots button.is-active { opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+    .superwoo-products-carousel-enabled ul.products.superwoo-carousel__track { transition-duration: 0.01ms; }
+}

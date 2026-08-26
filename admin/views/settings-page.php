@@ -69,7 +69,8 @@ $active_tab = isset($_GET['tab']) && 'currency' === sanitize_key(wp_unslash($_GE
                             <label><input type="checkbox" name="enable_reviews" value="1" <?php checked(!empty($settings['enable_reviews'])); ?>> <?php esc_html_e('Modern Reviews', 'superwoo'); ?></label><br>
                             <label><input type="checkbox" name="enable_variation_cards" value="1" <?php checked(!empty($settings['enable_variation_cards'])); ?>> <?php esc_html_e('Variation Cards', 'superwoo'); ?></label><br>
                             <label><input type="checkbox" name="enable_bundle_offers" value="1" <?php checked(!empty($settings['enable_bundle_offers'])); ?>> <?php esc_html_e('Offers', 'superwoo'); ?></label><br>
-                            <label><input type="checkbox" name="enable_cart_drawer" value="1" <?php checked(!empty($settings['enable_cart_drawer'])); ?>> <?php esc_html_e('Cart Drawer', 'superwoo'); ?></label>
+                            <label><input type="checkbox" name="enable_cart_drawer" value="1" <?php checked(!empty($settings['enable_cart_drawer'])); ?>> <?php esc_html_e('Cart Drawer', 'superwoo'); ?></label><br>
+                            <label><input type="checkbox" name="enable_elementor_products_carousel" value="1" <?php checked(!empty($settings['enable_elementor_products_carousel'])); ?>> <?php esc_html_e('Elementor Products Carousel', 'superwoo'); ?></label>
                         </fieldset>
                     </td>
                 </tr>

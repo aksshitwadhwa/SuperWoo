@@ -2,7 +2,7 @@
 /**
  * Plugin Name: SuperWoo
  * Description: WooCommerce product benefits, how-to content, FAQs, modern reviews, offers, and AJAX cart drawer.
- * Version: 1.0.126
+ * Version: 1.0.127
  * Author: Aksshit Wadhwa
  * Text Domain: superwoo
  * Requires at least: 6.2
@@ -12,7 +12,7 @@
 
 defined('ABSPATH') || exit;
 
-define('SUPERWOO_VERSION', '1.0.126');
+define('SUPERWOO_VERSION', '1.0.127');
 define('SUPERWOO_FILE', __FILE__);
 define('SUPERWOO_PATH', plugin_dir_path(__FILE__));
 define('SUPERWOO_URL', plugin_dir_url(__FILE__));
@@ -28,6 +28,7 @@ require_once SUPERWOO_PATH . 'includes/class-shortcodes.php';
 require_once SUPERWOO_PATH . 'includes/class-bundle-offers.php';
 require_once SUPERWOO_PATH . 'includes/class-cart-drawer.php';
 require_once SUPERWOO_PATH . 'includes/class-elementor-dynamic-tags.php';
+require_once SUPERWOO_PATH . 'includes/class-elementor-products-carousel.php';
 require_once SUPERWOO_PATH . 'includes/class-plugin.php';
 require_once SUPERWOO_PATH . 'includes/class-github-updater.php';
 

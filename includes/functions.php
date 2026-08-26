@@ -53,6 +53,7 @@ function superwoo_get_settings() {
         'enable_variation_cards' => true,
         'enable_bundle_offers'  => true,
         'enable_cart_drawer'    => true,
+        'enable_elementor_products_carousel' => false,
         'cart_auto_open'        => true,
         'cart_drawer_crosssell' => true,
         'cart_drawer_coupon'    => 'checkout_link',

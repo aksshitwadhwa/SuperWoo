@@ -35,6 +35,9 @@ class SuperWoo_Plugin {
         (new SuperWoo_Bundle_Offers())->hooks();
         (new SuperWoo_Cart_Drawer())->hooks();
         (new SuperWoo_Elementor_Dynamic_Tags())->hooks();
+        if (!empty(superwoo_get_settings()['enable_elementor_products_carousel'])) {
+            (new SuperWoo_Elementor_Products_Carousel())->hooks();
+        }
 
     }
 
@@ -89,6 +92,7 @@ class SuperWoo_Plugin {
             'enable_variation_cards' => !empty($_POST['enable_variation_cards']),
             'enable_bundle_offers'  => !empty($_POST['enable_bundle_offers']),
             'enable_cart_drawer'    => !empty($_POST['enable_cart_drawer']),
+            'enable_elementor_products_carousel' => !empty($_POST['enable_elementor_products_carousel']),
             'cart_auto_open'        => !empty($_POST['cart_auto_open']),
             'cart_drawer_crosssell' => !empty($_POST['cart_drawer_crosssell']),
             'cart_drawer_coupon'    => isset($_POST['cart_drawer_coupon']) && 'disabled' === $_POST['cart_drawer_coupon'] ? 'disabled' : 'checkout_link',
