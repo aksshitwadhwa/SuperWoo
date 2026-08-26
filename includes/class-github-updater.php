@@ -7,7 +7,33 @@ class SuperWoo_GitHub_Updater {
     public function hooks() {
         add_filter('pre_set_site_transient_update_plugins', [$this, 'check_for_update']);
         add_filter('site_transient_update_plugins', [$this, 'check_for_update']);
+        add_filter('update_plugins_github.com', [$this, 'check_update_uri'], 10, 4);
         add_filter('plugins_api', [$this, 'plugin_information'], 10, 3);
+    }
+
+    public function check_update_uri($update, $plugin_file, $plugin_data, $locales) {
+        if (plugin_basename(SUPERWOO_FILE) !== $plugin_file) {
+            return $update;
+        }
+
+        $release = $this->latest_release();
+        $version = $this->release_version($release);
+        $package = !empty($release['assets'][0]['browser_download_url'])
+            ? $release['assets'][0]['browser_download_url']
+            : (!empty($release['zipball_url']) ? $release['zipball_url'] : '');
+
+        if (!$version || version_compare($version, SUPERWOO_VERSION, '<=')) {
+            return false;
+        }
+
+        return (object) [
+            'id'          => 'https://github.com/aksshitwadhwa/SuperWoo',
+            'slug'        => dirname($plugin_file),
+            'plugin'      => $plugin_file,
+            'new_version' => $version,
+            'url'         => 'https://github.com/aksshitwadhwa/SuperWoo',
+            'package'     => $package,
+        ];
     }
 
     public function check_for_update($transient) {
