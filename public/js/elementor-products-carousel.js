@@ -34,6 +34,7 @@
         }
         this.slides = Array.prototype.slice.call(this.track.children);
         this.build();
+        this.root.classList.add('superwoo-carousel-extended-' + (this.config.extended || 'none'));
         this.bind();
         this.update();
         this.startAutoplay();
@@ -113,6 +114,8 @@
 
     Carousel.prototype.metrics = function () {
         var show = Math.max(1, Number(deviceValue(this.config.slidesToShow)) || 1);
+        if (this.config.extended === 'both') { show += 0.5; }
+        if (this.config.extended === 'left' || this.config.extended === 'right') { show += 0.25; }
         return { show: show, gap: Math.max(0, Number(deviceValue(this.config.spaceBetween)) || 0) };
     };
 

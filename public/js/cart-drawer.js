@@ -173,7 +173,7 @@
     }
 
     function cartTriggerIcon() {
-        return '<svg class="superwoo-elementor-cart-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2 3h2.2l2.2 11.2a2 2 0 0 0 2 1.6h8.9a2 2 0 0 0 2-1.6L21 7H5"/><circle cx="9" cy="20" r="1"/><circle cx="18" cy="20" r="1"/></svg>';
+        return '<svg class="superwoo-elementor-cart-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 8h14l1 13H4L5 8Z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></svg>';
     }
 
     function syncCartTriggerBadges() {

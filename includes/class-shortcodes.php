@@ -72,8 +72,8 @@ class SuperWoo_Shortcodes {
 
         ob_start();
         ?>
-        <button type="button" class="superwoo-cart-button" data-superwoo-open-cart>
-            <span><?php echo esc_html($atts['label']); ?></span>
+        <button type="button" class="superwoo-cart-button" data-superwoo-open-cart aria-label="<?php echo esc_attr($atts['label']); ?>">
+            <span class="superwoo-cart-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 8h14l1 13H4L5 8Z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></svg></span>
             <span class="superwoo-cart-count"><?php echo esc_html(superwoo_cart_count()); ?></span>
         </button>
         <?php

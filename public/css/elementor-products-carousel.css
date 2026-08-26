@@ -1,6 +1,8 @@
 .superwoo-products-carousel-enabled {
     position: relative;
     max-width: 100%;
+    --superwoo-carousel-arrow-color: inherit;
+    --superwoo-carousel-dot-color: currentColor;
 }
 
 .superwoo-products-carousel-enabled .superwoo-carousel__viewport {
@@ -44,7 +46,7 @@
     padding: 0;
     border: 1px solid currentColor;
     border-radius: 50%;
-    color: inherit;
+    color: var(--superwoo-carousel-arrow-color);
     background: var(--e-global-color-primary, Canvas);
     transform: translateY(-50%);
     cursor: pointer;
@@ -70,12 +72,16 @@
     padding: 0;
     border: 0;
     border-radius: 50%;
-    background: currentColor;
+    background: var(--superwoo-carousel-dot-color);
     opacity: .3;
     cursor: pointer;
 }
 
 .superwoo-carousel__dots button.is-active { opacity: 1; }
+
+.superwoo-products-carousel-enabled.superwoo-carousel-extended-both .superwoo-carousel__viewport,
+.superwoo-products-carousel-enabled.superwoo-carousel-extended-left .superwoo-carousel__viewport,
+.superwoo-products-carousel-enabled.superwoo-carousel-extended-right .superwoo-carousel__viewport { overflow: visible; }
 
 @media (prefers-reduced-motion: reduce) {
     .superwoo-products-carousel-enabled ul.products.superwoo-carousel__track { transition-duration: 0.01ms; }
