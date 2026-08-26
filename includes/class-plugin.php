@@ -27,6 +27,7 @@ class SuperWoo_Plugin {
         }
 
         superwoo_currency()->hooks();
+        (new SuperWoo_Discount_Percentage())->hooks();
         (new SuperWoo_Benefit_Taxonomy())->hooks();
         (new SuperWoo_Product_Meta())->hooks();
         (new SuperWoo_Shortcodes())->hooks();
@@ -98,6 +99,7 @@ class SuperWoo_Plugin {
             'cart_drawer_crosssell' => !empty($_POST['cart_drawer_crosssell']),
             'cart_drawer_coupon'    => isset($_POST['cart_drawer_coupon']) && 'disabled' === $_POST['cart_drawer_coupon'] ? 'disabled' : 'checkout_link',
             'enable_add_to_cart_diagnostics' => !empty($_POST['enable_add_to_cart_diagnostics']),
+            'show_discount_percentage' => !empty($_POST['show_discount_percentage']),
             'enable_multi_currency' => !empty($_POST['enable_multi_currency']),
             'enabled_currency_codes' => $this->sanitize_currency_codes($_POST['enabled_currency_codes'] ?? ''),
             'default_currency'      => $this->sanitize_default_currency($_POST['default_currency'] ?? 'INR', $_POST['enabled_currency_codes'] ?? ''),

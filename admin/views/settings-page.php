@@ -89,6 +89,8 @@ $active_tab = isset($_GET['tab']) && 'currency' === sanitize_key(wp_unslash($_GE
                             </label>
                             <br>
                             <label><input type="checkbox" name="enable_add_to_cart_diagnostics" value="1" <?php checked(!empty($settings['enable_add_to_cart_diagnostics'])); ?>> <?php esc_html_e('Temporarily log product Add to Cart diagnostics', 'superwoo'); ?></label>
+                            <br>
+                            <label><input type="checkbox" name="show_discount_percentage" value="1" <?php checked(!empty($settings['show_discount_percentage'])); ?>> <?php esc_html_e('Show sale discount percentage', 'superwoo'); ?></label>
                         </fieldset>
                         <p class="description"><?php esc_html_e('Use shortcode [superwoo_cart_button] or add data-superwoo-open-cart to any button/link. Diagnostics log only request IDs, product IDs, requested quantities, and matching cart quantities to the PHP error log; disable it after testing.', 'superwoo'); ?></p>
                     </td>

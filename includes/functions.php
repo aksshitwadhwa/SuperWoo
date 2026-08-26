@@ -58,6 +58,7 @@ function superwoo_get_settings() {
         'cart_drawer_crosssell' => true,
         'cart_drawer_coupon'    => 'checkout_link',
         'enable_add_to_cart_diagnostics' => false,
+        'show_discount_percentage' => false,
         'enable_multi_currency' => false,
         'enabled_currency_codes' => ['INR', 'USD', 'EUR'],
         'default_currency'      => 'INR',
