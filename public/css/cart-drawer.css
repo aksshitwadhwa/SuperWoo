@@ -87,7 +87,7 @@ body.single-product form.cart .single_add_to_cart_button.superwoo-product-adding
 .superwoo-cart-shell .superwoo-cart-title .superwoo-cart-count {
     background: transparent !important;
     color: var(--superwoo-drawer-action) !important;
-    font-weight: 800;
+    font-weight: 700;
     padding: 0;
 }
 
@@ -112,7 +112,6 @@ body.single-product form.cart .single_add_to_cart_button.superwoo-product-adding
 .superwoo-cart-shell .superwoo-cart-item__name a:focus {
     color: var(--superwoo-drawer-accent);
     font-size: 14px;
-    font-weight: 700;
     line-height: 1.3;
 }
 
