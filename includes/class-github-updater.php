@@ -6,6 +6,7 @@ class SuperWoo_GitHub_Updater {
 
     public function hooks() {
         add_filter('pre_set_site_transient_update_plugins', [$this, 'check_for_update']);
+        add_filter('site_transient_update_plugins', [$this, 'check_for_update']);
         add_filter('plugins_api', [$this, 'plugin_information'], 10, 3);
     }
 
@@ -17,6 +18,14 @@ class SuperWoo_GitHub_Updater {
         $release = $this->latest_release();
         $version = $this->release_version($release);
         $plugin = plugin_basename(SUPERWOO_FILE);
+        // Keep the response key aligned with the key WordPress is checking,
+        // including installations whose plugin directory casing differs.
+        foreach ((array) $transient->checked as $checked_plugin => $checked_version) {
+            if (strtolower(basename($checked_plugin)) === strtolower(basename($plugin))) {
+                $plugin = $checked_plugin;
+                break;
+            }
+        }
 
         if (!$version || version_compare($version, SUPERWOO_VERSION, '<=')) {
             return $transient;
