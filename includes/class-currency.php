@@ -97,11 +97,19 @@ class SuperWoo_Currency {
 
             $product = $cart_item['data'];
 
-            if (!isset($cart->cart_contents[$cart_item_key]['_superwoo_base_inr_price'])) {
-                $cart->cart_contents[$cart_item_key]['_superwoo_base_inr_price'] = (float) $product->get_price('edit');
-            }
+            // Always restore from the catalog product. Reusing the mutable
+            // cart object's price can preserve a temporary payment/checkout
+            // value (for example ₹1) as the next request's base price.
+            $catalog_id = !empty($cart_item['variation_id'])
+                ? absint($cart_item['variation_id'])
+                : (!empty($cart_item['product_id']) ? absint($cart_item['product_id']) : $product->get_id());
+            $catalog_product = $catalog_id ? wc_get_product($catalog_id) : false;
+            $base_price = $catalog_product instanceof WC_Product
+                ? (float) $catalog_product->get_price('edit')
+                : (float) $product->get_price('edit');
 
-            $product->set_price((float) $cart->cart_contents[$cart_item_key]['_superwoo_base_inr_price']);
+            $cart->cart_contents[$cart_item_key]['_superwoo_base_inr_price'] = $base_price;
+            $product->set_price($base_price);
             unset($cart->cart_contents[$cart_item_key]['_superwoo_currency']);
         }
     }
