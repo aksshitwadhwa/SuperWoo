@@ -58,7 +58,7 @@ class SuperWoo_GitHub_Updater {
             'name'          => 'SuperWoo',
             'slug'          => dirname(plugin_basename(SUPERWOO_FILE)),
             'version'       => $version,
-            'author'        => '<a href="https://github.com/aksshitwadhwa">Aksshit Wadhwa</a>',
+            'author'        => '<a href="https://digtize.com/">Aksshit Wadhwa</a>',
             'homepage'      => 'https://github.com/aksshitwadhwa/SuperWoo',
             'download_link' => !empty($release['assets'][0]['browser_download_url']) ? $release['assets'][0]['browser_download_url'] : $release['zipball_url'],
             'sections'      => ['description' => !empty($release['body']) ? wpautop(wp_kses_post($release['body'])) : 'SuperWoo plugin updates from GitHub.'],
