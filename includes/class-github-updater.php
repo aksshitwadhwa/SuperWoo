@@ -12,7 +12,7 @@ class SuperWoo_GitHub_Updater {
     }
 
     public function check_update_uri($update, $plugin_file, $plugin_data, $locales) {
-        if (plugin_basename(SUPERWOO_FILE) !== $plugin_file) {
+        if (strtolower(plugin_basename(SUPERWOO_FILE)) !== strtolower($plugin_file)) {
             return $update;
         }
 
