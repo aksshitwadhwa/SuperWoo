@@ -44,14 +44,16 @@ register_shutdown_function(static function () {
         $file,
         isset($error['line']) ? (int) $error['line'] : 0
     );
+    // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Emergency fallback.
     error_log('SuperWoo fatal: ' . trim($line));
 
-    if (defined('WP_CONTENT_DIR') && is_dir(WP_CONTENT_DIR) && is_writable(WP_CONTENT_DIR)) {
+    if (defined('WP_CONTENT_DIR') && is_dir(WP_CONTENT_DIR) && wp_is_writable(WP_CONTENT_DIR)) {
+        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Emergency fallback log.
         error_log($line, 3, WP_CONTENT_DIR . '/superwoo-fatal.log');
     }
 });
 
-define('SUPERWOO_VERSION', '1.0.148');
+define('SUPERWOO_VERSION', '1.0.149');
 define('SUPERWOO_FILE', __FILE__);
 define('SUPERWOO_PATH', plugin_dir_path(__FILE__));
 define('SUPERWOO_URL', plugin_dir_url(__FILE__));
@@ -75,11 +77,6 @@ if (file_exists($superwoo_carousel_file)) {
     require_once $superwoo_carousel_file;
 }
 require_once SUPERWOO_PATH . 'includes/class-plugin.php';
-require_once SUPERWOO_PATH . 'includes/class-github-updater.php';
-
-$superwoo_github_updater = new SuperWoo_GitHub_Updater();
-$superwoo_github_updater->hooks();
-
 register_activation_hook(__FILE__, ['SuperWoo_Plugin', 'activate']);
 register_deactivation_hook(__FILE__, ['SuperWoo_Plugin', 'deactivate']);
 
@@ -89,6 +86,7 @@ function superwoo_boot_plugin() {
     } catch (Throwable $error) {
         // Keep a plugin runtime error from taking down the entire WordPress
         // request. The error contains the file and line needed to fix it.
+        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Emergency fallback log.
         error_log('SuperWoo boot failure: ' . $error->getMessage() . ' in ' . $error->getFile() . ':' . $error->getLine());
     }
 }

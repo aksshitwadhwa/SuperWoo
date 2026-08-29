@@ -101,6 +101,7 @@ function superwoo_log($message, $context = [], $level = 'info') {
     if (function_exists('wc_get_logger')) {
         wc_get_logger()->log($level, (string) $message, ['source' => 'superwoo', 'context' => $context]);
     } else {
+        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Fallback when WooCommerce logging is unavailable.
         error_log('SuperWoo [' . strtoupper($level) . '] ' . $message . ' ' . wp_json_encode($context));
     }
 }
@@ -130,7 +131,7 @@ function superwoo_health_report() {
             ['label' => __('SuperWoo logging', 'superwoo'), 'value' => !empty($settings['enable_logging']) ? __('Enabled', 'superwoo') : __('Disabled', 'superwoo'), 'status' => !empty($settings['enable_logging']) ? 'ok' : 'neutral'],
             ['label' => __('Application log', 'superwoo'), 'value' => $log_path ? ($log_path . (file_exists($log_path) ? ' (' . size_format(filesize($log_path)) . ')' : '')) : __('Unavailable', 'superwoo'), 'status' => ($log_path && is_dir(dirname($log_path)) && wp_is_writable(dirname($log_path))) ? 'ok' : 'warning'],
             ['label' => __('Fatal error log', 'superwoo'), 'value' => $fatal_path . (file_exists($fatal_path) ? ' (' . size_format(filesize($fatal_path)) . ')' : ''), 'status' => file_exists($fatal_path) ? 'warning' : 'neutral'],
-            ['label' => __('GitHub updater', 'superwoo'), 'value' => defined('SUPERWOO_GITHUB_REPO') ? SUPERWOO_GITHUB_REPO : __('Not configured', 'superwoo'), 'status' => defined('SUPERWOO_GITHUB_REPO') ? 'ok' : 'warning'],
+            ['label' => __('WordPress.org updater', 'superwoo'), 'value' => __('Provided by WordPress.org', 'superwoo'), 'status' => 'ok'],
         ],
         'cart' => [],
     ];

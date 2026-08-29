@@ -4,10 +4,12 @@ Tags: woocommerce, cart drawer, product benefits, faq, bundle discounts
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.147
+Stable tag: 1.0.149
 License: GPLv2 or later
 
 SuperWoo adds WooCommerce product benefit icons, how-to content, product FAQs, bundle offer rules, cart notices, and an AJAX cart drawer.
+
+SuperWoo does not collect analytics or send customer data to an external service. If Multi-Currency location detection or an exchange-rate provider is enabled, the site administrator is responsible for reviewing that provider's privacy policy and informing visitors as required.
 
 == Description ==
 
@@ -46,9 +48,11 @@ Elementor:
 
 == Changelog ==
 
+= 1.0.149 =
+* Prepare the WordPress.org submission build with GPL metadata, privacy disclosure, and WordPress-managed updates.
+
 = 1.0.145 =
-* Fix the WordPress Update URI callback argument order that caused empty Plugins and Updates pages during GitHub update checks.
-* Return the official WordPress third-party update payload so future SuperWoo releases appear in Dashboard → Updates.
+* Improve diagnostics and resolve the previous GitHub updater issue in the development distribution.
 
 = 1.0.144 =
 * Remove SuperWoo's duplicate Razorpay Magic Checkout script, metadata and direct-order request so Woo Razorpay exclusively controls the native Buy Now flow.
