@@ -19,6 +19,7 @@ class SuperWoo_Plugin {
 
         add_action('init', [$this, 'load_textdomain']);
         add_action('admin_menu', [$this, 'register_settings_page']);
+        add_action('admin_post_superwoo_clear_logs', [$this, 'clear_logs']);
         add_action('admin_init', [$this, 'save_settings']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
 
@@ -71,6 +72,41 @@ class SuperWoo_Plugin {
             'dashicons-cart',
             56
         );
+        add_submenu_page('superwoo-settings', __('Logs', 'superwoo'), __('Logs', 'superwoo'), 'manage_woocommerce', 'superwoo-logs', [$this, 'render_logs_page']);
+    }
+
+    public function render_logs_page() {
+        if (!current_user_can('manage_woocommerce')) {
+            return;
+        }
+
+        $path = superwoo_log_file_path();
+        $contents = $path && file_exists($path) ? file_get_contents($path) : '';
+        $lines = $contents ? array_slice(array_filter(explode("\n", $contents)), -300) : [];
+        ?>
+        <div class="wrap superwoo-admin-page">
+            <h1><?php esc_html_e('SuperWoo Logs', 'superwoo'); ?></h1>
+            <p><?php esc_html_e('Recent diagnostic events from SuperWoo. Enable logging from SuperWoo → Settings → Cart.', 'superwoo'); ?></p>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <input type="hidden" name="action" value="superwoo_clear_logs">
+                <?php wp_nonce_field('superwoo_clear_logs'); ?>
+                <?php submit_button(__('Clear Logs', 'superwoo'), 'delete', 'submit', false); ?>
+            </form>
+            <pre style="background:#111827;color:#e5e7eb;max-height:650px;overflow:auto;padding:18px;white-space:pre-wrap;"><?php echo esc_html(implode("\n", $lines) ?: __('No logs available.', 'superwoo')); ?></pre>
+        </div>
+        <?php
+    }
+
+    public function clear_logs() {
+        if (!current_user_can('manage_woocommerce') || !check_admin_referer('superwoo_clear_logs')) {
+            wp_die(esc_html__('You are not allowed to clear these logs.', 'superwoo'));
+        }
+        $path = superwoo_log_file_path();
+        if ($path && file_exists($path)) {
+            file_put_contents($path, ''); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+        }
+        wp_safe_redirect(admin_url('admin.php?page=superwoo-logs&cleared=1'));
+        exit;
     }
 
     public function render_settings_page() {

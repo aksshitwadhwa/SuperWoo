@@ -221,7 +221,7 @@ body.single-product form.cart .single_add_to_cart_button.superwoo-product-adding
     pointer-events: none;
     position: fixed;
     transition: opacity 0.2s ease;
-    z-index: 2147483647 !important;
+    z-index: 2 !important;
     box-sizing: border-box;
 }
 
@@ -721,7 +721,6 @@ body.single-product form.cart .single_add_to_cart_button.superwoo-product-adding
     position: absolute !important;
     right: 0 !important;
     top: 0 !important;
-    z-index: 2147483647 !important;
     max-width: 440px;
     width: min(100vw, 440px);
 }
@@ -732,11 +731,11 @@ button.superwoo-cross-sell__add {
     color: var(--superwoo-drawer-accent) !important;
     padding: 0px !important;
 }
-
+/*
 .superwoo-cart-shell .superwoo-cart-backdrop {
-    z-index: 2147483647 !important;
+    z-index: 2 !important;
 }
-
+*/
 .superwoo-cart-shell .superwoo-cart-title .superwoo-cart-count::before {
     content: "(";
 }

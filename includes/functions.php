@@ -86,11 +86,27 @@ function superwoo_log($message, $context = [], $level = 'info') {
 
     $context = is_array($context) ? $context : [];
     $context['plugin_version'] = defined('SUPERWOO_VERSION') ? SUPERWOO_VERSION : '';
+    $line = '[' . current_time('mysql') . '] [' . strtoupper($level) . '] ' . (string) $message . ' ' . wp_json_encode($context) . "\n";
+
+    $uploads = wp_upload_dir();
+    if (empty($uploads['error']) && !empty($uploads['basedir'])) {
+        $log_dir = trailingslashit($uploads['basedir']) . 'superwoo-logs';
+        if (wp_mkdir_p($log_dir)) {
+            $log_file = trailingslashit($log_dir) . 'superwoo.log';
+            file_put_contents($log_file, $line, FILE_APPEND | LOCK_EX); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+        }
+    }
+
     if (function_exists('wc_get_logger')) {
         wc_get_logger()->log($level, (string) $message, ['source' => 'superwoo', 'context' => $context]);
     } else {
         error_log('SuperWoo [' . strtoupper($level) . '] ' . $message . ' ' . wp_json_encode($context));
     }
+}
+
+function superwoo_log_file_path() {
+    $uploads = wp_upload_dir();
+    return empty($uploads['error']) && !empty($uploads['basedir']) ? trailingslashit($uploads['basedir']) . 'superwoo-logs/superwoo.log' : '';
 }
 
 function superwoo_format_selected_currency_amount($base_inr_amount) {
