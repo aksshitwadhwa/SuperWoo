@@ -5,13 +5,11 @@ class SuperWoo_GitHub_Updater {
     const API_URL = 'https://api.github.com/repos/aksshitwadhwa/SuperWoo/releases/latest';
 
     public function hooks() {
-        add_filter('pre_set_site_transient_update_plugins', [$this, 'check_for_update']);
-        add_filter('site_transient_update_plugins', [$this, 'check_for_update']);
         add_filter('update_plugins_github.com', [$this, 'check_update_uri'], 10, 4);
         add_filter('plugins_api', [$this, 'plugin_information'], 10, 3);
     }
 
-    public function check_update_uri($update, $plugin_file, $plugin_data, $locales) {
+    public function check_update_uri($update, $plugin_data, $plugin_file, $locales) {
         if (strtolower(plugin_basename(SUPERWOO_FILE)) !== strtolower($plugin_file)) {
             return $update;
         }
@@ -26,55 +24,14 @@ class SuperWoo_GitHub_Updater {
             return false;
         }
 
-        return (object) [
+        return [
             'id'          => 'https://github.com/aksshitwadhwa/SuperWoo',
             'slug'        => dirname($plugin_file),
-            'plugin'      => $plugin_file,
-            'new_version' => $version,
+            'version'     => $version,
             'url'         => 'https://github.com/aksshitwadhwa/SuperWoo',
             'package'     => $package,
+            'requires_php' => '7.4',
         ];
-    }
-
-    public function check_for_update($transient) {
-        if (!is_object($transient) || empty($transient->checked)) {
-            return $transient;
-        }
-
-        $release = $this->latest_release();
-        $version = $this->release_version($release);
-        $plugin = plugin_basename(SUPERWOO_FILE);
-        // Keep the response key aligned with the key WordPress is checking,
-        // including installations whose plugin directory casing differs.
-        foreach ((array) $transient->checked as $checked_plugin => $checked_version) {
-            if (strtolower(basename($checked_plugin)) === strtolower(basename($plugin))) {
-                $plugin = $checked_plugin;
-                break;
-            }
-        }
-
-        if (!$version || version_compare($version, SUPERWOO_VERSION, '<=')) {
-            return $transient;
-        }
-
-        $package = !empty($release['assets'][0]['browser_download_url'])
-            ? $release['assets'][0]['browser_download_url']
-            : (!empty($release['zipball_url']) ? $release['zipball_url'] : '');
-
-        if (!$package) {
-            return $transient;
-        }
-
-        $transient->response[$plugin] = (object) [
-            'id'          => 'github.com/aksshitwadhwa/SuperWoo',
-            'slug'        => dirname($plugin),
-            'plugin'      => $plugin,
-            'new_version' => $version,
-            'url'         => 'https://github.com/aksshitwadhwa/SuperWoo',
-            'package'     => $package,
-        ];
-
-        return $transient;
     }
 
     public function plugin_information($result, $action, $args) {
