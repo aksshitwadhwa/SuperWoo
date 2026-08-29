@@ -173,7 +173,7 @@
     }
 
     function cartTriggerIcon() {
-        return '<svg class="superwoo-elementor-cart-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 8h14l1 13H4L5 8Z"/><path d="M8 8V6a4 4 0 0 1 8 0v2"/></svg>';
+        return '<svg class="superwoo-elementor-cart-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M7 12h18l2 17H5L7 12Z"/><path d="M11 12V9a5 5 0 0 1 10 0v3"/></svg>';
     }
 
     function syncCartTriggerBadges() {
@@ -196,6 +196,9 @@
 
             if (!$trigger.children('.superwoo-elementor-cart-count').length) {
                 $trigger.append('<span class="superwoo-cart-count superwoo-elementor-cart-count" aria-label="' + label + '">0</span>');
+            }
+            if (!$trigger.children('.superwoo-elementor-cart-label').length) {
+                $trigger.append('<span class="superwoo-elementor-cart-label">Cart</span>');
             }
         });
 
