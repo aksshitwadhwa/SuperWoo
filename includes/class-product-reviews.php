@@ -373,32 +373,32 @@ class SuperWoo_Product_Reviews {
 
         $commenter = wp_get_current_commenter();
         $comment_form = [
-            'title_reply'         => $product->get_review_count() ? __('Add a review', 'woocommerce') : sprintf(__('Be the first to review &ldquo;%s&rdquo;', 'woocommerce'), $product->get_name()),
-            'title_reply_to'      => __('Leave a Reply to %s', 'woocommerce'),
+            'title_reply'         => $product->get_review_count() ? __('Add a review', 'superwoo') : sprintf(/* translators: %s: product name. */ __('Be the first to review &ldquo;%s&rdquo;', 'superwoo'), $product->get_name()),
+            'title_reply_to'      => __('Leave a Reply to %s', 'superwoo'),
             'title_reply_before'  => '<h3 id="reply-title" class="comment-reply-title">',
             'title_reply_after'   => '</h3>',
             'comment_notes_after' => '',
-            'label_submit'        => __('Submit', 'woocommerce'),
+            'label_submit'        => __('Submit', 'superwoo'),
             'logged_in_as'        => '',
             'comment_field'       => '',
             'fields'              => [
-                'author' => '<p class="comment-form-author"><label for="author">' . esc_html__('Name', 'woocommerce') . '&nbsp;<span class="required">*</span></label><input id="author" name="author" type="text" value="' . esc_attr($commenter['comment_author']) . '" required></p>',
-                'email'  => '<p class="comment-form-email"><label for="email">' . esc_html__('Email', 'woocommerce') . '&nbsp;<span class="required">*</span></label><input id="email" name="email" type="email" value="' . esc_attr($commenter['comment_author_email']) . '" required></p>',
+                'author' => '<p class="comment-form-author"><label for="author">' . esc_html__('Name', 'superwoo') . '&nbsp;<span class="required">*</span></label><input id="author" name="author" type="text" value="' . esc_attr($commenter['comment_author']) . '" required></p>',
+                'email'  => '<p class="comment-form-email"><label for="email">' . esc_html__('Email', 'superwoo') . '&nbsp;<span class="required">*</span></label><input id="email" name="email" type="email" value="' . esc_attr($commenter['comment_author_email']) . '" required></p>',
             ],
         ];
 
         if (wc_review_ratings_enabled()) {
-            $comment_form['comment_field'] .= '<p class="comment-form-rating"><label for="rating">' . esc_html__('Your rating', 'woocommerce') . (wc_review_ratings_required() ? '&nbsp;<span class="required">*</span>' : '') . '</label><select name="rating" id="rating" required>
-                <option value="">' . esc_html__('Rate&hellip;', 'woocommerce') . '</option>
-                <option value="5">' . esc_html__('Perfect', 'woocommerce') . '</option>
-                <option value="4">' . esc_html__('Good', 'woocommerce') . '</option>
-                <option value="3">' . esc_html__('Average', 'woocommerce') . '</option>
-                <option value="2">' . esc_html__('Not that bad', 'woocommerce') . '</option>
-                <option value="1">' . esc_html__('Very poor', 'woocommerce') . '</option>
+            $comment_form['comment_field'] .= '<p class="comment-form-rating"><label for="rating">' . esc_html__('Your rating', 'superwoo') . (wc_review_ratings_required() ? '&nbsp;<span class="required">*</span>' : '') . '</label><select name="rating" id="rating" required>
+                <option value="">' . esc_html__('Rate&hellip;', 'superwoo') . '</option>
+                <option value="5">' . esc_html__('Perfect', 'superwoo') . '</option>
+                <option value="4">' . esc_html__('Good', 'superwoo') . '</option>
+                <option value="3">' . esc_html__('Average', 'superwoo') . '</option>
+                <option value="2">' . esc_html__('Not that bad', 'superwoo') . '</option>
+                <option value="1">' . esc_html__('Very poor', 'superwoo') . '</option>
             </select></p>';
         }
 
-        $comment_form['comment_field'] .= '<p class="comment-form-comment"><label for="comment">' . esc_html__('Your review', 'woocommerce') . '&nbsp;<span class="required">*</span></label><textarea id="comment" name="comment" cols="45" rows="6" required></textarea></p>';
+        $comment_form['comment_field'] .= '<p class="comment-form-comment"><label for="comment">' . esc_html__('Your review', 'superwoo') . '&nbsp;<span class="required">*</span></label><textarea id="comment" name="comment" cols="45" rows="6" required></textarea></p>';
         $comment_form['comment_field'] .= wp_nonce_field('superwoo_review_images_' . $product->get_id(), 'superwoo_review_images_nonce', true, false);
         $comment_form['comment_field'] .= '<p class="comment-form-superwoo-media"><label for="superwoo_review_media">' . esc_html__('Upload product photos or videos', 'superwoo') . '</label><input id="superwoo_review_media" name="superwoo_review_media[]" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime,video/ogg" multiple data-superwoo-review-media><span class="superwoo-review-upload-help" data-superwoo-review-media-help>' . esc_html__('Optional. Upload up to 4 photos and 2 videos.', 'superwoo') . '</span></p>';
 

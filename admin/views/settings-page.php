@@ -98,6 +98,12 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'currency'], true) ? $ac
                             <label><input type="checkbox" name="enable_add_to_cart_diagnostics" value="1" <?php checked(!empty($settings['enable_add_to_cart_diagnostics'])); ?>> <?php esc_html_e('Temporarily log product Add to Cart diagnostics', 'superwoo'); ?></label>
                             <br>
                             <label><input type="checkbox" name="show_discount_percentage" value="1" <?php checked(!empty($settings['show_discount_percentage'])); ?>> <?php esc_html_e('Show sale discount percentage', 'superwoo'); ?></label>
+                            <p><strong><?php esc_html_e('Header cart icon', 'superwoo'); ?></strong></p>
+                            <div class="superwoo-cart-icon-choices">
+                                <?php foreach (['outline-bag' => __('Outlined bag', 'superwoo'), 'filled-bag' => __('Filled bag', 'superwoo'), 'basket' => __('Basket', 'superwoo')] as $icon_key => $icon_label) : ?>
+                                    <label class="superwoo-cart-icon-choice"><input type="radio" name="header_cart_icon" value="<?php echo esc_attr($icon_key); ?>" <?php checked($settings['header_cart_icon'] ?? 'outline-bag', $icon_key); ?>><span class="superwoo-cart-icon-choice__preview superwoo-cart-icon-choice__preview--<?php echo esc_attr($icon_key); ?>" aria-hidden="true"></span><span><?php echo esc_html($icon_label); ?></span></label>
+                                <?php endforeach; ?>
+                            </div>
                             <br>
                             <label><input type="checkbox" name="enable_logging" value="1" <?php checked(!empty($settings['enable_logging'])); ?>> <?php esc_html_e('Enable SuperWoo logs', 'superwoo'); ?></label>
                             <p class="description"><?php esc_html_e('Logs are stored in WooCommerce → Status → Logs with source “superwoo”. Enable only while troubleshooting and disable afterward.', 'superwoo'); ?></p>

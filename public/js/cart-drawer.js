@@ -173,6 +173,13 @@
     }
 
     function cartTriggerIcon() {
+        var icon = window.SuperWooCart && SuperWooCart.headerCartIcon ? SuperWooCart.headerCartIcon : 'outline-bag';
+        if (icon === 'filled-bag') {
+            return '<svg class="superwoo-elementor-cart-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path class="superwoo-cart-icon-fill" d="M8 12h16l3 17H5l3-17Z"/><path d="M11 12V9a5 5 0 0 1 10 0v3"/></svg>';
+        }
+        if (icon === 'basket') {
+            return '<svg class="superwoo-elementor-cart-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M5 13h22l-2 15H7L5 13Z"/><path d="m9 13 3-7m11 7-3-7M4 13h24"/></svg>';
+        }
         return '<svg class="superwoo-elementor-cart-icon" viewBox="0 0 32 32" aria-hidden="true" focusable="false"><path d="M7 12h18l2 17H5L7 12Z"/><path d="M11 12V9a5 5 0 0 1 10 0v3"/></svg>';
     }
 
@@ -196,9 +203,6 @@
 
             if (!$trigger.children('.superwoo-elementor-cart-count').length) {
                 $trigger.append('<span class="superwoo-cart-count superwoo-elementor-cart-count" aria-label="' + label + '">0</span>');
-            }
-            if (!$trigger.children('.superwoo-elementor-cart-label').length) {
-                $trigger.append('<span class="superwoo-elementor-cart-label">Cart</span>');
             }
         });
 

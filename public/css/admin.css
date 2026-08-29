@@ -559,3 +559,11 @@
 .superwoo-health-card--warning { border-left-color: #dba617; }
 .superwoo-health-card strong, .superwoo-health-card span { display: block; }
 .superwoo-health-card span { margin-top: 7px; word-break: break-word; }
+.superwoo-cart-icon-choices { display: flex; flex-wrap: wrap; gap: 14px; }
+.superwoo-cart-icon-choice { align-items: center; background: #fff; border: 1px solid #c3c4c7; display: flex; flex-direction: column; gap: 6px; min-width: 110px; padding: 10px; }
+.superwoo-cart-icon-choice input { margin: 0; }
+.superwoo-cart-icon-choice__preview { display: block; height: 34px; position: relative; width: 34px; }
+.superwoo-cart-icon-choice__preview:before { border: 2px solid #59616b; border-radius: 2px; content: ''; height: 22px; left: 4px; position: absolute; top: 9px; width: 24px; }
+.superwoo-cart-icon-choice__preview:after { border: 2px solid #59616b; border-bottom: 0; border-radius: 10px 10px 0 0; content: ''; height: 9px; left: 10px; position: absolute; top: 2px; width: 12px; }
+.superwoo-cart-icon-choice__preview--filled-bag:before { background: #0b3d4d; border-color: #0b3d4d; }
+.superwoo-cart-icon-choice__preview--basket:before { border-radius: 0 0 4px 4px; transform: skew(-8deg); }

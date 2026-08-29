@@ -60,6 +60,7 @@ function superwoo_get_settings() {
         'enable_add_to_cart_diagnostics' => false,
         'enable_logging'        => false,
         'show_discount_percentage' => false,
+        'header_cart_icon'      => 'outline-bag',
         'enable_multi_currency' => false,
         'enabled_currency_codes' => ['INR', 'USD', 'EUR'],
         'default_currency'      => 'INR',
@@ -279,8 +280,9 @@ function superwoo_cart_primary_button_html() {
             <span>
                 <?php
                 printf(
+                    /* translators: %s: formatted cart subtotal. */
                     esc_html__('Proceed to Checkout · %s', 'superwoo'),
-                    wp_strip_all_tags($cart->get_cart_subtotal())
+                    esc_html(wp_strip_all_tags($cart->get_cart_subtotal()))
                 );
                 ?>
             </span>

@@ -2,9 +2,9 @@
 Contributors: Aksshit Wadhwa
 Tags: woocommerce, cart drawer, product benefits, faq, bundle discounts
 Requires at least: 6.2
-Tested up to: 6.6
+Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.145
+Stable tag: 1.0.147
 License: GPLv2 or later
 
 SuperWoo adds WooCommerce product benefit icons, how-to content, product FAQs, bundle offer rules, cart notices, and an AJAX cart drawer.

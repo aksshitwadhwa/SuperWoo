@@ -52,6 +52,7 @@ class SuperWoo_Cart_Drawer {
             'dashboardPage' => $this->is_dashboard_page(),
             'offerState'    => superwoo_cart_offer_state(),
             'addToCartDiagnostics' => !empty($settings['enable_add_to_cart_diagnostics']),
+            'headerCartIcon' => sanitize_key($settings['header_cart_icon'] ?? 'outline-bag'),
             'i18n'          => [
                 'updating'      => __('Updating...', 'superwoo'),
                 'error'         => __('Could not update the cart. Please try again.', 'superwoo'),

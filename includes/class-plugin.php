@@ -158,6 +158,7 @@ class SuperWoo_Plugin {
             'enable_add_to_cart_diagnostics' => !empty($_POST['enable_add_to_cart_diagnostics']),
             'enable_logging'        => !empty($_POST['enable_logging']),
             'show_discount_percentage' => !empty($_POST['show_discount_percentage']),
+            'header_cart_icon'      => in_array($_POST['header_cart_icon'] ?? '', ['outline-bag', 'filled-bag', 'basket'], true) ? sanitize_key(wp_unslash($_POST['header_cart_icon'])) : 'outline-bag',
             'enable_multi_currency' => !empty($_POST['enable_multi_currency']),
             'enabled_currency_codes' => $this->sanitize_currency_codes($_POST['enabled_currency_codes'] ?? ''),
             'default_currency'      => $this->sanitize_default_currency($_POST['default_currency'] ?? 'INR', $_POST['enabled_currency_codes'] ?? ''),

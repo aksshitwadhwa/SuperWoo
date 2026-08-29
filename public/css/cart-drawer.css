@@ -204,7 +204,7 @@ body.single-product form.cart .single_add_to_cart_button.superwoo-product-adding
     width: 34px;
 }
 
-.superwoo-elementor-cart-label { color: #59616b; font-size: 14px; line-height: 1.1; }
+.superwoo-elementor-cart-icon .superwoo-cart-icon-fill { fill: #0b3d4d; stroke: #0b3d4d; }
 
 .superwoo-elementor-cart-trigger > .superwoo-cart-count {
     align-items: center !important;
