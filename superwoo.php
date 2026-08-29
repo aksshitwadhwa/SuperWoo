@@ -2,7 +2,7 @@
 /**
  * Plugin Name: SuperWoo
  * Description: WooCommerce product benefits, how-to content, FAQs, modern reviews, offers, and AJAX cart drawer.
- * Version: 1.0.140
+ * Version: 1.0.141
  * Author: Aksshit Wadhwa
  * Author URI: https://digtize.com/
  * Update URI: https://github.com/aksshitwadhwa/SuperWoo
@@ -14,7 +14,7 @@
 
 defined('ABSPATH') || exit;
 
-define('SUPERWOO_VERSION', '1.0.140');
+define('SUPERWOO_VERSION', '1.0.141');
 define('SUPERWOO_FILE', __FILE__);
 define('SUPERWOO_PATH', plugin_dir_path(__FILE__));
 define('SUPERWOO_URL', plugin_dir_url(__FILE__));
@@ -46,4 +46,14 @@ $superwoo_github_updater->hooks();
 register_activation_hook(__FILE__, ['SuperWoo_Plugin', 'activate']);
 register_deactivation_hook(__FILE__, ['SuperWoo_Plugin', 'deactivate']);
 
-add_action('plugins_loaded', ['SuperWoo_Plugin', 'instance']);
+function superwoo_boot_plugin() {
+    try {
+        SuperWoo_Plugin::instance();
+    } catch (Throwable $error) {
+        // Keep a plugin runtime error from taking down the entire WordPress
+        // request. The error contains the file and line needed to fix it.
+        error_log('SuperWoo boot failure: ' . $error->getMessage() . ' in ' . $error->getFile() . ':' . $error->getLine());
+    }
+}
+
+add_action('plugins_loaded', 'superwoo_boot_plugin');
