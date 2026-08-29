@@ -127,35 +127,6 @@ function superwoo_cart_count() {
 }
 
 
-function superwoo_is_razorpay_magic_checkout_available() {
-    if (!function_exists('isRazorpayPluginEnabled') || !function_exists('is1ccEnabled')) {
-        return false;
-    }
-
-    return isRazorpayPluginEnabled() && is1ccEnabled();
-}
-
-function superwoo_get_razorpay_magic_checkout_data() {
-    $settings = get_option('woocommerce_razorpay_settings', []);
-    $settings = is_array($settings) ? $settings : [];
-    $site_url = get_option('siteurl');
-
-    return [
-        'enabled'              => superwoo_is_razorpay_magic_checkout_available(),
-        'orderApi'             => rest_url('1cc/v1/order/create'),
-        'abandonedCartApi'     => rest_url('1cc/v1/abandoned-cart'),
-        'restNonce'            => wp_create_nonce('wp_rest'),
-        'siteUrl'              => $site_url,
-        'blogName'             => get_bloginfo('name'),
-        'cookies'              => function_exists('wc_clean') ? wc_clean(wp_unslash($_COOKIE)) : [],
-        'requestData'          => function_exists('wc_clean') ? wc_clean(wp_unslash($_REQUEST)) : [],
-        'version'              => get_option('rzp_woocommerce_current_version', ''),
-        'merchantKey'          => isset($settings['key_id']) ? sanitize_text_field($settings['key_id']) : '',
-        'checkoutScriptUrl'    => defined('RZP_CHECKOUTJS_URL') ? RZP_CHECKOUTJS_URL : 'https://checkout.razorpay.com/v1/magic-checkout.js',
-        'selectedCurrency'     => function_exists('superwoo_currency') ? superwoo_currency()->get_selected_currency() : get_woocommerce_currency(),
-    ];
-}
-
 function superwoo_cart_drawer_fragments($calculate_totals = true) {
     $cart = superwoo_get_cart();
     if (!$cart) {
@@ -259,7 +230,7 @@ function superwoo_cart_primary_button_html() {
         <?php
     else :
         ?>
-        <button type="button" class="superwoo-cart-primary" data-superwoo-pay-now>
+        <a class="superwoo-cart-primary" href="<?php echo esc_url(wc_get_checkout_url()); ?>">
             <span class="superwoo-cart-primary__icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false"><path d="M17 9V7A5 5 0 0 0 7 7v2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1ZM9 7a3 3 0 0 1 6 0v2H9V7Z"/></svg>
             </span>
@@ -271,7 +242,7 @@ function superwoo_cart_primary_button_html() {
                 );
                 ?>
             </span>
-        </button>
+        </a>
         <?php
     endif;
 

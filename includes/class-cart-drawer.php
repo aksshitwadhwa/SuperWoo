@@ -9,7 +9,6 @@ class SuperWoo_Cart_Drawer {
         }
 
         add_action('wp_enqueue_scripts', [$this, 'enqueue_assets']);
-        add_action('wp_head', [$this, 'render_razorpay_magic_checkout_meta'], 2);
         add_action('wp_footer', [$this, 'render']);
         add_filter('body_class', [$this, 'body_classes']);
         add_filter('woocommerce_add_to_cart_fragments', [$this, 'fragments']);
@@ -38,11 +37,6 @@ class SuperWoo_Cart_Drawer {
         wp_enqueue_style('superwoo-cart-drawer', SUPERWOO_URL . 'public/css/cart-drawer.css', [], SUPERWOO_VERSION);
         wp_enqueue_style('superwoo-bundle-offers', SUPERWOO_URL . 'public/css/bundle-offers.css', [], SUPERWOO_VERSION);
 
-        $magic_checkout = superwoo_get_razorpay_magic_checkout_data();
-        if (!empty($magic_checkout['enabled']) && !empty($magic_checkout['checkoutScriptUrl'])) {
-            wp_enqueue_script('superwoo-razorpay-magic-checkout', esc_url_raw($magic_checkout['checkoutScriptUrl']), [], null, false);
-        }
-
         wp_enqueue_script('superwoo-cart-drawer', SUPERWOO_URL . 'public/js/cart-drawer.js', $deps, SUPERWOO_VERSION, true);
 
         $settings = superwoo_get_settings();
@@ -58,27 +52,13 @@ class SuperWoo_Cart_Drawer {
             'dashboardPage' => $this->is_dashboard_page(),
             'offerState'    => superwoo_cart_offer_state(),
             'addToCartDiagnostics' => !empty($settings['enable_add_to_cart_diagnostics']),
-            'magicCheckout' => $magic_checkout,
             'i18n'          => [
                 'updating'      => __('Updating...', 'superwoo'),
                 'error'         => __('Could not update the cart. Please try again.', 'superwoo'),
-                'paymentError'  => __('Could not start payment. Please try again.', 'superwoo'),
-                'magicMissing'  => __('Magic Checkout is not available. Please enable Razorpay Magic Checkout.', 'superwoo'),
-                'redirecting'   => __('Redirecting to payment...', 'superwoo'),
                 'cartItems'     => __('Cart items', 'superwoo'),
                 'chooseOptions' => __('Please choose product options before adding this product to your cart.', 'superwoo'),
             ],
         ]);
-    }
-
-    public function render_razorpay_magic_checkout_meta() {
-        $magic_checkout = superwoo_get_razorpay_magic_checkout_data();
-        if (empty($magic_checkout['enabled']) || empty($magic_checkout['merchantKey'])) {
-            return;
-        }
-
-        echo '<meta name="rzp_merchant_key" value="' . esc_attr($magic_checkout['merchantKey']) . '">' . "\n";
-        echo '<script>window.Razorpay=window.Razorpay||{};window.Razorpay.config=window.Razorpay.config||{};window.Razorpay.config.integration="magic-wooc";window.Razorpay.config.merchant_key="' . esc_js($magic_checkout['merchantKey']) . '";</script>' . "\n"; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
     }
 
     public function render() {
