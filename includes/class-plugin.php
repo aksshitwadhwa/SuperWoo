@@ -28,16 +28,27 @@ class SuperWoo_Plugin {
             return;
         }
 
-        superwoo_currency()->hooks();
-        (new SuperWoo_Discount_Percentage())->hooks();
+        // Ordinary wp-admin screens only need SuperWoo's administration
+        // modules. Loading cart, pricing, shortcode and display integrations
+        // here creates unnecessary conflicts on Plugins and Updates pages.
+        // AJAX requests are excluded because the cart drawer uses admin-ajax.
+        $is_regular_admin = is_admin() && !wp_doing_ajax();
+
         (new SuperWoo_Benefit_Taxonomy())->hooks();
         (new SuperWoo_Product_Meta())->hooks();
+        (new SuperWoo_Bundle_Offers())->hooks();
+        (new SuperWoo_Elementor_Dynamic_Tags())->hooks();
+
+        if ($is_regular_admin) {
+            return;
+        }
+
+        superwoo_currency()->hooks();
+        (new SuperWoo_Discount_Percentage())->hooks();
         (new SuperWoo_Shortcodes())->hooks();
         (new SuperWoo_Product_Reviews())->hooks();
         (new SuperWoo_Variation_Cards())->hooks();
-        (new SuperWoo_Bundle_Offers())->hooks();
         (new SuperWoo_Cart_Drawer())->hooks();
-        (new SuperWoo_Elementor_Dynamic_Tags())->hooks();
         if (!empty(superwoo_get_settings()['enable_elementor_products_carousel']) && class_exists('SuperWoo_Elementor_Products_Carousel')) {
             (new SuperWoo_Elementor_Products_Carousel())->hooks();
         }

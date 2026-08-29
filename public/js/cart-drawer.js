@@ -1313,6 +1313,23 @@
         closeCart();
     });
 
+    $(document).on('click.superwooCartOutside', function (event) {
+        var $shell = shell();
+        var drawerNode = drawer().get(0);
+
+        if (!$shell.hasClass('is-open') || !drawerNode) {
+            return;
+        }
+
+        // Keep all drawer controls interactive and do not immediately close
+        // the drawer when the click that opened it reaches the document.
+        if (drawerNode.contains(event.target) || closestCartTrigger(event.target)) {
+            return;
+        }
+
+        closeCart();
+    });
+
     $(document).on('keydown', function (event) {
         if (event.key === 'Escape' && shell().hasClass('is-open')) {
             closeCart();

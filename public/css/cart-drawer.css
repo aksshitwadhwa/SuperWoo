@@ -248,6 +248,10 @@ body.single-product form.cart .single_add_to_cart_button.superwoo-product-adding
     pointer-events: none;
 }
 
+.superwoo-cart-shell.is-open .superwoo-cart-backdrop {
+    pointer-events: auto;
+}
+
 .superwoo-cart-drawer {
     background: var(--superwoo-drawer-bg);
     box-shadow: var(--superwoo-drawer-shadow);

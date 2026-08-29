@@ -2,7 +2,7 @@
 /**
  * Plugin Name: SuperWoo
  * Description: WooCommerce product benefits, how-to content, FAQs, modern reviews, offers, and AJAX cart drawer.
- * Version: 1.0.142
+ * Version: 1.0.143
  * Author: Aksshit Wadhwa
  * Author URI: https://digtize.com/
  * Update URI: https://github.com/aksshitwadhwa/SuperWoo
@@ -14,7 +14,44 @@
 
 defined('ABSPATH') || exit;
 
-define('SUPERWOO_VERSION', '1.0.142');
+// Prevent a fatal "Cannot redeclare" error when WordPress has more than one
+// extracted copy of SuperWoo (for example, superwoo and SuperWoo-3). This can
+// happen after manually uploading the same ZIP multiple times. The first copy
+// loaded remains active and later duplicate copies stop before declaring any
+// constants, functions, or classes.
+if (defined('SUPERWOO_FILE')) {
+    return;
+}
+
+// Capture shutdown-level PHP errors even when WordPress cannot finish loading
+// its normal debug logger. This file is intentionally separate from the
+// optional SuperWoo activity log so activation failures are always recorded.
+register_shutdown_function(static function () {
+    $error = error_get_last();
+    if (!$error || !in_array($error['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR], true)) {
+        return;
+    }
+
+    $file = isset($error['file']) ? (string) $error['file'] : '';
+    if (false === stripos($file, 'superwoo')) {
+        return;
+    }
+
+    $line = sprintf(
+        "[%s] %s in %s:%d\n",
+        gmdate('Y-m-d H:i:s') . ' UTC',
+        isset($error['message']) ? (string) $error['message'] : 'Unknown fatal error',
+        $file,
+        isset($error['line']) ? (int) $error['line'] : 0
+    );
+    error_log('SuperWoo fatal: ' . trim($line));
+
+    if (defined('WP_CONTENT_DIR') && is_dir(WP_CONTENT_DIR) && is_writable(WP_CONTENT_DIR)) {
+        error_log($line, 3, WP_CONTENT_DIR . '/superwoo-fatal.log');
+    }
+});
+
+define('SUPERWOO_VERSION', '1.0.143');
 define('SUPERWOO_FILE', __FILE__);
 define('SUPERWOO_PATH', plugin_dir_path(__FILE__));
 define('SUPERWOO_URL', plugin_dir_url(__FILE__));

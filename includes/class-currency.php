@@ -15,6 +15,7 @@ class SuperWoo_Currency {
         add_filter('woocommerce_available_variation', [$this, 'filter_available_variation'], 1000, 3);
         add_action('woocommerce_before_calculate_totals', [$this, 'restore_cart_item_prices'], 1);
         add_action('woocommerce_before_calculate_totals', [$this, 'convert_cart_item_prices'], 1000);
+        add_action('woocommerce_before_calculate_totals', [$this, 'enforce_payment_request_catalog_prices'], PHP_INT_MAX);
         add_action('woocommerce_cart_calculate_fees', [$this, 'convert_cart_fees'], 1000);
         add_filter('woocommerce_get_cart_item_from_session', [$this, 'reset_session_cart_item'], 1000, 2);
         add_action('woocommerce_checkout_create_order', [$this, 'tag_order_currency'], 20, 2);
@@ -86,7 +87,13 @@ class SuperWoo_Currency {
     }
 
     public function restore_cart_item_prices($cart) {
-        if (!$this->is_enabled() || !$this->is_runtime_context() || $this->is_payment_request() || !$cart || $cart->is_empty()) {
+        $is_payment_request = $this->is_payment_request();
+
+        // Razorpay may leave its temporary ₹1 verification amount on the
+        // mutable cart product. Always restore the catalog price while its
+        // order endpoint is calculating totals, even when multi-currency is
+        // disabled. Currency conversion remains disabled for this request.
+        if ((!$this->is_enabled() && !$is_payment_request) || !$this->is_runtime_context() || !$cart || $cart->is_empty()) {
             return;
         }
 
@@ -112,6 +119,18 @@ class SuperWoo_Currency {
             $product->set_price($base_price);
             unset($cart->cart_contents[$cart_item_key]['_superwoo_currency']);
         }
+    }
+
+    /**
+     * Run after other cart-pricing callbacks as a final payment safety check.
+     * This prevents a temporary ₹1 value from becoming Razorpay's order total.
+     */
+    public function enforce_payment_request_catalog_prices($cart) {
+        if (!$this->is_payment_request()) {
+            return;
+        }
+
+        $this->restore_cart_item_prices($cart);
     }
 
     public function convert_cart_fees($cart) {
