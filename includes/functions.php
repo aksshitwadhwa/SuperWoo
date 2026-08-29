@@ -109,6 +109,48 @@ function superwoo_log_file_path() {
     return empty($uploads['error']) && !empty($uploads['basedir']) ? trailingslashit($uploads['basedir']) . 'superwoo-logs/superwoo.log' : '';
 }
 
+function superwoo_fatal_log_file_path() {
+    return defined('WP_CONTENT_DIR') ? trailingslashit(WP_CONTENT_DIR) . 'superwoo-fatal.log' : '';
+}
+
+function superwoo_health_report() {
+    $settings = superwoo_get_settings();
+    $log_path = superwoo_log_file_path();
+    $fatal_path = superwoo_fatal_log_file_path();
+    $report = [
+        'environment' => [
+            ['label' => __('SuperWoo version', 'superwoo'), 'value' => defined('SUPERWOO_VERSION') ? SUPERWOO_VERSION : __('Unknown', 'superwoo'), 'status' => 'ok'],
+            ['label' => __('WordPress version', 'superwoo'), 'value' => get_bloginfo('version'), 'status' => 'ok'],
+            ['label' => __('WooCommerce', 'superwoo'), 'value' => superwoo_is_woocommerce_active() ? (defined('WC_VERSION') ? WC_VERSION : __('Active', 'superwoo')) : __('Not available', 'superwoo'), 'status' => superwoo_is_woocommerce_active() ? 'ok' : 'warning'],
+            ['label' => __('PHP version', 'superwoo'), 'value' => PHP_VERSION, 'status' => version_compare(PHP_VERSION, '7.4', '>=') ? 'ok' : 'warning'],
+            ['label' => __('Plugin folder', 'superwoo'), 'value' => defined('SUPERWOO_FILE') ? plugin_basename(SUPERWOO_FILE) : __('Unknown', 'superwoo'), 'status' => (defined('SUPERWOO_FILE') && 'superwoo/superwoo.php' === strtolower(plugin_basename(SUPERWOO_FILE))) ? 'ok' : 'warning'],
+        ],
+        'diagnostics' => [
+            ['label' => __('SuperWoo logging', 'superwoo'), 'value' => !empty($settings['enable_logging']) ? __('Enabled', 'superwoo') : __('Disabled', 'superwoo'), 'status' => !empty($settings['enable_logging']) ? 'ok' : 'neutral'],
+            ['label' => __('Application log', 'superwoo'), 'value' => $log_path ? ($log_path . (file_exists($log_path) ? ' (' . size_format(filesize($log_path)) . ')' : '')) : __('Unavailable', 'superwoo'), 'status' => ($log_path && is_dir(dirname($log_path)) && wp_is_writable(dirname($log_path))) ? 'ok' : 'warning'],
+            ['label' => __('Fatal error log', 'superwoo'), 'value' => $fatal_path . (file_exists($fatal_path) ? ' (' . size_format(filesize($fatal_path)) . ')' : ''), 'status' => file_exists($fatal_path) ? 'warning' : 'neutral'],
+            ['label' => __('GitHub updater', 'superwoo'), 'value' => defined('SUPERWOO_GITHUB_REPO') ? SUPERWOO_GITHUB_REPO : __('Not configured', 'superwoo'), 'status' => defined('SUPERWOO_GITHUB_REPO') ? 'ok' : 'warning'],
+        ],
+        'cart' => [],
+    ];
+
+    $cart = superwoo_get_cart();
+    if (!$cart) {
+        $report['cart'][] = ['label' => __('Cart context', 'superwoo'), 'value' => __('Cart is not initialized in this admin request.', 'superwoo'), 'status' => 'neutral'];
+        return $report;
+    }
+
+    foreach ($cart->get_cart() as $key => $item) {
+        $product = isset($item['data']) && $item['data'] instanceof WC_Product ? $item['data'] : null;
+        $catalog_product = $product ? wc_get_product($product->get_id()) : null;
+        $cart_price = $product ? (float) $product->get_price() : 0;
+        $catalog_price = $catalog_product ? (float) $catalog_product->get_price('edit') : 0;
+        $status = ($catalog_price > 0 && abs($cart_price - $catalog_price) > 0.01) ? 'warning' : 'ok';
+        $report['cart'][] = ['label' => sprintf(__('Product #%s × %s', 'superwoo'), $product ? $product->get_id() : 'n/a', isset($item['quantity']) ? (int) $item['quantity'] : 0), 'value' => sprintf(__('Catalog %s / Cart %s / Line %s', 'superwoo'), wc_price($catalog_price), wc_price($cart_price), wc_price((float) ($item['line_total'] ?? 0))), 'status' => $status];
+    }
+    return $report;
+}
+
 function superwoo_format_selected_currency_amount($base_inr_amount) {
     if (function_exists('superwoo_currency') && superwoo_currency()->is_enabled()) {
         return superwoo_currency()->format_amount(superwoo_currency()->convert_amount($base_inr_amount));

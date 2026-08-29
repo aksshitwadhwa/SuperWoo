@@ -83,7 +83,16 @@ class SuperWoo_Plugin {
             'dashicons-cart',
             56
         );
+        add_submenu_page('superwoo-settings', __('Health', 'superwoo'), __('Health', 'superwoo'), 'manage_woocommerce', 'superwoo-health', [$this, 'render_health_page']);
         add_submenu_page('superwoo-settings', __('Logs', 'superwoo'), __('Logs', 'superwoo'), 'manage_woocommerce', 'superwoo-logs', [$this, 'render_logs_page']);
+    }
+
+    public function render_health_page() {
+        if (!current_user_can('manage_woocommerce')) {
+            return;
+        }
+        $report = superwoo_health_report();
+        include SUPERWOO_PATH . 'admin/views/health-page.php';
     }
 
     public function render_logs_page() {
@@ -169,7 +178,7 @@ class SuperWoo_Plugin {
     }
 
     public function enqueue_admin_assets($hook) {
-        if (in_array($hook, ['toplevel_page_superwoo-settings', 'superwoo_page_superwoo-bundle-offers'], true)) {
+        if (in_array($hook, ['toplevel_page_superwoo-settings', 'superwoo_page_superwoo-health', 'superwoo_page_superwoo-bundle-offers'], true)) {
             wp_enqueue_style('superwoo-admin', SUPERWOO_URL . 'public/css/admin.css', [], SUPERWOO_VERSION);
         }
     }

@@ -551,3 +551,11 @@
         grid-template-columns: 1fr;
     }
 }
+.superwoo-health-section { margin-top: 24px; max-width: 1100px; }
+.superwoo-health-section h2 { margin-bottom: 12px; }
+.superwoo-health-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.superwoo-health-card { background: #fff; border-left: 4px solid #8c8f94; padding: 16px; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+.superwoo-health-card--ok { border-left-color: #00a32a; }
+.superwoo-health-card--warning { border-left-color: #dba617; }
+.superwoo-health-card strong, .superwoo-health-card span { display: block; }
+.superwoo-health-card span { margin-top: 7px; word-break: break-word; }
