@@ -16,6 +16,16 @@ body.single-product.superwoo-variation-cards-enabled form.variations_form table.
     width: 100%;
 }
 
+/* The product theme sometimes wraps the variation selector in a shaded table.
+ * SuperWoo renders the choices as cards, so keep the surrounding area neutral. */
+body.single-product.superwoo-variation-cards-enabled form.variations_form table.variations,
+body.single-product.superwoo-variation-cards-enabled form.variations_form table.variations tbody,
+body.single-product.superwoo-variation-cards-enabled form.variations_form table.variations tr,
+body.single-product.superwoo-variation-cards-enabled form.variations_form table.variations th,
+body.single-product.superwoo-variation-cards-enabled form.variations_form table.variations td {
+    background: transparent !important;
+}
+
 form.variations_form.superwoo-variation-cards-active table.variations tr {
     display: inline;
     gap: 10px;
@@ -164,11 +174,24 @@ body.single-product .price del .amount,
 }
 
 form.variations_form.superwoo-variation-cards-active .reset_variations {
-    color: var(--superwoo-variation-accent);
-    display: inline-flex;
-    font-size: 13px;
-    font-weight: 700;
-    margin-top: 6px;
+    display: none !important;
+}
+
+/* Variation cards already show the selected price. Hide WooCommerce's repeated
+ * price below the choices while preserving stock and availability messages. */
+form.variations_form.superwoo-variation-cards-active .single_variation .woocommerce-variation-price,
+body.single-product.superwoo-variation-cards-enabled form.variations_form .single_variation .woocommerce-variation-price {
+    display: none !important;
+}
+
+/* Themes and quantity plugins commonly add spacing to their +/- controls. */
+form.variations_form.superwoo-variation-cards-active .quantity .qty-btn,
+form.variations_form.superwoo-variation-cards-active .quantity .minus,
+form.variations_form.superwoo-variation-cards-active .quantity .plus,
+body.single-product.superwoo-variation-cards-enabled form.variations_form .quantity .qty-btn,
+body.single-product.superwoo-variation-cards-enabled form.variations_form .quantity .minus,
+body.single-product.superwoo-variation-cards-enabled form.variations_form .quantity .plus {
+    margin: 0 !important;
 }
 
 @media (max-width: 640px) {

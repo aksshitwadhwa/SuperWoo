@@ -313,9 +313,9 @@ function superwoo_cart_primary_button_html() {
             <span>
                 <?php
                 printf(
-                    /* translators: %s: formatted cart subtotal. */
+                    /* translators: %s: formatted WooCommerce cart grand total. */
                     esc_html__('Proceed to Checkout · %s', 'superwoo'),
-                    esc_html(wp_strip_all_tags($cart->get_cart_subtotal()))
+                    esc_html(wp_strip_all_tags(wc_price((float) $cart->get_total('edit'))))
                 );
                 ?>
             </span>
