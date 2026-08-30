@@ -775,11 +775,9 @@ body.single-product form.cart a[href*="buy-now"] {
 }
 
 .superwoo-cart-shell .superwoo-cart-total {
-    align-items: center;
-    display: none;
-    flex-direction: row !important;
-    justify-content: space-between;
-    margin-bottom: 12px;
+    display: grid;
+    gap: 7px;
+    margin-bottom: 14px;
     writing-mode: horizontal-tb !important;
 }
 

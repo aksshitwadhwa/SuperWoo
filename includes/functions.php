@@ -261,7 +261,7 @@ function superwoo_cart_total_html() {
         </div>
         <div class="superwoo-cart-total__row">
             <span><?php esc_html_e('Shipping', 'superwoo'); ?></span>
-            <strong><?php echo wp_kses_post(wc_price((float) $cart->get_shipping_total())); ?></strong>
+            <strong><?php echo wp_kses_post($cart->get_cart_shipping_total()); ?></strong>
         </div>
         <div class="superwoo-cart-total__row superwoo-cart-total__row--grand-total">
             <span><?php esc_html_e('Total', 'superwoo'); ?></span>
