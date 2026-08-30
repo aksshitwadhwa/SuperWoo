@@ -8,6 +8,7 @@ class SuperWoo_GitHub_Updater {
     public function hooks() {
         add_filter('update_plugins_github.com', [$this, 'check_update_uri'], 10, 4);
         add_filter('pre_set_site_transient_update_plugins', [$this, 'inject_update']);
+        add_filter('site_transient_update_plugins', [$this, 'inject_update']);
         add_filter('plugins_api', [$this, 'plugin_information'], 10, 3);
     }
     public function check_update_uri($update, $plugin_data, $plugin_file, $locales) {
