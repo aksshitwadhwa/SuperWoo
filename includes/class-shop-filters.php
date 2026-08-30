@@ -19,11 +19,27 @@ class SuperWoo_Shop_Filters {
         $atts = shortcode_atts([
             'title' => __('Filter products', 'superwoo'),
             'show_title' => 'yes',
+            'show_search' => 'yes',
+            'show_categories' => 'yes',
+            'show_price' => 'yes',
+            'show_attributes' => 'yes',
+            'show_stock' => 'yes',
+            'show_sale' => 'yes',
+            'show_rating' => 'yes',
+            'show_sort' => 'yes',
         ], $atts, 'superwoo_shop_filters');
 
         return self::render([
             'title' => (string) $atts['title'],
             'show_title' => 'yes' === $atts['show_title'],
+            'show_search' => 'yes' === $atts['show_search'],
+            'show_categories' => 'yes' === $atts['show_categories'],
+            'show_price' => 'yes' === $atts['show_price'],
+            'show_attributes' => 'yes' === $atts['show_attributes'],
+            'show_stock' => 'yes' === $atts['show_stock'],
+            'show_sale' => 'yes' === $atts['show_sale'],
+            'show_rating' => 'yes' === $atts['show_rating'],
+            'show_sort' => 'yes' === $atts['show_sort'],
         ]);
     }
 
@@ -48,6 +64,14 @@ class SuperWoo_Shop_Filters {
         $args = wp_parse_args($args, [
             'title' => __('Filter products', 'superwoo'),
             'show_title' => true,
+            'show_search' => true,
+            'show_categories' => true,
+            'show_price' => true,
+            'show_attributes' => true,
+            'show_stock' => true,
+            'show_sale' => true,
+            'show_rating' => true,
+            'show_sort' => true,
         ]);
         wp_enqueue_style('superwoo-shop-filters');
 
@@ -63,16 +87,18 @@ class SuperWoo_Shop_Filters {
         ?>
         <form class="superwoo-shop-filters" method="get" action="">
             <?php if (!empty($args['show_title']) && '' !== trim((string) $args['title'])) : ?>
-                <h3 class="superwoo-shop-filters__title"><?php echo esc_html($args['title']); ?></h3>
+                <h4 class="superwoo-shop-filters__title"><?php echo esc_html($args['title']); ?></h4>
             <?php endif; ?>
 
-            <div class="superwoo-shop-filters__field superwoo-shop-filters__field--search">
-                <label for="superwoo-filter-search"><?php esc_html_e('Search products', 'superwoo'); ?></label>
-                <input id="superwoo-filter-search" type="search" name="s" value="<?php echo esc_attr(self::request_string('s')); ?>" placeholder="<?php esc_attr_e('Search products…', 'superwoo'); ?>">
-                <input type="hidden" name="post_type" value="product">
-            </div>
+            <?php if (!empty($args['show_search'])) : ?>
+                <div class="superwoo-shop-filters__field superwoo-shop-filters__field--search">
+                    <label for="superwoo-filter-search"><?php esc_html_e('Search products', 'superwoo'); ?></label>
+                    <input id="superwoo-filter-search" type="search" name="s" value="<?php echo esc_attr(self::request_string('s')); ?>" placeholder="<?php esc_attr_e('Search products…', 'superwoo'); ?>">
+                    <input type="hidden" name="post_type" value="product">
+                </div>
+            <?php endif; ?>
 
-            <?php if (!empty($categories) && !is_wp_error($categories)) : ?>
+            <?php if (!empty($args['show_categories']) && !empty($categories) && !is_wp_error($categories)) : ?>
                 <fieldset class="superwoo-shop-filters__field">
                     <legend><?php esc_html_e('Categories', 'superwoo'); ?></legend>
                     <div class="superwoo-shop-filters__choices">
@@ -83,16 +109,18 @@ class SuperWoo_Shop_Filters {
                 </fieldset>
             <?php endif; ?>
 
-            <fieldset class="superwoo-shop-filters__field">
-                <legend><?php esc_html_e('Price', 'superwoo'); ?></legend>
-                <div class="superwoo-shop-filters__range">
-                    <input type="number" name="min_price" min="0" step="0.01" value="<?php echo esc_attr(self::request_number('min_price')); ?>" placeholder="<?php esc_attr_e('Min', 'superwoo'); ?>">
-                    <span aria-hidden="true">–</span>
-                    <input type="number" name="max_price" min="0" step="0.01" value="<?php echo esc_attr(self::request_number('max_price')); ?>" placeholder="<?php esc_attr_e('Max', 'superwoo'); ?>">
-                </div>
-            </fieldset>
+            <?php if (!empty($args['show_price'])) : ?>
+                <fieldset class="superwoo-shop-filters__field">
+                    <legend><?php esc_html_e('Price', 'superwoo'); ?></legend>
+                    <div class="superwoo-shop-filters__range">
+                        <input type="number" name="min_price" min="0" step="0.01" value="<?php echo esc_attr(self::request_number('min_price')); ?>" placeholder="<?php esc_attr_e('Min', 'superwoo'); ?>">
+                        <span aria-hidden="true">–</span>
+                        <input type="number" name="max_price" min="0" step="0.01" value="<?php echo esc_attr(self::request_number('max_price')); ?>" placeholder="<?php esc_attr_e('Max', 'superwoo'); ?>">
+                    </div>
+                </fieldset>
+            <?php endif; ?>
 
-            <?php foreach ($attributes as $attribute) : ?>
+            <?php if (!empty($args['show_attributes'])) : foreach ($attributes as $attribute) : ?>
                 <?php $terms = get_terms(['taxonomy' => $attribute['taxonomy'], 'hide_empty' => true, 'orderby' => 'name', 'order' => 'ASC']); ?>
                 <?php if (empty($terms) || is_wp_error($terms)) { continue; } ?>
                 <?php $param = 'superwoo_filter_' . $attribute['taxonomy']; $selected = self::request_array($param); ?>
@@ -104,9 +132,9 @@ class SuperWoo_Shop_Filters {
                         <?php endforeach; ?>
                     </div>
                 </fieldset>
-            <?php endforeach; ?>
+            <?php endforeach; endif; ?>
 
-            <fieldset class="superwoo-shop-filters__field">
+            <?php if (!empty($args['show_stock'])) : ?><fieldset class="superwoo-shop-filters__field">
                 <legend><?php esc_html_e('Availability', 'superwoo'); ?></legend>
                 <select name="<?php echo esc_attr(self::STOCK_PARAM); ?>">
                     <option value=""><?php esc_html_e('Any availability', 'superwoo'); ?></option>
@@ -114,28 +142,36 @@ class SuperWoo_Shop_Filters {
                         <option value="<?php echo esc_attr($value); ?>" <?php selected($value, self::request_string(self::STOCK_PARAM)); ?>><?php echo esc_html($label); ?></option>
                     <?php endforeach; ?>
                 </select>
-            </fieldset>
+            </fieldset><?php endif; ?>
 
-            <fieldset class="superwoo-shop-filters__field">
+            <?php if (!empty($args['show_rating'])) : ?><fieldset class="superwoo-shop-filters__field">
                 <legend><?php esc_html_e('Customer rating', 'superwoo'); ?></legend>
-                <select name="<?php echo esc_attr(self::RATING_PARAM); ?>">
-                    <option value=""><?php esc_html_e('Any rating', 'superwoo'); ?></option>
-                    <?php foreach ([4 => __('4 stars & up', 'superwoo'), 3 => __('3 stars & up', 'superwoo'), 2 => __('2 stars & up', 'superwoo'), 1 => __('1 star & up', 'superwoo')] as $value => $label) : ?>
-                        <option value="<?php echo esc_attr($value); ?>" <?php selected((string) $value, self::request_string(self::RATING_PARAM)); ?>><?php echo esc_html($label); ?></option>
+                <div class="superwoo-shop-filters__ratings">
+                    <label class="superwoo-shop-filters__rating">
+                        <input type="radio" name="<?php echo esc_attr(self::RATING_PARAM); ?>" value="" <?php checked('', self::request_string(self::RATING_PARAM)); ?>>
+                        <span><?php esc_html_e('Any rating', 'superwoo'); ?></span>
+                    </label>
+                    <?php foreach ([5, 4, 3, 2, 1] as $value) : ?>
+                        <label class="superwoo-shop-filters__rating">
+                            <input type="radio" name="<?php echo esc_attr(self::RATING_PARAM); ?>" value="<?php echo esc_attr($value); ?>" <?php checked((string) $value, self::request_string(self::RATING_PARAM)); ?>>
+                            <span class="superwoo-shop-filters__stars" aria-hidden="true"><?php echo esc_html(str_repeat('★', $value) . str_repeat('☆', 5 - $value)); ?></span>
+                            <span class="screen-reader-text"><?php echo esc_html(sprintf(_n('%d star and up', '%d stars and up', $value, 'superwoo'), $value)); ?></span>
+                            <span class="superwoo-shop-filters__rating-label"><?php echo esc_html(sprintf(_n('%d star & up', '%d stars & up', $value, 'superwoo'), $value)); ?></span>
+                        </label>
                     <?php endforeach; ?>
-                </select>
-            </fieldset>
+                </div>
+            </fieldset><?php endif; ?>
 
-            <label class="superwoo-shop-filters__toggle"><input type="checkbox" name="<?php echo esc_attr(self::SALE_PARAM); ?>" value="1" <?php checked('1', self::request_string(self::SALE_PARAM)); ?>> <?php esc_html_e('On sale only', 'superwoo'); ?></label>
+            <?php if (!empty($args['show_sale'])) : ?><label class="superwoo-shop-filters__toggle"><input type="checkbox" name="<?php echo esc_attr(self::SALE_PARAM); ?>" value="1" <?php checked('1', self::request_string(self::SALE_PARAM)); ?>> <?php esc_html_e('On sale only', 'superwoo'); ?></label><?php endif; ?>
 
-            <div class="superwoo-shop-filters__field">
+            <?php if (!empty($args['show_sort'])) : ?><div class="superwoo-shop-filters__field">
                 <label for="superwoo-filter-sort"><?php esc_html_e('Sort by', 'superwoo'); ?></label>
                 <select id="superwoo-filter-sort" name="orderby">
                     <?php foreach (self::sorting_options() as $value => $label) : ?>
                         <option value="<?php echo esc_attr($value); ?>" <?php selected($value, self::request_string('orderby')); ?>><?php echo esc_html($label); ?></option>
                     <?php endforeach; ?>
                 </select>
-            </div>
+            </div><?php endif; ?>
 
             <div class="superwoo-shop-filters__actions">
                 <button type="submit"><?php esc_html_e('Apply filters', 'superwoo'); ?></button>

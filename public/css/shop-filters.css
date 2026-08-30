@@ -6,6 +6,12 @@
 .superwoo-shop-filters__range { align-items: center; display: grid; gap: 7px; grid-template-columns: 1fr auto 1fr; }
 .superwoo-shop-filters__choices { display: grid; gap: 8px; max-height: 180px; overflow: auto; }
 .superwoo-shop-filters__choices label, .superwoo-shop-filters__toggle { align-items: center; display: flex; font-size: 14px; gap: 8px; }
+.superwoo-shop-filters__ratings { display: grid; gap: 8px; }
+.superwoo-shop-filters__rating { align-items: center; border: 1px solid #cbd5e1; border-radius: 7px; cursor: pointer; display: flex; font-size: 14px; gap: 8px; min-height: 38px; padding: 7px 10px; }
+.superwoo-shop-filters__rating:has(input:checked) { background: color-mix(in srgb, var(--superwoo-primary, #005b7f) 8%, #fff); border-color: var(--superwoo-primary, #005b7f); }
+.superwoo-shop-filters__rating input { accent-color: var(--superwoo-primary, #005b7f); margin: 0; }
+.superwoo-shop-filters__stars { color: var(--superwoo-star, #ffb400); font-size: 17px; letter-spacing: 1px; white-space: nowrap; }
+.superwoo-shop-filters__rating-label { color: #475569; font-size: 13px; }
 .superwoo-shop-filters__actions { align-items: center; display: flex; flex-wrap: wrap; gap: 12px; }
 .superwoo-shop-filters__actions button { background: var(--superwoo-button, #005b7f); border: 0; border-radius: 7px; color: var(--superwoo-button-text, #fff); cursor: pointer; font-weight: 700; min-height: 42px; padding: 9px 15px; }
 .superwoo-shop-filters__actions button:hover, .superwoo-shop-filters__actions button:focus { background: var(--superwoo-button-hover, #004866); color: var(--superwoo-button-text, #fff); }

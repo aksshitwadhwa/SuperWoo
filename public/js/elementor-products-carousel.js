@@ -42,6 +42,41 @@
         return number(value && typeof value === 'object' ? value.size : value, fallback, 0, 100);
     }
 
+    function cssValue(root, property, fallback) {
+        var value = window.getComputedStyle(root).getPropertyValue(property).trim();
+        return value || fallback;
+    }
+
+    function previewConfigFromCss(root, config) {
+        var isEditor = root.classList.contains('elementor-element-edit-mode');
+        if (!isEditor) { return config; }
+        if (!root.classList.contains('superwoo-carousel-enabled-yes')) { return null; }
+        var allowedExtended = ['none', 'both', 'left', 'right'];
+        var allowedPosition = ['inside', 'outside', 'top-right', 'bottom-right'];
+        var extended = cssValue(root, '--superwoo-preview-extended', 'none');
+        var position = root.className.match(/superwoo-carousel-arrow-position-([\w-]+)/);
+        var style = root.className.match(/superwoo-carousel-arrow-style-([\w-]+)/);
+        var slides = number(cssValue(root, '--superwoo-preview-slides', 4), 4, 1, 8);
+        var gap = number(cssValue(root, '--superwoo-preview-gap', 20), 20, 0, 100);
+        var previewExtended = allowedExtended.indexOf(extended) !== -1 ? extended : 'none';
+        config = config || {};
+        // Elementor resolves responsive CSS custom properties for the active preview device.
+        // Use that resolved value for every breakpoint so a control change is reflected immediately.
+        config.slidesToShow = { desktop: slides, tablet: slides, mobile: slides };
+        config.spaceBetween = { desktop: gap, tablet: gap, mobile: gap };
+        config.slidesToScroll = number(cssValue(root, '--superwoo-preview-scroll', 1), 1, 1, 8);
+        config.productsLimit = number(cssValue(root, '--superwoo-preview-product-limit', 12), 12, 1, 100);
+        config.arrows = root.classList.contains('superwoo-carousel-arrows-yes');
+        config.dots = root.classList.contains('superwoo-carousel-dots-yes');
+        config.autoplay = root.classList.contains('superwoo-carousel-autoplay-yes');
+        config.loop = root.classList.contains('superwoo-carousel-loop-yes');
+        config.pauseOnHover = root.classList.contains('superwoo-carousel-pause_hover-yes');
+        config.arrowStyle = style && ['chevron', 'angle', 'arrow', 'triangle'].indexOf(style[1]) !== -1 ? style[1] : 'chevron';
+        config.arrowPosition = position && allowedPosition.indexOf(position[1]) !== -1 ? position[1] : 'inside';
+        config.extended = { desktop: previewExtended, tablet: previewExtended, mobile: previewExtended };
+        return config;
+    }
+
     function Carousel(root, config) {
         this.root = root;
         this.config = config;
@@ -262,21 +297,45 @@
         this.viewport.parentNode.insertBefore(this.track, this.viewport); this.viewport.remove();
         if (this.previous) { this.previous.remove(); this.next.remove(); }
         if (this.dots) { this.dots.remove(); }
-        this.root.classList.remove('superwoo-carousel--ready');
+        this.root.classList.remove('superwoo-carousel--ready', 'superwoo-carousel-arrows-inside', 'superwoo-carousel-arrows-outside', 'superwoo-carousel-arrows-top-right', 'superwoo-carousel-arrows-bottom-right');
     };
 
     function initialize(scope) {
         var root = scope && scope.nodeType ? scope : (scope && scope[0] && scope[0].nodeType ? scope[0] : document);
-        if (root.matches && !root.matches('[data-superwoo-products-carousel]')) {
-            root = root.querySelector('[data-superwoo-products-carousel]');
+        if (root.matches && !root.matches('[data-superwoo-products-carousel], .superwoo-carousel-enabled-yes')) {
+            root = root.querySelector('[data-superwoo-products-carousel], .superwoo-carousel-enabled-yes');
         }
-        if (!root || !root.matches || !root.matches('[data-superwoo-products-carousel]')) { return; }
+        if (!root || !root.matches || !root.matches('[data-superwoo-products-carousel], .superwoo-carousel-enabled-yes')) { return; }
+        var config = null;
+        try { config = root.hasAttribute('data-superwoo-products-carousel') ? JSON.parse(root.getAttribute('data-superwoo-products-carousel')) : {}; } catch (error) { config = {}; }
+        config = previewConfigFromCss(root, config);
+        if (!config) {
+            if (root[instanceKey]) { root[instanceKey].destroy(); root[instanceKey] = null; }
+            return;
+        }
+        var signature = JSON.stringify(config);
+        if (root[instanceKey] && root.__superwooCarouselSignature === signature) { return; }
         if (root[instanceKey]) { root[instanceKey].destroy(); }
-        try { root[instanceKey] = new Carousel(root, JSON.parse(root.getAttribute('data-superwoo-products-carousel'))); } catch (error) { root[instanceKey] = null; }
+        try {
+            root[instanceKey] = new Carousel(root, config);
+            root.__superwooCarouselSignature = signature;
+        } catch (error) { root[instanceKey] = null; }
     }
 
     function initializeAll() {
-        document.querySelectorAll('[data-superwoo-products-carousel]').forEach(initialize);
+        document.querySelectorAll('[data-superwoo-products-carousel], .superwoo-carousel-enabled-yes').forEach(initialize);
+    }
+
+    function bindEditorStylePreview() {
+        if (!document.body.classList.contains('elementor-editor-active') || !window.MutationObserver) { return; }
+        var queued = false;
+        var refresh = function () {
+            if (queued) { return; }
+            queued = true;
+            window.requestAnimationFrame(function () { queued = false; initializeAll(); });
+        };
+        new MutationObserver(refresh).observe(document.head, { childList: true, subtree: true, characterData: true });
+        new MutationObserver(refresh).observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class'] });
     }
 
     function editorConfig(settings) {
@@ -332,12 +391,16 @@
         });
     }
 
-    document.addEventListener('DOMContentLoaded', initializeAll);
+    document.addEventListener('DOMContentLoaded', function () {
+        initializeAll();
+        bindEditorStylePreview();
+    });
     window.addEventListener('elementor/frontend/init', function () {
         if (window.elementorFrontend && window.elementorFrontend.hooks) {
             window.elementorFrontend.hooks.addAction('frontend/element_ready/woocommerce-products.default', initialize);
         }
         initializeAll();
         bindEditorPreview();
+        bindEditorStylePreview();
     });
 }());

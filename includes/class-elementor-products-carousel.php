@@ -29,7 +29,7 @@ class SuperWoo_Elementor_Products_Carousel {
         $element->add_control('superwoo_carousel_enabled', [
             'label' => __('Enable Carousel', 'superwoo'), 'type' => \Elementor\Controls_Manager::SWITCHER,
             'label_on' => __('Yes', 'superwoo'), 'label_off' => __('No', 'superwoo'),
-            'return_value' => 'yes', 'default' => '',
+            'return_value' => 'yes', 'default' => '', 'prefix_class' => 'superwoo-carousel-enabled-',
         ]);
 
         $condition = ['superwoo_carousel_enabled' => 'yes'];
@@ -37,10 +37,12 @@ class SuperWoo_Elementor_Products_Carousel {
             'label' => __('Slides to Show', 'superwoo'), 'type' => \Elementor\Controls_Manager::NUMBER,
             'min' => 1, 'max' => 8, 'step' => 0.1, 'default' => 4,
             'tablet_default' => 2, 'mobile_default' => 1, 'condition' => $condition,
+            'selectors' => ['{{WRAPPER}}' => '--superwoo-preview-slides: {{VALUE}};'],
         ]);
         $element->add_control('superwoo_carousel_slides_to_scroll', [
             'label' => __('Slides to Scroll', 'superwoo'), 'type' => \Elementor\Controls_Manager::NUMBER,
             'min' => 1, 'max' => 8, 'default' => 1, 'condition' => $condition,
+            'selectors' => ['{{WRAPPER}}' => '--superwoo-preview-scroll: {{VALUE}};'],
         ]);
         $element->add_control('superwoo_carousel_products_limit', [
             'label' => __('Products to Display', 'superwoo'),
@@ -50,6 +52,7 @@ class SuperWoo_Elementor_Products_Carousel {
             'max' => 100,
             'default' => 12,
             'condition' => $condition,
+            'selectors' => ['{{WRAPPER}}' => '--superwoo-preview-product-limit: {{VALUE}};'],
         ]);
         $element->add_responsive_control('superwoo_carousel_space_between', [
             'label' => __('Space Between', 'superwoo'), 'type' => \Elementor\Controls_Manager::SLIDER,
@@ -57,6 +60,7 @@ class SuperWoo_Elementor_Products_Carousel {
             'default' => ['size' => 20, 'unit' => 'px'],
             'tablet_default' => ['size' => 20, 'unit' => 'px'],
             'mobile_default' => ['size' => 20, 'unit' => 'px'], 'condition' => $condition,
+            'selectors' => ['{{WRAPPER}}' => '--superwoo-preview-gap: {{SIZE}};'],
         ]);
 
         foreach ([
@@ -68,6 +72,7 @@ class SuperWoo_Elementor_Products_Carousel {
             $element->add_control($id, [
                 'label' => $control[0], 'type' => \Elementor\Controls_Manager::SWITCHER,
                 'return_value' => 'yes', 'default' => $control[1], 'condition' => $condition,
+                'prefix_class' => 'superwoo-carousel-' . str_replace('superwoo_carousel_', '', $id) . '-',
             ]);
         }
         $element->add_control('superwoo_carousel_arrow_style', [
@@ -81,6 +86,7 @@ class SuperWoo_Elementor_Products_Carousel {
             ],
             'default' => 'chevron',
             'condition' => ['superwoo_carousel_enabled' => 'yes', 'superwoo_carousel_arrows' => 'yes'],
+            'prefix_class' => 'superwoo-carousel-arrow-style-',
         ]);
         $element->add_control('superwoo_carousel_autoplay_speed', [
             'label' => __('Autoplay Speed', 'superwoo'), 'type' => \Elementor\Controls_Manager::NUMBER,
@@ -96,6 +102,7 @@ class SuperWoo_Elementor_Products_Carousel {
             'label' => __('Extended / Peek Mode', 'superwoo'), 'type' => \Elementor\Controls_Manager::SELECT,
             'options' => ['none' => __('None', 'superwoo'), 'both' => __('Both Sides', 'superwoo'), 'left' => __('Left Side', 'superwoo'), 'right' => __('Right Side', 'superwoo')],
             'default' => 'none', 'tablet_default' => 'none', 'mobile_default' => 'none', 'condition' => $condition,
+            'selectors' => ['{{WRAPPER}}' => '--superwoo-preview-extended: {{VALUE}};'],
         ]);
         $element->add_control('superwoo_carousel_arrow_color', [
             'label' => __('Arrow Color', 'superwoo'), 'type' => \Elementor\Controls_Manager::COLOR,
@@ -112,7 +119,7 @@ class SuperWoo_Elementor_Products_Carousel {
         $element->add_control('superwoo_carousel_arrow_position', [
             'label' => __('Arrow Position', 'superwoo'), 'type' => \Elementor\Controls_Manager::SELECT,
             'options' => ['inside' => __('Inside carousel', 'superwoo'), 'outside' => __('Outside carousel', 'superwoo'), 'top-right' => __('Top right', 'superwoo'), 'bottom-right' => __('Bottom right', 'superwoo')],
-            'default' => 'inside', 'condition' => $condition,
+            'default' => 'inside', 'condition' => $condition, 'prefix_class' => 'superwoo-carousel-arrow-position-',
         ]);
         $element->add_responsive_control('superwoo_carousel_dot_size', [
             'label' => __('Dot Size', 'superwoo'), 'type' => \Elementor\Controls_Manager::SLIDER,
