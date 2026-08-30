@@ -51,6 +51,7 @@ function superwoo_get_settings() {
         'enable_faqs'           => true,
         'enable_reviews'        => true,
         'enable_variation_cards' => true,
+        'enable_shop_filters'    => true,
         'enable_bundle_offers'  => true,
         'enable_cart_drawer'    => true,
         'enable_elementor_products_carousel' => false,

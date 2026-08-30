@@ -49,6 +49,9 @@ class SuperWoo_Plugin {
         (new SuperWoo_Shortcodes())->hooks();
         (new SuperWoo_Product_Reviews())->hooks();
         (new SuperWoo_Variation_Cards())->hooks();
+        if (!empty(superwoo_get_settings()['enable_shop_filters'])) {
+            (new SuperWoo_Shop_Filters())->hooks();
+        }
         (new SuperWoo_Cart_Drawer())->hooks();
         if (!empty(superwoo_get_settings()['enable_elementor_products_carousel']) && class_exists('SuperWoo_Elementor_Products_Carousel')) {
             (new SuperWoo_Elementor_Products_Carousel())->hooks();
@@ -146,6 +149,7 @@ class SuperWoo_Plugin {
             'enable_faqs'           => !empty($_POST['enable_faqs']),
             'enable_reviews'        => !empty($_POST['enable_reviews']),
             'enable_variation_cards' => !empty($_POST['enable_variation_cards']),
+            'enable_shop_filters'    => !empty($_POST['enable_shop_filters']),
             'enable_bundle_offers'  => !empty($_POST['enable_bundle_offers']),
             'enable_cart_drawer'    => !empty($_POST['enable_cart_drawer']),
             'enable_elementor_products_carousel' => !empty($_POST['enable_elementor_products_carousel']),

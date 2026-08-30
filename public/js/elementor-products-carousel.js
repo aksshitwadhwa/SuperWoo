@@ -21,6 +21,27 @@
         return values.desktop;
     }
 
+    function arrowGlyph(style, direction) {
+        var glyphs = {
+            chevron: { previous: '\u2039', next: '\u203a' },
+            angle: { previous: '\u276e', next: '\u276f' },
+            arrow: { previous: '\u2190', next: '\u2192' },
+            triangle: { previous: '\u25c0', next: '\u25b6' }
+        };
+        var selected = glyphs[style] || glyphs.chevron;
+        return selected[direction];
+    }
+
+    function number(value, fallback, min, max) {
+        value = Number(value);
+        if (!isFinite(value)) { value = fallback; }
+        return Math.max(min, Math.min(max, value));
+    }
+
+    function sliderValue(value, fallback) {
+        return number(value && typeof value === 'object' ? value.size : value, fallback, 0, 100);
+    }
+
     function Carousel(root, config) {
         this.root = root;
         this.config = config;
@@ -32,13 +53,22 @@
         if (!this.track || !this.track.children.length) {
             return;
         }
-        this.slides = Array.prototype.slice.call(this.track.children);
+        this.allSlides = Array.prototype.slice.call(this.track.children);
+        this.syncProductsLimit();
         this.build();
         this.syncExtendedClass();
         this.bind();
         this.update();
         this.startAutoplay();
     }
+
+    Carousel.prototype.syncProductsLimit = function () {
+        var limit = number(this.config.productsLimit, this.allSlides.length, 1, 100);
+        this.slides = this.allSlides.filter(function (slide, index) {
+            slide.hidden = index >= limit;
+            return index < limit;
+        });
+    };
 
     Carousel.prototype.build = function () {
         this.viewport = document.createElement('div');
@@ -53,8 +83,8 @@
         }, this);
 
         if (this.config.arrows) {
-            this.previous = this.button('previous', '\u2039');
-            this.next = this.button('next', '\u203a');
+            this.previous = this.button('previous');
+            this.next = this.button('next');
             this.root.appendChild(this.previous);
             this.root.appendChild(this.next);
         }
@@ -68,12 +98,15 @@
         this.root.classList.add('superwoo-carousel-arrows-' + (this.config.arrowPosition || 'inside'));
     };
 
-    Carousel.prototype.button = function (direction, text) {
+    Carousel.prototype.button = function (direction) {
         var button = document.createElement('button');
+        var icon = document.createElement('span');
         button.type = 'button';
         button.className = 'superwoo-carousel__arrow superwoo-carousel__arrow--' + direction;
         button.setAttribute('aria-label', direction === 'previous' ? 'Previous products' : 'Next products');
-        button.innerHTML = '<span aria-hidden="true">' + text + '</span>';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = arrowGlyph(this.config.arrowStyle, direction);
+        button.appendChild(icon);
         return button;
     };
 
@@ -221,9 +254,9 @@
         }
         if (this.resizeObserver) { this.resizeObserver.disconnect(); }
         if (!this.viewport) { return; }
-        this.slides.forEach(function (slide) {
+        this.allSlides.forEach(function (slide) {
             slide.classList.remove('superwoo-carousel__slide'); slide.style.removeProperty('flex'); slide.style.removeProperty('width');
-            slide.removeAttribute('role'); slide.removeAttribute('aria-label');
+            slide.removeAttribute('role'); slide.removeAttribute('aria-label'); slide.hidden = false;
         });
         this.track.classList.remove('superwoo-carousel__track'); this.track.style.gap = ''; this.track.style.transform = '';
         this.viewport.parentNode.insertBefore(this.track, this.viewport); this.viewport.remove();
@@ -245,11 +278,66 @@
     function initializeAll() {
         document.querySelectorAll('[data-superwoo-products-carousel]').forEach(initialize);
     }
+
+    function editorConfig(settings) {
+        var enabled = settings.superwoo_carousel_enabled === 'yes';
+        if (!enabled) { return null; }
+        var value = function (key, fallback) { return settings[key] === undefined || settings[key] === '' ? fallback : settings[key]; };
+        return {
+            slidesToShow: {
+                desktop: number(value('superwoo_carousel_slides_to_show', 4), 4, 1, 8),
+                tablet: number(value('superwoo_carousel_slides_to_show_tablet', 2), 2, 1, 8),
+                mobile: number(value('superwoo_carousel_slides_to_show_mobile', 1), 1, 1, 8)
+            },
+            spaceBetween: {
+                desktop: sliderValue(value('superwoo_carousel_space_between', 20), 20),
+                tablet: sliderValue(value('superwoo_carousel_space_between_tablet', 20), 20),
+                mobile: sliderValue(value('superwoo_carousel_space_between_mobile', 20), 20)
+            },
+            slidesToScroll: number(value('superwoo_carousel_slides_to_scroll', 1), 1, 1, 8),
+            productsLimit: number(value('superwoo_carousel_products_limit', 12), 12, 1, 100),
+            arrows: value('superwoo_carousel_arrows', 'yes') === 'yes',
+            arrowStyle: ['chevron', 'angle', 'arrow', 'triangle'].indexOf(value('superwoo_carousel_arrow_style', 'chevron')) !== -1 ? value('superwoo_carousel_arrow_style', 'chevron') : 'chevron',
+            dots: value('superwoo_carousel_dots', '') === 'yes',
+            autoplay: value('superwoo_carousel_autoplay', '') === 'yes',
+            autoplaySpeed: number(value('superwoo_carousel_autoplay_speed', 3000), 3000, 500, 60000),
+            loop: value('superwoo_carousel_loop', 'yes') === 'yes',
+            pauseOnHover: value('superwoo_carousel_pause_hover', 'yes') === 'yes',
+            extended: {
+                desktop: value('superwoo_carousel_extended', 'none'),
+                tablet: value('superwoo_carousel_extended_tablet', value('superwoo_carousel_extended', 'none')),
+                mobile: value('superwoo_carousel_extended_mobile', value('superwoo_carousel_extended_tablet', value('superwoo_carousel_extended', 'none')))
+            },
+            arrowPosition: value('superwoo_carousel_arrow_position', 'inside')
+        };
+    }
+
+    function bindEditorPreview() {
+        if (!window.elementor || !window.elementor.channels || !window.elementor.channels.editor) { return; }
+        window.elementor.channels.editor.on('change:element', function (model) {
+            if (!model || model.get('widgetType') !== 'woocommerce-products') { return; }
+            var settings = model.get('settings');
+            var attributes = settings && settings.attributes ? settings.attributes : null;
+            var config = attributes && editorConfig(attributes);
+            var id = model.get('id');
+            var root = id ? document.querySelector('.elementor-element-' + id) : null;
+            if (!root) { return; }
+            if (!config) {
+                if (root[instanceKey]) { root[instanceKey].destroy(); root[instanceKey] = null; }
+                root.removeAttribute('data-superwoo-products-carousel');
+                return;
+            }
+            root.setAttribute('data-superwoo-products-carousel', JSON.stringify(config));
+            initialize(root);
+        });
+    }
+
     document.addEventListener('DOMContentLoaded', initializeAll);
     window.addEventListener('elementor/frontend/init', function () {
         if (window.elementorFrontend && window.elementorFrontend.hooks) {
             window.elementorFrontend.hooks.addAction('frontend/element_ready/woocommerce-products.default', initialize);
         }
         initializeAll();
+        bindEditorPreview();
     });
 }());

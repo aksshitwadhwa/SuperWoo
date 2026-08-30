@@ -42,6 +42,15 @@ class SuperWoo_Elementor_Products_Carousel {
             'label' => __('Slides to Scroll', 'superwoo'), 'type' => \Elementor\Controls_Manager::NUMBER,
             'min' => 1, 'max' => 8, 'default' => 1, 'condition' => $condition,
         ]);
+        $element->add_control('superwoo_carousel_products_limit', [
+            'label' => __('Products to Display', 'superwoo'),
+            'description' => __('The total number of products loaded into this carousel.', 'superwoo'),
+            'type' => \Elementor\Controls_Manager::NUMBER,
+            'min' => 1,
+            'max' => 100,
+            'default' => 12,
+            'condition' => $condition,
+        ]);
         $element->add_responsive_control('superwoo_carousel_space_between', [
             'label' => __('Space Between', 'superwoo'), 'type' => \Elementor\Controls_Manager::SLIDER,
             'size_units' => ['px'], 'range' => ['px' => ['min' => 0, 'max' => 100]],
@@ -61,6 +70,18 @@ class SuperWoo_Elementor_Products_Carousel {
                 'return_value' => 'yes', 'default' => $control[1], 'condition' => $condition,
             ]);
         }
+        $element->add_control('superwoo_carousel_arrow_style', [
+            'label' => __('Arrow Icon', 'superwoo'),
+            'type' => \Elementor\Controls_Manager::SELECT,
+            'options' => [
+                'chevron'  => __('Chevron ‹ ›', 'superwoo'),
+                'angle'    => __('Angle ❮ ❯', 'superwoo'),
+                'arrow'    => __('Arrow ← →', 'superwoo'),
+                'triangle' => __('Triangle ◀ ▶', 'superwoo'),
+            ],
+            'default' => 'chevron',
+            'condition' => ['superwoo_carousel_enabled' => 'yes', 'superwoo_carousel_arrows' => 'yes'],
+        ]);
         $element->add_control('superwoo_carousel_autoplay_speed', [
             'label' => __('Autoplay Speed', 'superwoo'), 'type' => \Elementor\Controls_Manager::NUMBER,
             'min' => 500, 'step' => 100, 'default' => 3000,
@@ -113,6 +134,13 @@ class SuperWoo_Elementor_Products_Carousel {
             return;
         }
 
+        // Elementor's Products widget reads this setting when it builds the
+        // WooCommerce query, so the carousel only loads the requested amount.
+        $products_limit = (int) $this->number($settings['superwoo_carousel_products_limit'] ?? 12, 12, 1, 100);
+        if (method_exists($element, 'set_settings')) {
+            $element->set_settings('posts_per_page', $products_limit);
+        }
+
         $config = [
             'slidesToShow' => [
                 'desktop' => $this->number($settings['superwoo_carousel_slides_to_show'] ?? 4, 4, 1, 8),
@@ -125,7 +153,9 @@ class SuperWoo_Elementor_Products_Carousel {
                 'mobile' => $this->slider_size($settings['superwoo_carousel_space_between_mobile'] ?? [], 20),
             ],
             'slidesToScroll' => $this->number($settings['superwoo_carousel_slides_to_scroll'] ?? 1, 1, 1, 8),
+            'productsLimit' => $products_limit,
             'arrows' => 'yes' === ($settings['superwoo_carousel_arrows'] ?? 'yes'),
+            'arrowStyle' => $this->arrow_style_value($settings['superwoo_carousel_arrow_style'] ?? 'chevron'),
             'dots' => 'yes' === ($settings['superwoo_carousel_dots'] ?? ''),
             'autoplay' => 'yes' === ($settings['superwoo_carousel_autoplay'] ?? ''),
             'autoplaySpeed' => (int) $this->number($settings['superwoo_carousel_autoplay_speed'] ?? 3000, 3000, 500, 60000),
@@ -165,5 +195,9 @@ class SuperWoo_Elementor_Products_Carousel {
 
     private function extended_value($value) {
         return in_array($value, ['none', 'both', 'left', 'right'], true) ? $value : 'none';
+    }
+
+    private function arrow_style_value($value) {
+        return in_array($value, ['chevron', 'angle', 'arrow', 'triangle'], true) ? $value : 'chevron';
     }
 }
