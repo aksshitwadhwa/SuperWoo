@@ -71,10 +71,10 @@ class SuperWoo_Elementor_Products_Carousel {
             'return_value' => 'yes', 'default' => 'yes',
             'condition' => ['superwoo_carousel_enabled' => 'yes', 'superwoo_carousel_autoplay' => 'yes'],
         ]);
-        $element->add_control('superwoo_carousel_extended', [
+        $element->add_responsive_control('superwoo_carousel_extended', [
             'label' => __('Extended / Peek Mode', 'superwoo'), 'type' => \Elementor\Controls_Manager::SELECT,
             'options' => ['none' => __('None', 'superwoo'), 'both' => __('Both Sides', 'superwoo'), 'left' => __('Left Side', 'superwoo'), 'right' => __('Right Side', 'superwoo')],
-            'default' => 'none', 'condition' => $condition,
+            'default' => 'none', 'tablet_default' => 'none', 'mobile_default' => 'none', 'condition' => $condition,
         ]);
         $element->add_control('superwoo_carousel_arrow_color', [
             'label' => __('Arrow Color', 'superwoo'), 'type' => \Elementor\Controls_Manager::COLOR,
@@ -126,7 +126,11 @@ class SuperWoo_Elementor_Products_Carousel {
             'autoplaySpeed' => (int) $this->number($settings['superwoo_carousel_autoplay_speed'] ?? 3000, 3000, 500, 60000),
             'loop' => 'yes' === ($settings['superwoo_carousel_loop'] ?? 'yes'),
             'pauseOnHover' => 'yes' === ($settings['superwoo_carousel_pause_hover'] ?? 'yes'),
-            'extended' => in_array(($settings['superwoo_carousel_extended'] ?? 'none'), ['none', 'both', 'left', 'right'], true) ? $settings['superwoo_carousel_extended'] : 'none',
+            'extended' => [
+                'desktop' => $this->extended_value($settings['superwoo_carousel_extended'] ?? 'none'),
+                'tablet' => $this->extended_value($settings['superwoo_carousel_extended_tablet'] ?? ($settings['superwoo_carousel_extended'] ?? 'none')),
+                'mobile' => $this->extended_value($settings['superwoo_carousel_extended_mobile'] ?? ($settings['superwoo_carousel_extended_tablet'] ?? ($settings['superwoo_carousel_extended'] ?? 'none'))),
+            ],
         ];
         $element->add_render_attribute('_wrapper', 'class', 'superwoo-products-carousel-enabled');
         $element->add_render_attribute('_wrapper', 'data-superwoo-products-carousel', wp_json_encode($config));
@@ -151,5 +155,9 @@ class SuperWoo_Elementor_Products_Carousel {
 
     private function slider_size($value, $default) {
         return $this->number(is_array($value) ? ($value['size'] ?? $default) : $value, $default, 0, 100);
+    }
+
+    private function extended_value($value) {
+        return in_array($value, ['none', 'both', 'left', 'right'], true) ? $value : 'none';
     }
 }

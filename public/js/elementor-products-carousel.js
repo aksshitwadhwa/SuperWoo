@@ -34,7 +34,7 @@
         }
         this.slides = Array.prototype.slice.call(this.track.children);
         this.build();
-        this.root.classList.add('superwoo-carousel-extended-' + (this.config.extended || 'none'));
+        this.syncExtendedClass();
         this.bind();
         this.update();
         this.startAutoplay();
@@ -114,14 +114,22 @@
 
     Carousel.prototype.metrics = function () {
         var show = Math.max(1, Number(deviceValue(this.config.slidesToShow)) || 1);
-        if (this.config.extended === 'both') { show += 0.5; }
-        if (this.config.extended === 'left' || this.config.extended === 'right') { show += 0.25; }
+        var extended = deviceValue(this.config.extended || { desktop: 'none', tablet: 'none', mobile: 'none' });
+        if (extended === 'both') { show += 0.5; }
+        if (extended === 'left' || extended === 'right') { show += 0.25; }
         return { show: show, gap: Math.max(0, Number(deviceValue(this.config.spaceBetween)) || 0) };
+    };
+
+    Carousel.prototype.syncExtendedClass = function () {
+        var extended = deviceValue(this.config.extended || { desktop: 'none', tablet: 'none', mobile: 'none' });
+        this.root.classList.remove('superwoo-carousel-extended-none', 'superwoo-carousel-extended-both', 'superwoo-carousel-extended-left', 'superwoo-carousel-extended-right');
+        this.root.classList.add('superwoo-carousel-extended-' + extended);
     };
 
     Carousel.prototype.update = function () {
         if (!this.viewport) { return; }
         var metrics = this.metrics();
+        this.syncExtendedClass();
         var width = this.viewport.clientWidth;
         this.slideWidth = (width - (metrics.show - 1) * metrics.gap) / metrics.show;
         this.maxIndex = Math.max(0, this.slides.length - Math.ceil(metrics.show));
