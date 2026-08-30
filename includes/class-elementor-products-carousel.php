@@ -121,6 +121,32 @@ class SuperWoo_Elementor_Products_Carousel {
             'options' => ['inside' => __('Inside carousel', 'superwoo'), 'outside' => __('Outside carousel', 'superwoo'), 'top-right' => __('Top right', 'superwoo'), 'bottom-right' => __('Bottom right', 'superwoo')],
             'default' => 'inside', 'condition' => $condition, 'prefix_class' => 'superwoo-carousel-arrow-position-',
         ]);
+        $element->add_responsive_control('superwoo_carousel_arrow_left_offset', [
+            'label' => __('Left Arrow Offset', 'superwoo'),
+            'description' => __('Move the previous arrow horizontally. Use a negative or positive pixel value.', 'superwoo'),
+            'type' => \Elementor\Controls_Manager::NUMBER,
+            'min' => -300,
+            'max' => 300,
+            'step' => 1,
+            'default' => 0,
+            'tablet_default' => 0,
+            'mobile_default' => 0,
+            'condition' => ['superwoo_carousel_enabled' => 'yes', 'superwoo_carousel_arrows' => 'yes'],
+            'selectors' => ['{{WRAPPER}}' => '--superwoo-carousel-arrow-left-offset: {{VALUE}}px;'],
+        ]);
+        $element->add_responsive_control('superwoo_carousel_arrow_right_offset', [
+            'label' => __('Right Arrow Offset', 'superwoo'),
+            'description' => __('Move the next arrow horizontally. Use a negative or positive pixel value.', 'superwoo'),
+            'type' => \Elementor\Controls_Manager::NUMBER,
+            'min' => -300,
+            'max' => 300,
+            'step' => 1,
+            'default' => 0,
+            'tablet_default' => 0,
+            'mobile_default' => 0,
+            'condition' => ['superwoo_carousel_enabled' => 'yes', 'superwoo_carousel_arrows' => 'yes'],
+            'selectors' => ['{{WRAPPER}}' => '--superwoo-carousel-arrow-right-offset: {{VALUE}}px;'],
+        ]);
         $element->add_responsive_control('superwoo_carousel_dot_size', [
             'label' => __('Dot Size', 'superwoo'), 'type' => \Elementor\Controls_Manager::SLIDER,
             'size_units' => ['px'], 'range' => ['px' => ['min' => 4, 'max' => 24]], 'selectors' => ['{{WRAPPER}}.superwoo-products-carousel-enabled .superwoo-carousel__dots button' => 'width: {{SIZE}}{{UNIT}}; height: {{SIZE}}{{UNIT}};'], 'condition' => $condition,
