@@ -199,15 +199,27 @@
     };
 
     Carousel.prototype.metrics = function () {
-        var show = Math.max(1, Number(deviceValue(this.config.slidesToShow)) || 1);
-        var extended = deviceValue(this.config.extended || { desktop: 'none', tablet: 'none', mobile: 'none' });
+        var isEditorPreview = this.root.classList.contains('elementor-element-edit-mode');
+        // Elementor's preview iframe can report "desktop" even while its mobile
+        // canvas is active. Its generated custom properties are the reliable
+        // source for the current preview device.
+        var show = isEditorPreview
+            ? number(cssValue(this.root, '--superwoo-preview-slides', 4), 4, 1, 8)
+            : Math.max(1, Number(deviceValue(this.config.slidesToShow)) || 1);
+        var extended = isEditorPreview
+            ? cssValue(this.root, '--superwoo-preview-extended', 'none')
+            : deviceValue(this.config.extended || { desktop: 'none', tablet: 'none', mobile: 'none' });
+        if (['none', 'both', 'left', 'right'].indexOf(extended) === -1) { extended = 'none'; }
+        var gap = isEditorPreview
+            ? number(cssValue(this.root, '--superwoo-preview-gap', 20), 20, 0, 100)
+            : Math.max(0, Number(deviceValue(this.config.spaceBetween)) || 0);
         if (extended === 'both') { show += 0.5; }
         if (extended === 'left' || extended === 'right') { show += 0.25; }
-        return { show: show, gap: Math.max(0, Number(deviceValue(this.config.spaceBetween)) || 0) };
+        return { show: show, gap: gap, extended: extended };
     };
 
     Carousel.prototype.syncExtendedClass = function () {
-        var extended = deviceValue(this.config.extended || { desktop: 'none', tablet: 'none', mobile: 'none' });
+        var extended = this.metrics().extended;
         this.root.classList.remove('superwoo-carousel-extended-none', 'superwoo-carousel-extended-both', 'superwoo-carousel-extended-left', 'superwoo-carousel-extended-right');
         this.root.classList.add('superwoo-carousel-extended-' + extended);
     };
