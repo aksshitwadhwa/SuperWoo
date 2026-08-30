@@ -38,6 +38,12 @@ class SuperWoo_Plugin {
         (new SuperWoo_Product_Meta())->hooks();
         (new SuperWoo_Bundle_Offers())->hooks();
         (new SuperWoo_Elementor_Dynamic_Tags())->hooks();
+        // Elementor loads its widget library from wp-admin. Register Shop
+        // Filters before the regular-admin early return so it is discoverable
+        // in the editor as well as on the storefront.
+        if (!empty(superwoo_get_settings()['enable_shop_filters'])) {
+            (new SuperWoo_Shop_Filters())->hooks();
+        }
 
         if ($is_regular_admin) {
             return;
@@ -49,9 +55,6 @@ class SuperWoo_Plugin {
         (new SuperWoo_Shortcodes())->hooks();
         (new SuperWoo_Product_Reviews())->hooks();
         (new SuperWoo_Variation_Cards())->hooks();
-        if (!empty(superwoo_get_settings()['enable_shop_filters'])) {
-            (new SuperWoo_Shop_Filters())->hooks();
-        }
         (new SuperWoo_Cart_Drawer())->hooks();
         if (!empty(superwoo_get_settings()['enable_elementor_products_carousel']) && class_exists('SuperWoo_Elementor_Products_Carousel')) {
             (new SuperWoo_Elementor_Products_Carousel())->hooks();
