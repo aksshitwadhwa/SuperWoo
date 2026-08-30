@@ -278,7 +278,11 @@ function superwoo_cart_primary_button_html() {
         <?php
     else :
         ?>
-        <a class="superwoo-cart-primary" href="<?php echo esc_url(wc_get_checkout_url()); ?>">
+        <?php
+        // Keep WooCommerce's native checkout classes so payment extensions,
+        // including Razorpay Magic Checkout, can intercept this control.
+        ?>
+        <a class="superwoo-cart-primary checkout wc-forward" href="<?php echo esc_url(wc_get_checkout_url()); ?>">
             <span class="superwoo-cart-primary__icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false"><path d="M17 9V7A5 5 0 0 0 7 7v2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1ZM9 7a3 3 0 0 1 6 0v2H9V7Z"/></svg>
             </span>

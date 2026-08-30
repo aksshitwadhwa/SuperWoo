@@ -86,16 +86,23 @@
         this.onPointerDown = function (event) {
             if (event.pointerType !== 'mouse' || event.button === 0) {
                 this.pointerStart = event.clientX;
+                this.track.style.transition = 'none';
                 this.viewport.classList.add('is-grabbing');
                 if (this.viewport.setPointerCapture) {
                     this.viewport.setPointerCapture(event.pointerId);
                 }
             }
         }.bind(this);
+        this.onPointerMove = function (event) {
+            if (this.pointerStart === null) { return; }
+            var distance = event.clientX - this.pointerStart;
+            this.track.style.transform = 'translate3d(' + ((-this.index * (this.slideWidth + this.metrics().gap)) + distance) + 'px,0,0)';
+        }.bind(this);
         this.onPointerUp = function (event) {
             if (this.pointerStart === null) { return; }
             var distance = event.clientX - this.pointerStart;
             this.pointerStart = null;
+            this.track.style.transition = '';
             this.viewport.classList.remove('is-grabbing');
             if (this.viewport.releasePointerCapture && this.viewport.hasPointerCapture && this.viewport.hasPointerCapture(event.pointerId)) {
                 this.viewport.releasePointerCapture(event.pointerId);
@@ -105,6 +112,7 @@
         window.addEventListener('resize', this.onResize);
         this.viewport.addEventListener('keydown', this.onKeydown);
         this.viewport.addEventListener('pointerdown', this.onPointerDown);
+        this.viewport.addEventListener('pointermove', this.onPointerMove);
         this.viewport.addEventListener('pointerup', this.onPointerUp);
         this.viewport.addEventListener('pointercancel', this.onPointerUp);
         this.viewport.setAttribute('tabindex', '0');
@@ -146,8 +154,8 @@
         this.index = Math.min(this.index, this.maxIndex);
         this.track.style.gap = metrics.gap + 'px';
         this.slides.forEach(function (slide) {
-            slide.style.flex = '0 0 ' + this.slideWidth + 'px';
-            slide.style.width = this.slideWidth + 'px';
+            slide.style.setProperty('flex', '0 0 ' + this.slideWidth + 'px', 'important');
+            slide.style.setProperty('width', this.slideWidth + 'px', 'important');
         }, this);
         this.renderDots();
         this.render();
@@ -214,7 +222,7 @@
         if (this.resizeObserver) { this.resizeObserver.disconnect(); }
         if (!this.viewport) { return; }
         this.slides.forEach(function (slide) {
-            slide.classList.remove('superwoo-carousel__slide'); slide.style.flex = ''; slide.style.width = '';
+            slide.classList.remove('superwoo-carousel__slide'); slide.style.removeProperty('flex'); slide.style.removeProperty('width');
             slide.removeAttribute('role'); slide.removeAttribute('aria-label');
         });
         this.track.classList.remove('superwoo-carousel__track'); this.track.style.gap = ''; this.track.style.transform = '';
