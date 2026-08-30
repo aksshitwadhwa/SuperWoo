@@ -374,6 +374,7 @@ class SuperWoo_Product_Reviews {
         $commenter = wp_get_current_commenter();
         $comment_form = [
             'title_reply'         => $product->get_review_count() ? __('Add a review', 'superwoo') : sprintf(/* translators: %s: product name. */ __('Be the first to review &ldquo;%s&rdquo;', 'superwoo'), $product->get_name()),
+            /* translators: %s: comment author name. */
             'title_reply_to'      => __('Leave a Reply to %s', 'superwoo'),
             'title_reply_before'  => '<h3 id="reply-title" class="comment-reply-title">',
             'title_reply_after'   => '</h3>',

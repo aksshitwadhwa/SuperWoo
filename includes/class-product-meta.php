@@ -100,12 +100,6 @@ class SuperWoo_Product_Meta {
             'post_status'    => 'any',
             'posts_per_page' => 200,
             'fields'         => 'ids',
-            'meta_query'     => [
-                [
-                    'key'     => 'product_how_to_use',
-                    'compare' => 'NOT EXISTS',
-                ],
-            ],
         ]);
 
         foreach ($product_ids as $product_id) {

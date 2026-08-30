@@ -9,10 +9,12 @@ if ($next_tier) :
     $next_free_product = !empty($next_tier['free_product_id']) ? wc_get_product(absint($next_tier['free_product_id'])) : null;
     $next_reward = [];
     if (!empty($next_tier['discount'])) {
-        $next_reward[] = sprintf(esc_html__('%s%% off', 'superwoo'), esc_html($next_tier['discount']));
+        /* translators: %s: discount percentage. */
+        $next_reward[] = sprintf(esc_html__('%1$s%% off', 'superwoo'), esc_html($next_tier['discount']));
     }
     if ($next_free_product) {
-        $next_reward[] = sprintf(esc_html__('<strong>Free</strong> %s', 'superwoo'), esc_html($next_free_product->get_name()));
+        /* translators: %s: free product name. */
+        $next_reward[] = sprintf(esc_html__('<strong>Free</strong> %1$s', 'superwoo'), esc_html($next_free_product->get_name()));
     }
     $next_reward_text = implode(' + ', $next_reward);
     ?>
@@ -29,6 +31,7 @@ if ($next_tier) :
                 );
                 ?>
             </div>
+            <?php /* translators: 1: quantity threshold, 2: reward description. */ ?>
             <strong><?php echo esc_html(sprintf(__('From %1$s: %2$s', 'superwoo'), $next_min_qty, $next_reward_text)); ?></strong>
         </div>
         <div class="superwoo-bundle-progress">
@@ -45,10 +48,12 @@ if ($next_tier) :
     $current_free_product = !empty($current_tier['free_product_id']) ? wc_get_product(absint($current_tier['free_product_id'])) : null;
     $current_reward = [];
     if (!empty($current_tier['discount'])) {
-        $current_reward[] = sprintf(esc_html__('%s%% off', 'superwoo'), esc_html($current_tier['discount']));
+        /* translators: %s: discount percentage. */
+        $current_reward[] = sprintf(esc_html__('%1$s%% off', 'superwoo'), esc_html($current_tier['discount']));
     }
     if ($current_free_product) {
-        $current_reward[] = sprintf(esc_html__('<strong>Free</strong> %s', 'superwoo'), esc_html($current_free_product->get_name()));
+        /* translators: %s: free product name. */
+        $current_reward[] = sprintf(esc_html__('<strong>Free</strong> %1$s', 'superwoo'), esc_html($current_free_product->get_name()));
     }
     ?>
     <div class="superwoo-bundle-notice superwoo-bundle-notice--success">

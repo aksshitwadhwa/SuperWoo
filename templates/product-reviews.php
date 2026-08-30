@@ -15,6 +15,7 @@ $image_thumbs = isset($summary['image_thumbs']) && is_array($summary['image_thum
                 $percent = $review_count > 0 ? min(100, ($count / $review_count) * 100) : 0;
                 ?>
                 <div class="superwoo-review-bar">
+                    <?php /* translators: %d: star rating value. */ ?>
                     <span class="superwoo-review-bar__stars" aria-label="<?php echo esc_attr(sprintf(_n('%d star', '%d stars', $star, 'superwoo'), $star)); ?>">
                         <?php for ($i = 1; $i <= 5; $i++) : ?>
                             <span><?php echo $i <= $star ? '★' : '☆'; ?></span>
@@ -32,13 +33,15 @@ $image_thumbs = isset($summary['image_thumbs']) && is_array($summary['image_thum
             <p class="superwoo-reviews__summary-subtitle"><?php esc_html_e('Real experiences from our customers', 'superwoo'); ?></p>
             <div class="superwoo-reviews__score">
                 <strong><?php echo esc_html($average); ?></strong>
+                <?php /* translators: %s: number of reviews. */ ?>
                 <span><?php echo esc_html(sprintf(_n('%s review', '%s reviews', $review_count, 'superwoo'), number_format_i18n($review_count))); ?></span>
             </div>
             <?php if (!empty($image_thumbs)) : ?>
                 <div class="superwoo-reviews__thumbs" aria-label="<?php esc_attr_e('Review pictures', 'superwoo'); ?>">
                     <?php foreach ($image_thumbs as $index => $image) : ?>
                         <a href="<?php echo esc_url($image['full']); ?>" target="_blank" rel="noopener" class="superwoo-review-thumb">
-                            <img src="<?php echo esc_url($image['src']); ?>" alt="<?php echo esc_attr($image['alt'] ? $image['alt'] : sprintf(__('Review picture %d', 'superwoo'), $index + 1)); ?>">
+                            <?php /* translators: %d: review image number. */ ?>
+                            <img src="<?php echo esc_url($image['src']); ?>" alt="<?php echo esc_attr($image['alt'] ? $image['alt'] : sprintf(__('Review picture %1$d', 'superwoo'), $index + 1)); ?>">
                         </a>
                     <?php endforeach; ?>
                 </div>
@@ -107,6 +110,7 @@ $image_thumbs = isset($summary['image_thumbs']) && is_array($summary['image_thum
                     data-search="<?php echo esc_attr($search_text); ?>"
                     <?php echo $index >= 8 ? 'hidden' : ''; ?>
                 >
+                    <?php /* translators: %d: star rating value. */ ?>
                     <div class="superwoo-review-card__stars" aria-label="<?php echo esc_attr(sprintf(_n('%d star', '%d stars', (int) $review['rating'], 'superwoo'), (int) $review['rating'])); ?>">
                         <?php for ($i = 1; $i <= 5; $i++) : ?>
                             <span><?php echo $i <= (int) $review['rating'] ? '★' : '☆'; ?></span>

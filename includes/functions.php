@@ -148,7 +148,11 @@ function superwoo_health_report() {
         $cart_price = $product ? (float) $product->get_price() : 0;
         $catalog_price = $catalog_product ? (float) $catalog_product->get_price('edit') : 0;
         $status = ($catalog_price > 0 && abs($cart_price - $catalog_price) > 0.01) ? 'warning' : 'ok';
-        $report['cart'][] = ['label' => sprintf(__('Product #%s × %s', 'superwoo'), $product ? $product->get_id() : 'n/a', isset($item['quantity']) ? (int) $item['quantity'] : 0), 'value' => sprintf(__('Catalog %s / Cart %s / Line %s', 'superwoo'), wc_price($catalog_price), wc_price($cart_price), wc_price((float) ($item['line_total'] ?? 0))), 'status' => $status];
+        /* translators: 1: product ID, 2: quantity. */
+        $label = sprintf(__('Product #%1$s × %2$s', 'superwoo'), $product ? $product->get_id() : 'n/a', isset($item['quantity']) ? (int) $item['quantity'] : 0);
+        /* translators: 1: catalog price, 2: cart price, 3: line total. */
+        $value = sprintf(__('Catalog %1$s / Cart %2$s / Line %3$s', 'superwoo'), wc_price($catalog_price), wc_price($cart_price), wc_price((float) ($item['line_total'] ?? 0)));
+        $report['cart'][] = ['label' => $label, 'value' => $value, 'status' => $status];
     }
     return $report;
 }

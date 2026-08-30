@@ -142,7 +142,7 @@ class SuperWoo_Bundle_Offers {
 
         check_admin_referer('superwoo_save_offer_settings');
 
-        $threshold = isset($_POST['superwoo_free_delivery_threshold']) ? (float) wc_format_decimal(wp_unslash($_POST['superwoo_free_delivery_threshold'])) : 0;
+        $threshold = isset($_POST['superwoo_free_delivery_threshold']) ? (float) wc_format_decimal(sanitize_text_field(wp_unslash($_POST['superwoo_free_delivery_threshold']))) : 0;
         $threshold = max(0, $threshold);
 
         if ($threshold > 0) {
@@ -836,7 +836,8 @@ class SuperWoo_Bundle_Offers {
                 if ($min_qty > 0 && $discount > 0 && $qty >= $min_qty) {
                     $key = !empty($rule['id']) ? $rule['id'] : 'discount_' . $min_qty . '_' . $discount;
                     $state['discounts'][$key] = [
-                        'message' => sprintf(__('Cart updated: offer applied. You got %s%% off eligible products.', 'superwoo'), wc_format_decimal($discount)),
+                        /* translators: %s: discount percentage. */
+                        'message' => sprintf(__('Cart updated: offer applied. You got %1$s%% off eligible products.', 'superwoo'), wc_format_decimal($discount)),
                     ];
                 }
 
@@ -862,7 +863,7 @@ class SuperWoo_Bundle_Offers {
             $state['gifts']['gift_' . $gift_id] = [
                 'message' => $worth
                     ? sprintf(__('Cart updated: free item added. You got %1$s free worth %2$s.', 'superwoo'), $cart_item['data']->get_name(), $worth)
-                    : sprintf(__('Cart updated: free item added. You got %s free.', 'superwoo'), $cart_item['data']->get_name()),
+                    : sprintf(__('Cart updated: free item added. You got %1$s free.', 'superwoo'), $cart_item['data']->get_name()),
             ];
         }
 
@@ -1285,7 +1286,8 @@ class SuperWoo_Bundle_Offers {
 
         $term = get_term(absint($rule['category_id']), 'product_cat');
         if ($term && !is_wp_error($term)) {
-            return sprintf(__('%s product', 'superwoo'), $term->name);
+            /* translators: %s: product category name. */
+            return sprintf(__('%1$s product', 'superwoo'), $term->name);
         }
 
         return __('product', 'superwoo');

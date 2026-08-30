@@ -17,7 +17,6 @@ class SuperWoo_Plugin {
         $this->guard = new SuperWoo_WooCommerce_Guard();
         superwoo_log('Plugin loaded');
 
-        add_action('init', [$this, 'load_textdomain']);
         add_action('admin_menu', [$this, 'register_settings_page']);
         add_action('admin_post_superwoo_clear_logs', [$this, 'clear_logs']);
         add_action('admin_init', [$this, 'save_settings']);
@@ -54,10 +53,6 @@ class SuperWoo_Plugin {
             (new SuperWoo_Elementor_Products_Carousel())->hooks();
         }
 
-    }
-
-    public function load_textdomain() {
-        load_plugin_textdomain('superwoo', false, dirname(plugin_basename(SUPERWOO_FILE)) . '/languages');
     }
 
     public static function activate() {
@@ -161,13 +156,13 @@ class SuperWoo_Plugin {
             'show_discount_percentage' => !empty($_POST['show_discount_percentage']),
             'header_cart_icon'      => in_array($_POST['header_cart_icon'] ?? '', ['outline-bag', 'filled-bag', 'basket'], true) ? sanitize_key(wp_unslash($_POST['header_cart_icon'])) : 'outline-bag',
             'enable_multi_currency' => !empty($_POST['enable_multi_currency']),
-            'enabled_currency_codes' => $this->sanitize_currency_codes($_POST['enabled_currency_codes'] ?? ''),
-            'default_currency'      => $this->sanitize_default_currency($_POST['default_currency'] ?? 'INR', $_POST['enabled_currency_codes'] ?? ''),
+            'enabled_currency_codes' => $this->sanitize_currency_codes(isset($_POST['enabled_currency_codes']) ? sanitize_text_field(wp_unslash($_POST['enabled_currency_codes'])) : ''),
+            'default_currency'      => $this->sanitize_default_currency(isset($_POST['default_currency']) ? sanitize_text_field(wp_unslash($_POST['default_currency'])) : 'INR', isset($_POST['enabled_currency_codes']) ? sanitize_text_field(wp_unslash($_POST['enabled_currency_codes'])) : ''),
             'currency_auto_detect'  => !empty($_POST['currency_auto_detect']),
             'exchange_rate_api_url' => isset($_POST['exchange_rate_api_url']) ? sanitize_text_field(trim(wp_unslash($_POST['exchange_rate_api_url']))) : '',
             'exchange_rate_api_key' => isset($_POST['exchange_rate_api_key']) ? sanitize_text_field(wp_unslash($_POST['exchange_rate_api_key'])) : '',
             'exchange_rate_cache_minutes' => isset($_POST['exchange_rate_cache_hours']) ? max(1, absint($_POST['exchange_rate_cache_hours'])) * 60 : 720,
-            'manual_exchange_rates' => $this->sanitize_manual_rates($_POST['manual_exchange_rates'] ?? ''),
+            'manual_exchange_rates' => $this->sanitize_manual_rates(isset($_POST['manual_exchange_rates']) ? sanitize_textarea_field(wp_unslash($_POST['manual_exchange_rates'])) : ''),
         ];
 
         update_option('superwoo_settings', $settings);

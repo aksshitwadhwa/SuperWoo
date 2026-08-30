@@ -260,8 +260,9 @@ class SuperWoo_Cart_Drawer {
         }
 
         $remaining = max(0, $threshold - $subtotal);
+        /* translators: %s: amount remaining before free delivery is unlocked. */
         return sprintf(
-            __('Add %s more to unlock free delivery.', 'superwoo'),
+            __('Add %1$s more to unlock free delivery.', 'superwoo'),
             wp_strip_all_tags(superwoo_format_selected_currency_amount($remaining))
         );
     }
@@ -412,6 +413,7 @@ class SuperWoo_Cart_Drawer {
             return;
         }
 
+        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Optional troubleshooting log, enabled only by an administrator.
         error_log('SuperWoo add-to-cart diagnostic ' . wp_json_encode([
             'action_id' => $action_id,
             'cart_quantity' => $this->get_matching_cart_quantity($product_id, $variation_id),
