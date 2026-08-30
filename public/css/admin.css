@@ -567,3 +567,8 @@
 .superwoo-cart-icon-choice__preview:after { border: 2px solid #59616b; border-bottom: 0; border-radius: 10px 10px 0 0; content: ''; height: 9px; left: 10px; position: absolute; top: 2px; width: 12px; }
 .superwoo-cart-icon-choice__preview--filled-bag:before { background: #0b3d4d; border-color: #0b3d4d; }
 .superwoo-cart-icon-choice__preview--basket:before { border-radius: 0 0 4px 4px; transform: skew(-8deg); }
+.superwoo-appearance-card { background: #fff; border: 1px solid #dcdcde; border-radius: 8px; margin-top: 18px; max-width: 900px; padding: 20px; }
+.superwoo-appearance-card h2 { margin-top: 0; }
+.superwoo-color-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin: 22px 0; }
+.superwoo-color-field { align-items: center; display: flex; justify-content: space-between; gap: 12px; }
+.superwoo-color-field > span { font-weight: 600; }

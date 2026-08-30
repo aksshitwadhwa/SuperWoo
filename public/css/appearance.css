@@ -1,0 +1,86 @@
+:root {
+    --superwoo-primary: #005b7f;
+    --superwoo-secondary: #74bf2e;
+    --superwoo-button: #005b7f;
+    --superwoo-button-text: #ffffff;
+    --superwoo-button-hover: #004866;
+    --superwoo-cart-icon: #0b3d4d;
+    --superwoo-cart-badge: #ef5b4f;
+    --superwoo-body-text: #17212b;
+    --superwoo-star: #ffb400;
+}
+
+.superwoo-cart-shell {
+    --superwoo-drawer-accent: var(--superwoo-button);
+    --superwoo-drawer-accent-hover: var(--superwoo-button-hover);
+    --superwoo-drawer-accent-text: var(--superwoo-button-text);
+    --superwoo-drawer-secondary: var(--superwoo-secondary);
+    --superwoo-drawer-text: var(--superwoo-body-text);
+    --superwoo-mobile-bottom-nav-accent: var(--superwoo-primary);
+    --superwoo-mobile-bottom-nav-active: var(--superwoo-secondary);
+    --superwoo-mobile-bottom-nav-badge: var(--superwoo-cart-badge);
+}
+
+.superwoo-elementor-cart-trigger,
+.superwoo-cart-button,
+.superwoo-mobile-bottom-nav__item[data-superwoo-open-cart] {
+    color: var(--superwoo-cart-icon);
+}
+
+.superwoo-elementor-cart-icon .superwoo-cart-icon-fill {
+    fill: var(--superwoo-cart-icon);
+    stroke: var(--superwoo-cart-icon);
+}
+
+.superwoo-elementor-cart-trigger .superwoo-cart-count,
+.superwoo-cart-button .superwoo-cart-count,
+.superwoo-mobile-bottom-nav__count {
+    background: var(--superwoo-cart-badge);
+    color: #ffffff;
+}
+
+.superwoo-variation-cards-enabled {
+    --superwoo-variation-accent: var(--superwoo-primary);
+    --superwoo-variation-text: var(--superwoo-body-text);
+}
+
+.superwoo-reviews {
+    --superwoo-review-black: var(--superwoo-body-text);
+    --superwoo-review-button: var(--superwoo-button);
+    --superwoo-review-button-hover: var(--superwoo-button-hover);
+    --superwoo-review-star: var(--superwoo-star);
+}
+
+.superwoo-review-write,
+.superwoo-review-show-more {
+    color: var(--superwoo-button-text);
+}
+
+.superwoo-review-write:hover,
+.superwoo-review-write:focus,
+.superwoo-review-show-more:hover,
+.superwoo-review-show-more:focus {
+    color: var(--superwoo-button-text);
+}
+
+body.single-product .elementor-product-simple form.cart .single_add_to_cart_button,
+body.single-product .elementor-product-variable .woocommerce-variation-add-to-cart .single_add_to_cart_button,
+body.single-product .superwoo-mobile-buy-now__button {
+    background: var(--superwoo-button);
+    color: var(--superwoo-button-text);
+}
+
+body.single-product .elementor-product-simple form.cart .single_add_to_cart_button:hover,
+body.single-product .elementor-product-simple form.cart .single_add_to_cart_button:focus,
+body.single-product .elementor-product-variable .woocommerce-variation-add-to-cart .single_add_to_cart_button:hover,
+body.single-product .elementor-product-variable .woocommerce-variation-add-to-cart .single_add_to_cart_button:focus,
+body.single-product .superwoo-mobile-buy-now__button:hover,
+body.single-product .superwoo-mobile-buy-now__button:focus {
+    background: var(--superwoo-button-hover);
+    color: var(--superwoo-button-text);
+}
+
+body.single-product form.cart #btn-1cc-pdp {
+    border-color: var(--superwoo-secondary);
+    color: var(--superwoo-secondary);
+}

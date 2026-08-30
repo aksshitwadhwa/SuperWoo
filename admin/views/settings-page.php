@@ -40,7 +40,7 @@ foreach ($manual_rates as $code => $rate) {
 $exchange_rate_cache_hours = max(1, (int) ceil(absint($settings['exchange_rate_cache_minutes']) / 60));
 $suggested_currency_text = implode(', ', array_values($currency_labels));
 $active_tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'general';
-$active_tab = in_array($active_tab, ['general', 'cart', 'currency'], true) ? $active_tab : 'general';
+$active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'], true) ? $active_tab : 'general';
 ?>
 <div class="wrap superwoo-admin-page">
     <h1><?php esc_html_e('SuperWoo', 'superwoo'); ?></h1>
@@ -56,6 +56,7 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'currency'], true) ? $ac
         <nav class="nav-tab-wrapper superwoo-settings-tabs" aria-label="<?php esc_attr_e('SuperWoo settings tabs', 'superwoo'); ?>">
             <a href="#superwoo-general-settings" class="nav-tab <?php echo 'general' === $active_tab ? 'nav-tab-active' : ''; ?>" data-superwoo-settings-tab="general"><?php esc_html_e('Product Page', 'superwoo'); ?></a>
             <a href="#superwoo-cart-settings" class="nav-tab <?php echo 'cart' === $active_tab ? 'nav-tab-active' : ''; ?>" data-superwoo-settings-tab="cart"><?php esc_html_e('Cart', 'superwoo'); ?></a>
+            <a href="#superwoo-appearance-settings" class="nav-tab <?php echo 'appearance' === $active_tab ? 'nav-tab-active' : ''; ?>" data-superwoo-settings-tab="appearance"><?php esc_html_e('Colors & Style', 'superwoo'); ?></a>
             <a href="#superwoo-currency-settings" class="nav-tab <?php echo 'currency' === $active_tab ? 'nav-tab-active' : ''; ?>" data-superwoo-settings-tab="currency"><?php esc_html_e('Multi-Currency', 'superwoo'); ?></a>
         </nav>
 
@@ -77,6 +78,35 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'currency'], true) ? $ac
                     </td>
                 </tr>
             </table>
+        </div>
+
+        <div id="superwoo-appearance-settings" class="superwoo-settings-panel <?php echo 'appearance' === $active_tab ? 'is-active' : ''; ?>" data-superwoo-settings-panel="appearance">
+            <div class="superwoo-appearance-card">
+                <h2><?php esc_html_e('Storefront Colors', 'superwoo'); ?></h2>
+                <p><?php esc_html_e('These colors are shared by SuperWoo product controls, reviews, cart drawer, cart icons, badges, and buttons.', 'superwoo'); ?></p>
+                <div class="superwoo-color-grid">
+                    <?php
+                    $color_fields = [
+                        'color_primary'     => __('Primary color', 'superwoo'),
+                        'color_secondary'   => __('Secondary color', 'superwoo'),
+                        'color_button'      => __('Button background', 'superwoo'),
+                        'color_button_text' => __('Button text', 'superwoo'),
+                        'color_button_hover'=> __('Button hover', 'superwoo'),
+                        'color_cart_icon'   => __('Cart icon', 'superwoo'),
+                        'color_cart_badge'  => __('Cart count badge', 'superwoo'),
+                        'color_body_text'   => __('Text color', 'superwoo'),
+                        'color_star'        => __('Review star color', 'superwoo'),
+                    ];
+                    foreach ($color_fields as $field_name => $field_label) :
+                    ?>
+                        <label class="superwoo-color-field" for="<?php echo esc_attr($field_name); ?>">
+                            <span><?php echo esc_html($field_label); ?></span>
+                            <input type="text" id="<?php echo esc_attr($field_name); ?>" name="<?php echo esc_attr($field_name); ?>" value="<?php echo esc_attr($settings[$field_name]); ?>" class="superwoo-color-picker" data-default-color="<?php echo esc_attr($settings[$field_name]); ?>">
+                        </label>
+                    <?php endforeach; ?>
+                </div>
+                <p class="description"><?php esc_html_e('Clear any custom page-builder color overrides if they should inherit these global SuperWoo colors.', 'superwoo'); ?></p>
+            </div>
         </div>
 
         <div id="superwoo-cart-settings" class="superwoo-settings-panel <?php echo 'cart' === $active_tab ? 'is-active' : ''; ?>" data-superwoo-settings-panel="cart">
@@ -217,5 +247,9 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'currency'], true) ? $ac
             activate(tab.getAttribute('data-superwoo-settings-tab'));
         });
     });
+
+    if (window.jQuery && window.jQuery.fn.wpColorPicker) {
+        window.jQuery('.superwoo-color-picker').wpColorPicker();
+    }
 })();
 </script>

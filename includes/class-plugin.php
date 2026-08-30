@@ -21,6 +21,7 @@ class SuperWoo_Plugin {
         add_action('admin_post_superwoo_clear_logs', [$this, 'clear_logs']);
         add_action('admin_init', [$this, 'save_settings']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
+        add_action('wp_enqueue_scripts', [$this, 'enqueue_appearance'], 99);
 
         if (!$this->guard->is_available()) {
             $this->guard->hooks();
@@ -155,6 +156,15 @@ class SuperWoo_Plugin {
             'enable_logging'        => !empty($_POST['enable_logging']),
             'show_discount_percentage' => !empty($_POST['show_discount_percentage']),
             'header_cart_icon'      => in_array($_POST['header_cart_icon'] ?? '', ['outline-bag', 'filled-bag', 'basket'], true) ? sanitize_key(wp_unslash($_POST['header_cart_icon'])) : 'outline-bag',
+            'color_primary'         => $this->sanitize_color('color_primary', '#005b7f'),
+            'color_secondary'       => $this->sanitize_color('color_secondary', '#74bf2e'),
+            'color_button'          => $this->sanitize_color('color_button', '#005b7f'),
+            'color_button_text'     => $this->sanitize_color('color_button_text', '#ffffff'),
+            'color_button_hover'    => $this->sanitize_color('color_button_hover', '#004866'),
+            'color_cart_icon'       => $this->sanitize_color('color_cart_icon', '#0b3d4d'),
+            'color_cart_badge'      => $this->sanitize_color('color_cart_badge', '#ef5b4f'),
+            'color_body_text'       => $this->sanitize_color('color_body_text', '#17212b'),
+            'color_star'            => $this->sanitize_color('color_star', '#ffb400'),
             'enable_multi_currency' => !empty($_POST['enable_multi_currency']),
             'enabled_currency_codes' => $this->sanitize_currency_codes(isset($_POST['enabled_currency_codes']) ? sanitize_text_field(wp_unslash($_POST['enabled_currency_codes'])) : ''),
             'default_currency'      => $this->sanitize_default_currency(isset($_POST['default_currency']) ? sanitize_text_field(wp_unslash($_POST['default_currency'])) : 'INR', isset($_POST['enabled_currency_codes']) ? sanitize_text_field(wp_unslash($_POST['enabled_currency_codes'])) : ''),
@@ -168,7 +178,7 @@ class SuperWoo_Plugin {
         update_option('superwoo_settings', $settings);
 
         $active_tab = isset($_POST['superwoo_active_tab']) ? sanitize_key(wp_unslash($_POST['superwoo_active_tab'])) : 'general';
-        $active_tab = in_array($active_tab, ['general', 'cart', 'currency'], true) ? $active_tab : 'general';
+        $active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'], true) ? $active_tab : 'general';
 
         wp_safe_redirect(add_query_arg(['page' => 'superwoo-settings', 'updated' => 'true', 'tab' => $active_tab], admin_url('admin.php')));
         exit;
@@ -177,7 +187,41 @@ class SuperWoo_Plugin {
     public function enqueue_admin_assets($hook) {
         if (in_array($hook, ['toplevel_page_superwoo-settings', 'superwoo_page_superwoo-health', 'superwoo_page_superwoo-bundle-offers'], true)) {
             wp_enqueue_style('superwoo-admin', SUPERWOO_URL . 'public/css/admin.css', [], SUPERWOO_VERSION);
+            if ('toplevel_page_superwoo-settings' === $hook) {
+                wp_enqueue_style('wp-color-picker');
+                wp_enqueue_script('wp-color-picker');
+            }
         }
+    }
+
+    public function enqueue_appearance() {
+        $settings = superwoo_get_settings();
+        $colors = [
+            '--superwoo-primary'     => $settings['color_primary'],
+            '--superwoo-secondary'   => $settings['color_secondary'],
+            '--superwoo-button'      => $settings['color_button'],
+            '--superwoo-button-text' => $settings['color_button_text'],
+            '--superwoo-button-hover'=> $settings['color_button_hover'],
+            '--superwoo-cart-icon'   => $settings['color_cart_icon'],
+            '--superwoo-cart-badge'  => $settings['color_cart_badge'],
+            '--superwoo-body-text'   => $settings['color_body_text'],
+            '--superwoo-star'        => $settings['color_star'],
+        ];
+        $declarations = [];
+        foreach ($colors as $property => $color) {
+            $clean = sanitize_hex_color($color);
+            if ($clean) {
+                $declarations[] = $property . ':' . $clean;
+            }
+        }
+
+        wp_enqueue_style('superwoo-appearance', SUPERWOO_URL . 'public/css/appearance.css', [], SUPERWOO_VERSION);
+        wp_add_inline_style('superwoo-appearance', ':root{' . implode(';', $declarations) . '}');
+    }
+
+    private function sanitize_color($key, $fallback) {
+        $value = isset($_POST[$key]) ? sanitize_text_field(wp_unslash($_POST[$key])) : '';
+        return sanitize_hex_color($value) ?: $fallback;
     }
 
 
