@@ -27,7 +27,9 @@ $image_thumbs = isset($summary['image_thumbs']) && is_array($summary['image_thum
         </div>
 
         <div class="superwoo-reviews__summary">
+            <span class="superwoo-reviews__summary-icon" aria-hidden="true">☷</span>
             <h2><?php esc_html_e('Customer Reviews', 'superwoo'); ?></h2>
+            <p class="superwoo-reviews__summary-subtitle"><?php esc_html_e('Real experiences from our customers', 'superwoo'); ?></p>
             <div class="superwoo-reviews__score">
                 <strong><?php echo esc_html($average); ?></strong>
                 <span><?php echo esc_html(sprintf(_n('%s review', '%s reviews', $review_count, 'superwoo'), number_format_i18n($review_count))); ?></span>

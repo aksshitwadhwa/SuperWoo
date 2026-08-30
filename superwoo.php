@@ -2,7 +2,7 @@
 /**
  * Plugin Name: SuperWoo
  * Description: WooCommerce product benefits, how-to content, FAQs, modern reviews, offers, and AJAX cart drawer.
- * Version: 1.0.151
+ * Version: 1.0.152
  * Author: Aksshit Wadhwa
  * Author URI: https://digtize.com/
  * License: GPLv2 or later
@@ -53,7 +53,7 @@ register_shutdown_function(static function () {
     }
 });
 
-define('SUPERWOO_VERSION', '1.0.151');
+define('SUPERWOO_VERSION', '1.0.152');
 define('SUPERWOO_FILE', __FILE__);
 define('SUPERWOO_PATH', plugin_dir_path(__FILE__));
 define('SUPERWOO_URL', plugin_dir_url(__FILE__));
