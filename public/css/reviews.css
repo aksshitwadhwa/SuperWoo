@@ -658,7 +658,7 @@
 
 @media (max-width: 640px) {
     .superwoo-reviews {
-        padding-top: 22px;
+        padding:0;
     }
 
     .superwoo-review-grid {
