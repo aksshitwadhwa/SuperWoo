@@ -266,6 +266,100 @@ body.single-product form.cart a[href*="buy-now"] {
     width: 100%;
 }
 
+/* Product purchase layout. These rules replace the former Customizer CSS and
+ * are scoped to Elementor's product widgets so other forms are unaffected. */
+.elementor-product-simple form.cart,
+.elementor-product-variable .woocommerce-variation-add-to-cart {
+    align-items: stretch;
+    box-sizing: border-box;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: minmax(120px, 184px) minmax(0, 1fr);
+    width: 100%;
+}
+
+.elementor-product-simple form.cart .quantity,
+.elementor-product-variable .woocommerce-variation-add-to-cart .quantity {
+    align-items: center;
+    box-sizing: border-box;
+    display: flex;
+    height: 52px;
+    justify-content: space-between;
+    margin: 0;
+    min-width: 0;
+    width: 100%;
+}
+
+.elementor-product-simple form.cart .quantity .qty,
+.elementor-product-variable .woocommerce-variation-add-to-cart .quantity .qty {
+    border: 0;
+    height: 52px;
+    text-align: center;
+    width: 70px;
+}
+
+.elementor-product-simple form.cart .qty-btn,
+.elementor-product-variable .woocommerce-variation-add-to-cart .qty-btn {
+    background: #f1f1f1;
+    border: 0;
+    font-size: 20px;
+    height: 52px;
+    min-width: 52px;
+    width: 52px;
+}
+
+.elementor-product-simple form.cart .single_add_to_cart_button,
+.elementor-product-variable .woocommerce-variation-add-to-cart .single_add_to_cart_button {
+    align-items: center;
+    box-sizing: border-box;
+    display: flex;
+    font-size: 16px;
+    font-weight: 700;
+    height: 52px;
+    justify-content: center;
+    margin: 0;
+    width: 100%;
+}
+
+.elementor-product-simple form.cart #btn-1cc-pdp,
+.elementor-product-variable .woocommerce-variation-add-to-cart #btn-1cc-pdp {
+    background: transparent;
+    border: 1px solid #056b9d;
+    color: #056b9d;
+    grid-column: 1 / -1;
+}
+
+.elementor-product-variable .tinv-wraper.tinvwl-after-add-to-cart {
+    display: block;
+    grid-column: 1 / -1;
+    margin-top: 2px;
+    width: 100%;
+}
+
+@media (max-width: 767px) {
+    .elementor-product-simple form.cart,
+    .elementor-product-variable .woocommerce-variation-add-to-cart {
+        gap: 8px;
+        grid-template-columns: minmax(100px, 120px) minmax(0, 1fr);
+    }
+
+    .elementor-product-simple form.cart .quantity,
+    .elementor-product-variable .woocommerce-variation-add-to-cart .quantity {
+        min-width: 0;
+    }
+
+    .elementor-product-simple form.cart .quantity .qty,
+    .elementor-product-variable .woocommerce-variation-add-to-cart .quantity .qty {
+        width: 45px;
+    }
+
+    .elementor-product-simple form.cart .qty-btn,
+    .elementor-product-variable .woocommerce-variation-add-to-cart .qty-btn {
+        min-width: 36px;
+        width: 36px;
+    }
+}
+
 .superwoo-cart-shell a,
 .superwoo-cart-shell button,
 .superwoo-cart-shell input {
