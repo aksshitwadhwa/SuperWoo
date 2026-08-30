@@ -17,7 +17,8 @@ class SuperWoo_Bundle_Offers {
         add_action('wp_ajax_superwoo_delete_bundle_offer', [$this, 'ajax_delete_offer']);
         add_action('wp_ajax_superwoo_toggle_bundle_offer', [$this, 'ajax_toggle_offer']);
         add_action('admin_post_superwoo_save_offer_settings', [$this, 'save_offer_settings']);
-        add_action('woocommerce_before_calculate_totals', [$this, 'apply_discounts'], 20);
+        // WooCommerce remains the sole authority for cart pricing. Offer
+        // rules remain available for admin/display notices only.
         add_filter('woocommerce_cart_item_name', [$this, 'gift_cart_item_name'], 10, 3);
         add_action('woocommerce_before_cart_table', [$this, 'render_notices']);
         add_shortcode('bundle_offers_notice', [$this, 'notice_shortcode']);

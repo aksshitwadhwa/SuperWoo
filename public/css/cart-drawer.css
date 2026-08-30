@@ -120,15 +120,13 @@ body.single-product form.cart .single_add_to_cart_button.superwoo-product-adding
 
 .superwoo-cart-shell .superwoo-cart-primary {
     align-items: center;
-    /* background: var(--superwoo-drawer-action); */
+    background: var(--superwoo-drawer-action);
     border: 0;
     border-radius: 6px;
     /* box-shadow: 0 10px 22px rgba(32, 143, 38, 0.24); */
     color: #ffffff;
     cursor: pointer;
     display: inline-flex;
-    font-size: 15px;
-    font-weight: 700;
     gap: 12px;
     justify-content: center;
     min-height: 50px;
@@ -762,9 +760,7 @@ body.single-product form.cart a[href*="buy-now"] {
 
 .superwoo-cart-shell .superwoo-cart-primary:hover,
 .superwoo-cart-shell .superwoo-cart-primary:focus {
-    background: #026195 !important;
-    border-radius: 6px !important;
-    outline: none;
+    color: #ffffff;
 }
 
 .superwoo-cart-shell .superwoo-coupon-row {

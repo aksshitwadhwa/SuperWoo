@@ -43,7 +43,8 @@ class SuperWoo_Plugin {
             return;
         }
 
-        superwoo_currency()->hooks();
+        // WooCommerce remains the sole source of truth for currency and
+        // product/cart prices. SuperWoo only renders the cart UI.
         (new SuperWoo_Discount_Percentage())->hooks();
         (new SuperWoo_Shortcodes())->hooks();
         (new SuperWoo_Product_Reviews())->hooks();
