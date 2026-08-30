@@ -85,18 +85,27 @@
         this.onPointerDown = function (event) {
             if (event.pointerType !== 'mouse' || event.button === 0) {
                 this.pointerStart = event.clientX;
+                this.viewport.classList.add('is-grabbing');
+                if (this.viewport.setPointerCapture) {
+                    this.viewport.setPointerCapture(event.pointerId);
+                }
             }
         }.bind(this);
         this.onPointerUp = function (event) {
             if (this.pointerStart === null) { return; }
             var distance = event.clientX - this.pointerStart;
             this.pointerStart = null;
+            this.viewport.classList.remove('is-grabbing');
+            if (this.viewport.releasePointerCapture && this.viewport.hasPointerCapture && this.viewport.hasPointerCapture(event.pointerId)) {
+                this.viewport.releasePointerCapture(event.pointerId);
+            }
             if (Math.abs(distance) > 40) { this.go(distance > 0 ? -1 : 1); }
         }.bind(this);
         window.addEventListener('resize', this.onResize);
         this.viewport.addEventListener('keydown', this.onKeydown);
         this.viewport.addEventListener('pointerdown', this.onPointerDown);
         this.viewport.addEventListener('pointerup', this.onPointerUp);
+        this.viewport.addEventListener('pointercancel', this.onPointerUp);
         this.viewport.setAttribute('tabindex', '0');
         if (this.previous) { this.previous.addEventListener('click', function () { this.go(-1); }.bind(this)); }
         if (this.next) { this.next.addEventListener('click', function () { this.go(1); }.bind(this)); }

@@ -6,10 +6,15 @@
 }
 
 .superwoo-products-carousel-enabled .superwoo-carousel__viewport {
+    cursor: grab;
     width: 100%;
     max-width: 100%;
     overflow: hidden;
     touch-action: pan-y;
+}
+
+.superwoo-products-carousel-enabled .superwoo-carousel__viewport.is-grabbing {
+    cursor: grabbing;
 }
 
 .superwoo-products-carousel-enabled ul.products.superwoo-carousel__track {
