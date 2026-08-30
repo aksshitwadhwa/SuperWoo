@@ -2,7 +2,7 @@
 /**
  * Plugin Name: SuperWoo
  * Description: WooCommerce product benefits, how-to content, FAQs, modern reviews, offers, and AJAX cart drawer.
- * Version: 1.0.149
+ * Version: 1.0.150
  * Author: Aksshit Wadhwa
  * Author URI: https://digtize.com/
  * License: GPLv2 or later

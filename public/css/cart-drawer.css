@@ -247,6 +247,25 @@ body.single-product form.cart .single_add_to_cart_button.superwoo-product-adding
     box-sizing: border-box;
 }
 
+/* Keep the product purchase actions aligned when a theme places Buy Now in a
+ * separate grid column. */
+body.single-product form.cart .superwoo-native-buy-now-mobile,
+body.single-product form.cart button.buy-now,
+body.single-product form.cart button.buy_now,
+body.single-product form.cart button[name="buy_now"],
+body.single-product form.cart button[name="buy-now"],
+body.single-product form.cart button[value="buy_now"],
+body.single-product form.cart button[value="buy-now"],
+body.single-product form.cart a[href*="buy-now"] {
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    margin-left: 0;
+    margin-right: 0;
+    max-width: none;
+    width: 100%;
+}
+
 .superwoo-cart-shell a,
 .superwoo-cart-shell button,
 .superwoo-cart-shell input {

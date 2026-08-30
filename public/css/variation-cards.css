@@ -61,12 +61,12 @@ body.single-product.superwoo-variation-cards-enabled form.variations_form .rtwpv
 
 .superwoo-variation-cards {
     align-items: stretch;
-    display: flex;
-    flex-wrap: nowrap;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 12px;
     margin: 0 0 8px;
     max-width: 100%;
-    overflow-x: auto;
+    overflow-x: visible;
     overscroll-behavior-inline: contain;
     padding: 0 0 4px;
     scrollbar-width: thin;
@@ -88,10 +88,14 @@ body.single-product.superwoo-variation-cards-enabled form.variations_form .rtwpv
     box-sizing: border-box;
     /* min-width: 145px; */
     /* min-height: 86px; */
+    min-height: 78px;
     padding: 14px 16px;
     text-align: left;
     margin: 0px;
 }
+
+.superwoo-variation-card__title { font-weight: 700; }
+.superwoo-variation-card.is-selected { background: var(--superwoo-variation-selected-bg); }
 
 .superwoo-variation-card:hover,
 .superwoo-variation-card:focus {
