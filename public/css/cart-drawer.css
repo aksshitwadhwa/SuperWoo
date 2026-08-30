@@ -270,10 +270,10 @@ body.single-product form.cart a[href*="buy-now"] {
 .elementor-product-variable .woocommerce-variation-add-to-cart {
     align-items: stretch;
     box-sizing: border-box;
-    display: grid;
-    gap: 12px;
-    grid-template-columns: minmax(120px, 184px) minmax(0, 1fr);
-    width: 100%;
+    display: grid !important;
+    gap: 12px !important;
+    grid-template-columns: 184px minmax(0, 1fr) !important;
+    width: 100% !important;
 }
 
 .elementor-product-simple form.cart .quantity,
@@ -281,29 +281,29 @@ body.single-product form.cart a[href*="buy-now"] {
     align-items: center;
     box-sizing: border-box;
     display: flex;
-    height: 52px;
+    height: 52px !important;
     justify-content: space-between;
-    margin: 0;
-    min-width: 0;
-    width: 100%;
+    margin: 0 !important;
+    min-width: 184px !important;
+    width: 184px !important;
 }
 
 .elementor-product-simple form.cart .quantity .qty,
 .elementor-product-variable .woocommerce-variation-add-to-cart .quantity .qty {
-    border: 0;
-    height: 52px;
-    text-align: center;
-    width: 70px;
+    border: 0 !important;
+    height: 52px !important;
+    text-align: center !important;
+    width: 70px !important;
 }
 
 .elementor-product-simple form.cart .qty-btn,
 .elementor-product-variable .woocommerce-variation-add-to-cart .qty-btn {
-    background: #f1f1f1;
-    border: 0;
-    font-size: 20px;
-    height: 52px;
-    min-width: 52px;
-    width: 52px;
+    background: #f1f1f1 !important;
+    border: 0 !important;
+    font-size: 20px !important;
+    height: 52px !important;
+    min-width: 52px !important;
+    width: 52px !important;
 }
 
 .elementor-product-simple form.cart .single_add_to_cart_button,
@@ -313,49 +313,63 @@ body.single-product form.cart a[href*="buy-now"] {
     display: flex;
     font-size: 16px;
     font-weight: 700;
-    height: 52px;
+    height: 52px !important;
     justify-content: center;
-    margin: 0;
-    width: 100%;
+    margin: 0 !important;
+    width: 100% !important;
+}
+
+.elementor-product-simple form.cart .single_add_to_cart_button:not(#btn-1cc-pdp),
+.elementor-product-variable .woocommerce-variation-add-to-cart .single_add_to_cart_button:not(#btn-1cc-pdp) {
+    background: var(--superwoo-button, #056b9d) !important;
+    border: 0 !important;
+    color: var(--superwoo-button-text, #ffffff) !important;
 }
 
 .elementor-product-simple form.cart #btn-1cc-pdp,
 .elementor-product-variable .woocommerce-variation-add-to-cart #btn-1cc-pdp {
-    background: transparent;
-    border: 1px solid #056b9d;
-    color: #056b9d;
+    background: transparent !important;
+    border: 1px solid var(--superwoo-button, #056b9d) !important;
+    color: var(--superwoo-button, #056b9d) !important;
     grid-column: 1 / -1;
+    margin: 0 !important;
+    width: 100% !important;
 }
 
 .elementor-product-variable .tinv-wraper.tinvwl-after-add-to-cart {
     display: block;
     grid-column: 1 / -1;
-    margin-top: 2px;
+    margin-top: 14px !important;
     width: 100%;
 }
 
 @media (max-width: 767px) {
     .elementor-product-simple form.cart,
     .elementor-product-variable .woocommerce-variation-add-to-cart {
-        gap: 8px;
-        grid-template-columns: minmax(100px, 120px) minmax(0, 1fr);
+        gap: 8px !important;
+        grid-template-columns: 120px minmax(0, 1fr) !important;
     }
 
     .elementor-product-simple form.cart .quantity,
     .elementor-product-variable .woocommerce-variation-add-to-cart .quantity {
-        min-width: 0;
+        min-width: 120px !important;
+        width: 120px !important;
     }
 
     .elementor-product-simple form.cart .quantity .qty,
     .elementor-product-variable .woocommerce-variation-add-to-cart .quantity .qty {
-        width: 45px;
+        width: 45px !important;
     }
 
     .elementor-product-simple form.cart .qty-btn,
     .elementor-product-variable .woocommerce-variation-add-to-cart .qty-btn {
-        min-width: 36px;
-        width: 36px;
+        min-width: 36px !important;
+        width: 36px !important;
     }
+}
+
+body.single-product .woocommerce .star-rating {
+    color: var(--superwoo-star, #ffbe00);
 }
 
 .superwoo-cart-shell a,
