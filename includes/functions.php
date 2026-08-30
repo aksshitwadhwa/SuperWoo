@@ -263,22 +263,26 @@ function superwoo_cart_total_html() {
     return ob_get_clean();
 }
 
+function superwoo_razorpay_magic_checkout_available() {
+    $razorpay_user = wp_get_current_user();
+    $razorpay_test_allowed = !function_exists('isTestModeEnabled')
+        || !isTestModeEnabled()
+        || current_user_can('administrator')
+        || ($razorpay_user->exists() && preg_match('/@razorpay\.com$/i', $razorpay_user->user_email));
+    return $razorpay_test_allowed
+        && function_exists('is1ccEnabled')
+        && function_exists('isMiniCartCheckoutEnabled')
+        && is1ccEnabled()
+        && isMiniCartCheckoutEnabled();
+}
+
 function superwoo_cart_primary_button_html() {
     $cart = superwoo_get_cart();
     if (!$cart) {
         return '';
     }
 
-    $razorpay_user = wp_get_current_user();
-    $razorpay_test_allowed = !function_exists('isTestModeEnabled')
-        || !isTestModeEnabled()
-        || current_user_can('administrator')
-        || ($razorpay_user->exists() && preg_match('/@razorpay\.com$/i', $razorpay_user->user_email));
-    $razorpay_magic_checkout = $razorpay_test_allowed
-        && function_exists('is1ccEnabled')
-        && function_exists('isMiniCartCheckoutEnabled')
-        && is1ccEnabled()
-        && isMiniCartCheckoutEnabled();
+    $razorpay_magic_checkout = superwoo_razorpay_magic_checkout_available();
 
     ob_start();
     if ($cart->is_empty()) :
@@ -289,11 +293,11 @@ function superwoo_cart_primary_button_html() {
         <?php
     else :
         ?>
-        <?php
-        // Keep WooCommerce's native checkout classes so payment extensions,
-        // including Razorpay Magic Checkout, can intercept this control.
-        ?>
-        <a<?php echo $razorpay_magic_checkout ? ' id="btn-1cc-mini-cart"' : ''; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Static, conditionally emitted ID. ?> class="superwoo-cart-primary checkout wc-forward" href="<?php echo esc_url(wc_get_checkout_url()); ?>">
+        <?php if ($razorpay_magic_checkout) : ?>
+        <button id="btn-1cc-mini-cart" class="superwoo-cart-primary checkout wc-forward" type="button">
+        <?php else : ?>
+        <a class="superwoo-cart-primary checkout wc-forward" href="<?php echo esc_url(wc_get_checkout_url()); ?>">
+        <?php endif; ?>
             <span class="superwoo-cart-primary__icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false"><path d="M17 9V7A5 5 0 0 0 7 7v2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1ZM9 7a3 3 0 0 1 6 0v2H9V7Z"/></svg>
             </span>
@@ -306,9 +310,10 @@ function superwoo_cart_primary_button_html() {
                 );
                 ?>
             </span>
-        </a>
         <?php if ($razorpay_magic_checkout) : ?>
-            <div id="error-message" class="superwoo-cart-primary__error" aria-live="polite"></div>
+        </button>
+        <?php else : ?>
+        </a>
         <?php endif; ?>
         <?php
     endif;

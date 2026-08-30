@@ -101,5 +101,8 @@
     <div class="superwoo-cart-drawer__footer">
         <?php echo superwoo_cart_total_html(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
         <?php echo superwoo_cart_primary_button_html(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+        <?php if (superwoo_razorpay_magic_checkout_available()) : ?>
+            <div id="error-message" class="superwoo-cart-primary__error" aria-live="polite"></div>
+        <?php endif; ?>
     </div>
 <?php endif; ?>
