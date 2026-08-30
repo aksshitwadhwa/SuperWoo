@@ -65,6 +65,7 @@
             this.root.appendChild(this.dots);
         }
         this.root.classList.add('superwoo-carousel--ready');
+        this.root.classList.add('superwoo-carousel-arrows-' + (this.config.arrowPosition || 'inside'));
     };
 
     Carousel.prototype.button = function (direction, text) {

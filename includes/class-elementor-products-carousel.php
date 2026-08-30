@@ -88,6 +88,11 @@ class SuperWoo_Elementor_Products_Carousel {
             'label' => __('Dot Color', 'superwoo'), 'type' => \Elementor\Controls_Manager::COLOR,
             'selectors' => ['{{WRAPPER}}.superwoo-products-carousel-enabled' => '--superwoo-carousel-dot-color: {{VALUE}};'], 'condition' => $condition,
         ]);
+        $element->add_control('superwoo_carousel_arrow_position', [
+            'label' => __('Arrow Position', 'superwoo'), 'type' => \Elementor\Controls_Manager::SELECT,
+            'options' => ['inside' => __('Inside carousel', 'superwoo'), 'outside' => __('Outside carousel', 'superwoo'), 'top-right' => __('Top right', 'superwoo'), 'bottom-right' => __('Bottom right', 'superwoo')],
+            'default' => 'inside', 'condition' => $condition,
+        ]);
         $element->add_responsive_control('superwoo_carousel_dot_size', [
             'label' => __('Dot Size', 'superwoo'), 'type' => \Elementor\Controls_Manager::SLIDER,
             'size_units' => ['px'], 'range' => ['px' => ['min' => 4, 'max' => 24]], 'selectors' => ['{{WRAPPER}}.superwoo-products-carousel-enabled .superwoo-carousel__dots button' => 'width: {{SIZE}}{{UNIT}}; height: {{SIZE}}{{UNIT}};'], 'condition' => $condition,
@@ -131,6 +136,7 @@ class SuperWoo_Elementor_Products_Carousel {
                 'tablet' => $this->extended_value($settings['superwoo_carousel_extended_tablet'] ?? ($settings['superwoo_carousel_extended'] ?? 'none')),
                 'mobile' => $this->extended_value($settings['superwoo_carousel_extended_mobile'] ?? ($settings['superwoo_carousel_extended_tablet'] ?? ($settings['superwoo_carousel_extended'] ?? 'none'))),
             ],
+            'arrowPosition' => in_array(($settings['superwoo_carousel_arrow_position'] ?? 'inside'), ['inside', 'outside', 'top-right', 'bottom-right'], true) ? $settings['superwoo_carousel_arrow_position'] : 'inside',
         ];
         $element->add_render_attribute('_wrapper', 'class', 'superwoo-products-carousel-enabled');
         $element->add_render_attribute('_wrapper', 'data-superwoo-products-carousel', wp_json_encode($config));
