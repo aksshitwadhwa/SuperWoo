@@ -125,11 +125,6 @@ class SuperWoo_Elementor_Products_Carousel {
             'label' => __('Dot Color', 'superwoo'), 'type' => \Elementor\Controls_Manager::COLOR,
             'selectors' => ['{{WRAPPER}}.superwoo-products-carousel-enabled' => '--superwoo-carousel-dot-color: {{VALUE}};'], 'condition' => $condition,
         ]);
-        $element->add_control('superwoo_carousel_arrow_position', [
-            'label' => __('Arrow Position', 'superwoo'), 'type' => \Elementor\Controls_Manager::SELECT,
-            'options' => ['inside' => __('Inside carousel', 'superwoo'), 'outside' => __('Outside carousel', 'superwoo'), 'top-right' => __('Top right', 'superwoo'), 'bottom-right' => __('Bottom right', 'superwoo')],
-            'default' => 'inside', 'condition' => $condition, 'prefix_class' => 'superwoo-carousel-arrow-position-',
-        ]);
         $element->add_responsive_control('superwoo_carousel_arrow_left_offset', [
             'label' => __('Left Arrow Offset', 'superwoo'),
             'description' => __('Move the previous arrow horizontally. Use a negative or positive pixel value.', 'superwoo'),
@@ -247,7 +242,6 @@ class SuperWoo_Elementor_Products_Carousel {
                 'tablet' => $this->extended_value($settings['superwoo_carousel_extended_tablet'] ?? ($settings['superwoo_carousel_extended'] ?? 'none')),
                 'mobile' => $this->extended_value($settings['superwoo_carousel_extended_mobile'] ?? ($settings['superwoo_carousel_extended_tablet'] ?? ($settings['superwoo_carousel_extended'] ?? 'none'))),
             ],
-            'arrowPosition' => in_array(($settings['superwoo_carousel_arrow_position'] ?? 'inside'), ['inside', 'outside', 'top-right', 'bottom-right'], true) ? $settings['superwoo_carousel_arrow_position'] : 'inside',
             'label' => sanitize_text_field($settings['superwoo_carousel_accessibility_label'] ?? __('Products carousel', 'superwoo')) ?: __('Products carousel', 'superwoo'),
             'header' => [
                 'show' => 'yes' === ($settings['superwoo_carousel_show_heading'] ?? ''),
