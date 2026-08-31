@@ -22,6 +22,8 @@ class SuperWoo_Cart_Drawer {
         add_action('wc_ajax_superwoo_remove_cart_item', [$this, 'ajax_remove_cart_item']);
         add_action('wp_ajax_superwoo_add_cross_sell', [$this, 'ajax_add_cross_sell']);
         add_action('wp_ajax_nopriv_superwoo_add_cross_sell', [$this, 'ajax_add_cross_sell']);
+        add_action('wp_ajax_superwoo_add_product_to_cart', [$this, 'ajax_add_product_to_cart']);
+        add_action('wp_ajax_nopriv_superwoo_add_product_to_cart', [$this, 'ajax_add_product_to_cart']);
     }
 
     public function enqueue_assets() {
@@ -197,6 +199,64 @@ class SuperWoo_Cart_Drawer {
         WC()->cart->calculate_totals();
         WC()->cart->set_session();
         $this->send_fragments($previous_offer_state, $allowed_quantities);
+    }
+
+    public function ajax_add_product_to_cart() {
+        $this->verify_ajax();
+
+        $product_id = isset($_POST['product_id']) ? absint($_POST['product_id']) : 0;
+        if (!$product_id && isset($_POST['add-to-cart'])) {
+            $product_id = absint($_POST['add-to-cart']);
+        }
+
+        $variation_id = isset($_POST['variation_id']) ? absint($_POST['variation_id']) : 0;
+        $quantity = isset($_POST['quantity']) && !is_array($_POST['quantity']) ? wc_stock_amount(wp_unslash($_POST['quantity'])) : 1;
+        $quantity = max(1, $quantity);
+        $variation = [];
+
+        foreach ($_POST as $key => $value) {
+            if (0 !== strpos($key, 'attribute_') || is_array($value)) {
+                continue;
+            }
+            $variation[sanitize_key(wp_unslash($key))] = wc_clean(wp_unslash($value));
+        }
+
+        if (!$product_id && $variation_id) {
+            $variation_product = wc_get_product($variation_id);
+            $product_id = $variation_product ? $variation_product->get_parent_id() : 0;
+        }
+
+        $product = wc_get_product($variation_id ?: $product_id);
+        if (!$product || !$product_id || in_array($product->get_type(), ['external', 'grouped'], true)) {
+            wp_send_json_error(['message' => __('This product cannot be added with AJAX.', 'superwoo')], 400);
+        }
+
+        $action_id = isset($_POST['superwoo_action_id']) ? sanitize_key(wp_unslash($_POST['superwoo_action_id'])) : '';
+        $before_quantity = $this->get_matching_cart_quantity($product_id, $variation_id);
+        if ($this->is_duplicate_product_add_action($action_id)) {
+            $this->send_fragments(null, null, $this->get_product_add_diagnostic_data($action_id, $product_id, $variation_id, $quantity, $before_quantity, $before_quantity, 'duplicate_skipped'));
+        }
+
+        $passed = apply_filters('woocommerce_add_to_cart_validation', true, $product_id, $quantity, $variation_id, $variation);
+        if (!$passed) {
+            wp_send_json_error(['message' => $this->get_cart_error_message()], 400);
+        }
+
+        $previous_offer_state = $this->get_offer_state();
+        $added = WC()->cart->add_to_cart($product_id, $quantity, $variation_id, $variation);
+        if (!$added) {
+            wp_send_json_error(['message' => $this->get_cart_error_message()], 400);
+        }
+
+        $this->remember_product_add_action($action_id);
+        $this->log_product_add_diagnostic('added', $product_id, $variation_id, $quantity, $action_id);
+        do_action('woocommerce_ajax_added_to_cart', $product_id);
+
+        $this->send_fragments(
+            $previous_offer_state,
+            $this->get_customer_cart_quantities(),
+            $this->get_product_add_diagnostic_data($action_id, $product_id, $variation_id, $quantity, $before_quantity, $this->get_matching_cart_quantity($product_id, $variation_id), 'added')
+        );
     }
 
     public function get_cross_sell_products() {

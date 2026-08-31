@@ -660,6 +660,46 @@
         }
     }
 
+    function ajaxSubmitProductForm($form, $button) {
+        var data = serializeForm($form, $button);
+        var key = productAddKey(data);
+        var request;
+
+        if (shouldBlockDuplicateProductAdd($form, key)) {
+            return true;
+        }
+
+        if ($form.hasClass('variations_form') && (!data.variation_id || parseInt(data.variation_id, 10) < 1)) {
+            return false;
+        }
+
+        productAddInFlight = true;
+        $form.data('superwoo-submitting', true);
+        rememberProductAdd($form, key);
+        data.superwoo_action_id = productAddActionId(key);
+        setProductButtonPending($button, true);
+
+        request = post('superwoo_add_product_to_cart', data, null, {
+            openCart: false,
+            refreshWooFragments: false
+        });
+
+        request.done(function (response) {
+            if (!response || !response.success || !response.data) {
+                return;
+            }
+
+            activateInlineProductQuantity($form);
+            $(document.body).trigger('added_to_cart', [response.data.fragments || {}, response.data.cart_hash || '', $button]);
+        }).always(function () {
+            productAddInFlight = false;
+            $form.removeData('superwoo-submitting');
+            setProductButtonPending($button, false);
+        });
+
+        return true;
+    }
+
     function isMobileProductView() {
         return document.body && document.body.classList.contains('single-product') && window.matchMedia('(max-width: 767px)').matches;
     }
@@ -1100,9 +1140,6 @@
     function clickStickyBuyNow(event) {
         var $form = productCartForm();
         var $addToCart;
-        var form;
-        var submitValue;
-        var submitField;
 
         event.preventDefault();
         event.stopPropagation();
@@ -1118,31 +1155,9 @@
             return;
         }
 
-        form = $form.get(0);
-        submitValue = $addToCart.val() || $addToCart.attr('value') || $form.find('[name="add-to-cart"]').first().val() || $form.find('[name="product_id"]').first().val();
-
-        // Submit exactly one standard WooCommerce form request.  requestSubmit
-        // and a programmatic button click both run theme/extension handlers;
-        // those are the only mobile-specific path left that can perform a
-        // second add. Native form submission bypasses those handlers while
-        // retaining WooCommerce's form data (quantity, variation and options).
-        if (!form || !submitValue || !window.HTMLFormElement || !window.HTMLFormElement.prototype.submit) {
-            return;
+        if (!ajaxSubmitProductForm($form, $addToCart)) {
+            announce(SuperWooCart.i18n.chooseOptions);
         }
-
-        submitField = document.createElement('input');
-        submitField.type = 'hidden';
-        submitField.name = 'add-to-cart';
-        submitField.value = submitValue;
-        form.appendChild(submitField);
-
-        try {
-            window.sessionStorage.setItem('superwoo-open-cart-after-native-product-submit', '1');
-        } catch (storageError) {
-            // Storage access is optional; the WooCommerce request still runs.
-        }
-
-        window.HTMLFormElement.prototype.submit.call(form);
     }
 
     function updateItem($item, quantity) {
@@ -1318,17 +1333,53 @@
         removeItem($item);
     });
 
-    $(document).on('click', '[data-superwoo-sticky-add-to-cart]', clickStickyBuyNow);
-    $(document).on('click', 'body.single-product form.cart .single_add_to_cart_button', function () {
-        var $button = $(this);
-        var $form = $button.closest('form.cart');
+    function handleSingleProductAdd(control, event) {
+        var $button = $(control);
+        var $form = $button.closest('body.single-product form.cart');
 
-        if (isBuyNowControl(this) || $button.is(':disabled, .disabled') || $button.attr('aria-disabled') === 'true') {
+        if (!$form.length || !canAjaxSubmitProductForm($form) || isBuyNowControl(control) || !isNativeAddToCartControl(control)) {
+            return false;
+        }
+
+        if ($button.is(':disabled, .disabled') || $button.attr('aria-disabled') === 'true') {
+            return true;
+        }
+
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.stopImmediatePropagation) {
+            event.stopImmediatePropagation();
+        }
+
+        if (!ajaxSubmitProductForm($form, $button)) {
+            announce(SuperWooCart.i18n.chooseOptions);
+        }
+
+        return true;
+    }
+
+    document.addEventListener('click', function (event) {
+        var control = event.target && event.target.closest ? event.target.closest('body.single-product form.cart button, body.single-product form.cart input[type="submit"]') : null;
+        if (control) {
+            handleSingleProductAdd(control, event);
+        }
+    }, true);
+
+    document.addEventListener('submit', function (event) {
+        var form = event.target;
+        var $form;
+        var $button;
+
+        if (!form || !form.matches || !form.matches('body.single-product form.cart')) {
             return;
         }
 
-        activateInlineProductQuantity($form);
-    });
+        $form = $(form);
+        $button = nativeAddToCartButton($form);
+        handleSingleProductAdd($button.get(0), event);
+    }, true);
+
+    $(document).on('click', '[data-superwoo-sticky-add-to-cart]', clickStickyBuyNow);
     $(document).on('click', '[data-superwoo-product-qty-minus], [data-superwoo-product-qty-plus]', function (event) {
         var $input = $(this).siblings('input.qty, input[name="quantity"]').first();
         var current = parseFloat($input.val()) || 1;
