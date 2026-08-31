@@ -37,6 +37,32 @@
         var timer = null;
         var submitting = false;
 
+        form.querySelectorAll('[data-superwoo-price-slider]').forEach(function (slider) {
+            var minimum = slider.querySelector('.superwoo-shop-filters__price-range--min');
+            var maximum = slider.querySelector('.superwoo-shop-filters__price-range--max');
+            var minLabel = form.querySelector('[data-superwoo-price-min]');
+            var maxLabel = form.querySelector('[data-superwoo-price-max]');
+            var lower = Number(slider.dataset.min || 0);
+            var upper = Number(slider.dataset.max || 0);
+            var currency = slider.dataset.currency || 'USD';
+            function format(value) { return new Intl.NumberFormat(undefined, { style: 'currency', currency: currency, maximumFractionDigits: 2 }).format(value); }
+            function update(source) {
+                var min = Number(minimum.value);
+                var max = Number(maximum.value);
+                if (min > max) {
+                    if (source === minimum) { max = min; maximum.value = String(max); } else { min = max; minimum.value = String(min); }
+                }
+                var range = upper - lower || 1;
+                slider.style.setProperty('--superwoo-range-start', ((min - lower) / range * 100) + '%');
+                slider.style.setProperty('--superwoo-range-end', ((max - lower) / range * 100) + '%');
+                if (minLabel) { minLabel.textContent = format(min); }
+                if (maxLabel) { maxLabel.textContent = format(max); }
+            }
+            update();
+            minimum.addEventListener('input', function () { update(minimum); });
+            maximum.addEventListener('input', function () { update(maximum); });
+        });
+
         function apply(delay) {
             window.clearTimeout(timer);
             timer = window.setTimeout(function () {
@@ -69,7 +95,7 @@
         form.addEventListener('input', function (event) {
             if (event.target.matches('input[type="search"]')) {
                 apply(550);
-            } else if (event.target.matches('input[type="number"]')) {
+            } else if (event.target.matches('input[type="number"], input[type="range"]')) {
                 apply(700);
             }
         });

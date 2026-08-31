@@ -96,6 +96,13 @@ class SuperWoo_Shop_Filters {
             'order' => 'ASC',
         ]);
         $filter_id = wp_unique_id('superwoo-shop-filters-');
+        $price_bounds = self::price_bounds();
+        $price_min = self::request_number('min_price');
+        $price_max = self::request_number('max_price');
+        $price_min = '' !== $price_min ? (float) $price_min : $price_bounds['min'];
+        $price_max = '' !== $price_max ? (float) $price_max : $price_bounds['max'];
+        $price_min = min(max($price_min, $price_bounds['min']), $price_bounds['max']);
+        $price_max = max(min($price_max, $price_bounds['max']), $price_min);
 
         ob_start();
         ?>
@@ -131,10 +138,14 @@ class SuperWoo_Shop_Filters {
             <?php if (!empty($args['show_price'])) : ?>
                 <fieldset class="superwoo-shop-filters__field">
                     <legend><?php esc_html_e('Price', 'superwoo'); ?></legend>
-                    <div class="superwoo-shop-filters__range">
-                        <input type="number" name="min_price" min="0" step="0.01" value="<?php echo esc_attr(self::request_number('min_price')); ?>" placeholder="<?php esc_attr_e('Min', 'superwoo'); ?>">
-                        <span aria-hidden="true">–</span>
-                        <input type="number" name="max_price" min="0" step="0.01" value="<?php echo esc_attr(self::request_number('max_price')); ?>" placeholder="<?php esc_attr_e('Max', 'superwoo'); ?>">
+                    <div class="superwoo-shop-filters__price-slider" data-superwoo-price-slider data-min="<?php echo esc_attr($price_bounds['min']); ?>" data-max="<?php echo esc_attr($price_bounds['max']); ?>" data-currency="<?php echo esc_attr(get_woocommerce_currency()); ?>">
+                        <div class="superwoo-shop-filters__price-track" aria-hidden="true"><span></span></div>
+                        <input class="superwoo-shop-filters__price-range superwoo-shop-filters__price-range--min" type="range" name="min_price" min="<?php echo esc_attr($price_bounds['min']); ?>" max="<?php echo esc_attr($price_bounds['max']); ?>" step="<?php echo esc_attr($price_bounds['step']); ?>" value="<?php echo esc_attr($price_min); ?>" aria-label="<?php esc_attr_e('Minimum price', 'superwoo'); ?>">
+                        <input class="superwoo-shop-filters__price-range superwoo-shop-filters__price-range--max" type="range" name="max_price" min="<?php echo esc_attr($price_bounds['min']); ?>" max="<?php echo esc_attr($price_bounds['max']); ?>" step="<?php echo esc_attr($price_bounds['step']); ?>" value="<?php echo esc_attr($price_max); ?>" aria-label="<?php esc_attr_e('Maximum price', 'superwoo'); ?>">
+                    </div>
+                    <div class="superwoo-shop-filters__price-values" aria-live="polite">
+                        <span data-superwoo-price-min><?php echo wp_kses_post(wc_price($price_min)); ?></span>
+                        <span data-superwoo-price-max><?php echo wp_kses_post(wc_price($price_max)); ?></span>
                     </div>
                 </fieldset>
             <?php endif; ?>
@@ -260,6 +271,26 @@ class SuperWoo_Shop_Filters {
             }
         }
         return $attributes;
+    }
+
+    /** Return a safe slider range from WooCommerce's indexed product prices. */
+    private static function price_bounds() {
+        global $wpdb;
+
+        $minimum = 0.0;
+        $maximum = 1000.0;
+        if (!empty($wpdb->wc_product_meta_lookup)) {
+            $lookup = $wpdb->wc_product_meta_lookup;
+            $row = $wpdb->get_row("SELECT MIN(lookup.min_price) AS minimum, MAX(lookup.max_price) AS maximum FROM {$lookup} AS lookup INNER JOIN {$wpdb->posts} AS products ON products.ID = lookup.product_id WHERE products.post_type = 'product' AND products.post_status = 'publish'"); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+            if ($row && null !== $row->maximum) {
+                $minimum = max(0, (float) $row->minimum);
+                $maximum = max($minimum + 1, (float) $row->maximum);
+            }
+        }
+
+        $decimals = function_exists('wc_get_price_decimals') ? max(0, (int) wc_get_price_decimals()) : 2;
+        $step = $decimals > 0 ? (string) (1 / (10 ** $decimals)) : '1';
+        return ['min' => $minimum, 'max' => $maximum, 'step' => $step];
     }
 
     private static function sorting_options() {
