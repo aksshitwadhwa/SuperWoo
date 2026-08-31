@@ -7,6 +7,8 @@
     var stickyBuyNowTimer = null;
     var productCartVisibilityObserver = null;
     var observedProductCartForm = null;
+    var productQuantityObserver = null;
+    var productQuantityNormalizeTimer = null;
     var storeApiNonce = '';
     var currentOfferState = window.SuperWooCart && SuperWooCart.offerState ? SuperWooCart.offerState : { discounts: {}, gifts: {} };
     var productAddInFlight = false;
@@ -937,7 +939,6 @@
 
     function prepareInlineProductActions() {
         var $form = productCartForm();
-        var $quantity;
 
         if (!$form.length || $form.hasClass('grouped_form')) {
             return;
@@ -948,11 +949,88 @@
             $(this).toggleClass('superwoo-inline-buy-now', isBuyNowControl(this));
         });
 
-        $quantity = $form.find('.quantity').first();
-        if ($quantity.length && !$quantity.find('[data-superwoo-product-qty-minus]').length) {
-            $quantity.prepend('<button type="button" class="qty-btn" data-superwoo-product-qty-minus aria-label="Decrease quantity">−</button>');
-            $quantity.append('<button type="button" class="qty-btn" data-superwoo-product-qty-plus aria-label="Increase quantity">+</button>');
+        normalizeProductQuantityControls($form);
+        observeProductQuantityControls($form);
+    }
+
+    function quantityControlDirection(element) {
+        var text = $.trim(($(element).is('input') ? $(element).val() : $(element).text()) || '');
+
+        if (/^[\-−–—]$/.test(text)) {
+            return 'minus';
         }
+        if (text === '+') {
+            return 'plus';
+        }
+        return '';
+    }
+
+    function normalizeProductQuantityControls($form) {
+        var $quantity = $form.find('.quantity').first();
+        var controls = { minus: [], plus: [] };
+        var keep;
+
+        if (!$quantity.length) {
+            return;
+        }
+
+        $form.find('button, input[type="button"], a, [role="button"], .minus, .plus').each(function () {
+            var direction;
+
+            if (isNativeAddToCartControl(this) || isBuyNowControl(this)) {
+                return;
+            }
+
+            direction = quantityControlDirection(this);
+            if (direction) {
+                controls[direction].push(this);
+            }
+        });
+
+        $.each(['minus', 'plus'], function (_index, direction) {
+            keep = controls[direction].filter(function (element) {
+                return $(element).is('[data-superwoo-product-qty-' + direction + ']');
+            })[0] || controls[direction][0];
+
+            $.each(controls[direction], function (_controlIndex, element) {
+                if (element !== keep) {
+                    $(element).remove();
+                }
+            });
+
+            if (!keep) {
+                keep = $('<button type="button" class="qty-btn" data-superwoo-product-qty-' + direction + '="" aria-label="' + (direction === 'minus' ? 'Decrease' : 'Increase') + ' quantity">' + (direction === 'minus' ? '−' : '+') + '</button>').get(0);
+            }
+
+            $(keep).attr('data-superwoo-product-qty-' + direction, '');
+            if (keep.parentNode !== $quantity.get(0)) {
+                if (direction === 'minus') {
+                    $quantity.prepend(keep);
+                } else {
+                    $quantity.append(keep);
+                }
+            }
+        });
+    }
+
+    function observeProductQuantityControls($form) {
+        var form = $form.get(0);
+
+        if (!form || !window.MutationObserver) {
+            return;
+        }
+
+        if (productQuantityObserver) {
+            productQuantityObserver.disconnect();
+        }
+
+        productQuantityObserver = new MutationObserver(function () {
+            window.clearTimeout(productQuantityNormalizeTimer);
+            productQuantityNormalizeTimer = window.setTimeout(function () {
+                normalizeProductQuantityControls($form);
+            }, 20);
+        });
+        productQuantityObserver.observe(form, { childList: true, subtree: true });
     }
 
     function nativeAddToCartButton($form) {
