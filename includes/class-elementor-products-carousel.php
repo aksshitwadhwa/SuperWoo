@@ -75,6 +75,15 @@ class SuperWoo_Elementor_Products_Carousel {
                 'prefix_class' => 'superwoo-carousel-' . str_replace('superwoo_carousel_', '', $id) . '-',
             ]);
         }
+        $element->add_control('superwoo_carousel_infinite_scroll', [
+            'label' => __('Infinite Scroll', 'superwoo'),
+            'description' => __('Enable mouse-wheel and trackpad navigation that continues from the last product to the first.', 'superwoo'),
+            'type' => \Elementor\Controls_Manager::SWITCHER,
+            'return_value' => 'yes',
+            'default' => '',
+            'condition' => $condition,
+            'prefix_class' => 'superwoo-carousel-infinite-scroll-',
+        ]);
         $element->add_control('superwoo_carousel_arrow_style', [
             'label' => __('Arrow Icon', 'superwoo'),
             'type' => \Elementor\Controls_Manager::SELECT,
@@ -193,6 +202,7 @@ class SuperWoo_Elementor_Products_Carousel {
             'autoplay' => 'yes' === ($settings['superwoo_carousel_autoplay'] ?? ''),
             'autoplaySpeed' => (int) $this->number($settings['superwoo_carousel_autoplay_speed'] ?? 3000, 3000, 500, 60000),
             'loop' => 'yes' === ($settings['superwoo_carousel_loop'] ?? 'yes'),
+            'infiniteScroll' => 'yes' === ($settings['superwoo_carousel_infinite_scroll'] ?? ''),
             'pauseOnHover' => 'yes' === ($settings['superwoo_carousel_pause_hover'] ?? 'yes'),
             'extended' => [
                 'desktop' => $this->extended_value($settings['superwoo_carousel_extended'] ?? 'none'),

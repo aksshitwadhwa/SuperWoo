@@ -70,6 +70,7 @@
         config.dots = root.classList.contains('superwoo-carousel-dots-yes');
         config.autoplay = root.classList.contains('superwoo-carousel-autoplay-yes');
         config.loop = root.classList.contains('superwoo-carousel-loop-yes');
+        config.infiniteScroll = root.classList.contains('superwoo-carousel-infinite-scroll-yes');
         config.pauseOnHover = root.classList.contains('superwoo-carousel-pause_hover-yes');
         config.arrowStyle = style && ['chevron', 'angle', 'arrow', 'triangle'].indexOf(style[1]) !== -1 ? style[1] : 'chevron';
         config.arrowPosition = position && allowedPosition.indexOf(position[1]) !== -1 ? position[1] : 'inside';
@@ -177,12 +178,23 @@
             }
             if (Math.abs(distance) > 40) { this.go(distance > 0 ? -1 : 1); }
         }.bind(this);
+        this.onWheel = function (event) {
+            if (!this.config.infiniteScroll) { return; }
+            var distance = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+            if (Math.abs(distance) < 12) { return; }
+            event.preventDefault();
+            if (this.wheelLocked) { return; }
+            this.wheelLocked = true;
+            this.go(distance > 0 ? 1 : -1);
+            window.setTimeout(function () { this.wheelLocked = false; }.bind(this), 250);
+        }.bind(this);
         window.addEventListener('resize', this.onResize);
         this.viewport.addEventListener('keydown', this.onKeydown);
         this.viewport.addEventListener('pointerdown', this.onPointerDown);
         this.viewport.addEventListener('pointermove', this.onPointerMove);
         this.viewport.addEventListener('pointerup', this.onPointerUp);
         this.viewport.addEventListener('pointercancel', this.onPointerUp);
+        this.viewport.addEventListener('wheel', this.onWheel, { passive: false });
         this.viewport.setAttribute('tabindex', '0');
         if (this.previous) { this.previous.addEventListener('click', function () { this.go(-1); }.bind(this)); }
         if (this.next) { this.next.addEventListener('click', function () { this.go(1); }.bind(this)); }
@@ -244,7 +256,7 @@
     Carousel.prototype.go = function (direction) {
         var step = Math.max(1, Math.round(Number(this.config.slidesToScroll) || 1));
         var target = this.index + direction * step;
-        if (this.config.loop && this.maxIndex > 0) {
+        if ((this.config.loop || this.config.infiniteScroll) && this.maxIndex > 0) {
             target = target > this.maxIndex ? 0 : (target < 0 ? this.maxIndex : target);
         } else {
             target = Math.max(0, Math.min(this.maxIndex, target));
@@ -301,6 +313,7 @@
         }
         if (this.resizeObserver) { this.resizeObserver.disconnect(); }
         if (!this.viewport) { return; }
+        this.viewport.removeEventListener('wheel', this.onWheel);
         this.allSlides.forEach(function (slide) {
             slide.classList.remove('superwoo-carousel__slide'); slide.style.removeProperty('flex'); slide.style.removeProperty('width');
             slide.removeAttribute('role'); slide.removeAttribute('aria-label'); slide.hidden = false;
@@ -373,6 +386,7 @@
             autoplay: value('superwoo_carousel_autoplay', '') === 'yes',
             autoplaySpeed: number(value('superwoo_carousel_autoplay_speed', 3000), 3000, 500, 60000),
             loop: value('superwoo_carousel_loop', 'yes') === 'yes',
+            infiniteScroll: value('superwoo_carousel_infinite_scroll', '') === 'yes',
             pauseOnHover: value('superwoo_carousel_pause_hover', 'yes') === 'yes',
             extended: {
                 desktop: value('superwoo_carousel_extended', 'none'),
