@@ -38,6 +38,28 @@
     min-width: 0;
 }
 
+/* Elementor can omit runtime render attributes on its first editor-frame
+ * render. Keep its native Columns control from winning during that brief
+ * state; the JavaScript carousel replaces these preview-only dimensions as
+ * soon as the widget model is available. */
+.elementor-editor-active .superwoo-carousel-enabled-yes:not(.superwoo-products-carousel-enabled) ul.products {
+    display: flex !important;
+    grid-template-columns: none !important;
+    flex-wrap: nowrap;
+    gap: calc(var(--superwoo-preview-gap, 20) * 1px);
+    overflow: hidden;
+}
+
+.elementor-editor-active .superwoo-carousel-enabled-yes:not(.superwoo-products-carousel-enabled) ul.products > li.product {
+    float: none !important;
+    clear: none !important;
+    width: calc((100% - ((var(--superwoo-preview-slides, 1) - 1) * var(--superwoo-preview-gap, 20) * 1px)) / var(--superwoo-preview-slides, 1)) !important;
+    max-width: none !important;
+    margin: 0 !important;
+    flex: 0 0 calc((100% - ((var(--superwoo-preview-slides, 1) - 1) * var(--superwoo-preview-gap, 20) * 1px)) / var(--superwoo-preview-slides, 1)) !important;
+    min-width: 0;
+}
+
 .superwoo-products-carousel-enabled .woocommerce-pagination {
     display: none;
 }
