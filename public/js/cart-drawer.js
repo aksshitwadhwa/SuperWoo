@@ -1458,22 +1458,42 @@
     }, true);
 
     $(document).on('click', '[data-superwoo-sticky-add-to-cart]', clickStickyBuyNow);
-    $(document).on('click', '[data-superwoo-product-qty-minus], [data-superwoo-product-qty-plus]', function (event) {
-        var $input = $(this).siblings('input.qty, input[name="quantity"]').first();
-        var current = parseFloat($input.val()) || 1;
-        var step = parseFloat($input.attr('step')) || 1;
-        var min = parseFloat($input.attr('min')) || 1;
-        var max = parseFloat($input.attr('max'));
-        var next = $(this).is('[data-superwoo-product-qty-plus]') ? current + step : current - step;
+    document.addEventListener('click', function (event) {
+        var control = event.target && event.target.closest ? event.target.closest('[data-superwoo-product-qty-minus], [data-superwoo-product-qty-plus]') : null;
+        var $control;
+        var $input;
+        var current;
+        var step;
+        var min;
+        var max;
+        var next;
+
+        if (!control) {
+            return;
+        }
+
+        $control = $(control);
+        $input = $control.siblings('input.qty, input[name="quantity"]').first();
+        if (!$input.length) {
+            return;
+        }
+
+        current = parseFloat($input.val()) || 1;
+        step = parseFloat($input.attr('step')) || 1;
+        min = parseFloat($input.attr('min')) || 1;
+        max = parseFloat($input.attr('max'));
+        next = $control.is('[data-superwoo-product-qty-plus]') ? current + step : current - step;
 
         event.preventDefault();
         event.stopPropagation();
+        event.stopImmediatePropagation();
+
         next = Math.max(min, next);
         if (!isNaN(max)) {
             next = Math.min(max, next);
         }
         $input.val(next).trigger('input').trigger('change');
-    });
+    }, true);
     $(document).on('submit', 'body.single-product form.cart', function () {
         // Native WooCommerce submissions normally reload the product page and
         // do not emit `added_to_cart`. Preserve the user's intent so the

@@ -355,7 +355,13 @@ body.single-product form.cart.superwoo-product-quantity-active:not(.grouped_form
     font-size: 20px !important;
     height: 52px !important;
     min-width: 52px !important;
+    margin: 0 !important;
     width: 52px !important;
+}
+
+body.single-product form.cart .quantity [data-superwoo-product-qty-plus],
+body.single-product form.cart .quantity .qty-btn.plus {
+    margin: 0 !important;
 }
 
 .elementor-product-simple form.cart .single_add_to_cart_button,
