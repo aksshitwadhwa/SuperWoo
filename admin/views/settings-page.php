@@ -72,11 +72,24 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'
                             <label><input type="checkbox" name="enable_reviews" value="1" <?php checked(!empty($settings['enable_reviews'])); ?>> <?php esc_html_e('Modern Reviews', 'superwoo'); ?></label><br>
                             <label><input type="checkbox" name="enable_variation_cards" value="1" <?php checked(!empty($settings['enable_variation_cards'])); ?>> <?php esc_html_e('Variation Cards', 'superwoo'); ?></label><br>
                             <label><input type="checkbox" name="enable_shop_filters" value="1" <?php checked(!empty($settings['enable_shop_filters'])); ?>> <?php esc_html_e('Shop Filters', 'superwoo'); ?></label><br>
+                            <label><input type="checkbox" name="enable_shoppable_videos" value="1" <?php checked(!empty($settings['enable_shoppable_videos'])); ?>> <?php esc_html_e('Shoppable Videos', 'superwoo'); ?></label><br>
+                            <span class="description"><?php esc_html_e('Configure customer-facing video behavior below.', 'superwoo'); ?></span><br>
                             <label><input type="checkbox" name="enable_bundle_offers" value="1" <?php checked(!empty($settings['enable_bundle_offers'])); ?>> <?php esc_html_e('Offers', 'superwoo'); ?></label><br>
                             <label><input type="checkbox" name="enable_cart_drawer" value="1" <?php checked(!empty($settings['enable_cart_drawer'])); ?>> <?php esc_html_e('Cart Drawer', 'superwoo'); ?></label><br>
                             <label><input type="checkbox" name="enable_elementor_products_carousel" value="1" <?php checked(!empty($settings['enable_elementor_products_carousel'])); ?>> <?php esc_html_e('Elementor Products Carousel', 'superwoo'); ?></label>
                         </fieldset>
                     </td>
+                </tr>
+                <tr>
+                    <th scope="row"><?php esc_html_e('Shoppable Videos', 'superwoo'); ?></th>
+                    <td><fieldset>
+                        <label><input type="checkbox" name="shoppable_videos_fullscreen" value="1" <?php checked(!empty($settings['shoppable_videos_fullscreen'])); ?>> <?php esc_html_e('Enable fullscreen viewer', 'superwoo'); ?></label><br>
+                        <label><input type="checkbox" name="shoppable_videos_autoplay" value="1" <?php checked(!empty($settings['shoppable_videos_autoplay'])); ?>> <?php esc_html_e('Autoplay videos when meaningfully visible', 'superwoo'); ?></label><br>
+                        <label><input type="checkbox" name="shoppable_videos_muted" value="1" <?php checked(!empty($settings['shoppable_videos_muted'])); ?>> <?php esc_html_e('Mute autoplay by default', 'superwoo'); ?></label><br>
+                        <label><input type="checkbox" name="shoppable_videos_quick_buy" value="1" <?php checked(!empty($settings['shoppable_videos_quick_buy'])); ?>> <?php esc_html_e('Enable Quick Buy redirect after add to cart', 'superwoo'); ?></label><br>
+                        <label><input type="checkbox" name="shoppable_videos_product_page" value="1" <?php checked(!empty($settings['shoppable_videos_product_page'])); ?>> <?php esc_html_e('Automatically show matching videos on product pages', 'superwoo'); ?></label><br>
+                        <label><?php esc_html_e('Product-page position:', 'superwoo'); ?> <select name="shoppable_videos_product_position"><option value="after_summary" <?php selected($settings['shoppable_videos_product_position'] ?? 'after_summary', 'after_summary'); ?>><?php esc_html_e('After summary', 'superwoo'); ?></option><option value="after_tabs" <?php selected($settings['shoppable_videos_product_position'] ?? '', 'after_tabs'); ?>><?php esc_html_e('After tabs', 'superwoo'); ?></option><option value="before_related" <?php selected($settings['shoppable_videos_product_position'] ?? '', 'before_related'); ?>><?php esc_html_e('Before related products', 'superwoo'); ?></option></select></label>
+                    </fieldset></td>
                 </tr>
                 <tr>
                     <th scope="row"><?php esc_html_e('Shop filters to show', 'superwoo'); ?></th>

@@ -4,12 +4,12 @@ Tags: woocommerce, cart drawer, product benefits, faq, bundle discounts
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.176
+Stable tag: 1.0.177
 License: GPLv2 or later
 
-SuperWoo adds WooCommerce product benefit icons, how-to content, product FAQs, bundle offer rules, cart notices, and an AJAX cart drawer.
+SuperWoo adds WooCommerce product benefit icons, how-to content, product FAQs, shoppable videos, bundle offer rules, cart notices, and an AJAX cart drawer.
 
-SuperWoo does not collect analytics or send customer data to an external service. If Multi-Currency location detection or an exchange-rate provider is enabled, the site administrator is responsible for reviewing that provider's privacy policy and informing visitors as required.
+When Shoppable Videos is enabled, SuperWoo stores pseudonymous, on-site video engagement events (views, product clicks, add-to-cart actions, and completions) for 90 days. It does not send those events to an external service. If Multi-Currency location detection or an exchange-rate provider is enabled, the site administrator is responsible for reviewing that provider's privacy policy and informing visitors as required.
 
 == Description ==
 
@@ -31,6 +31,7 @@ Shortcodes:
 * `[superwoo_product_reviews]`
 * `[superwoo_product_reviews id="123"]`
 * `[superwoo_cart_button]`
+* `[superwoo_shoppable_videos]`
 
 Elementor:
 
@@ -47,6 +48,10 @@ Elementor:
 5. Configure offer rules under WooCommerce > Offers.
 
 == Changelog ==
+
+= 1.0.177 =
+* Add Shoppable Videos with native video management, collections, timed product cards, WooCommerce cart attribution, optional Quick Buy, product-page placement, analytics, shortcodes, and Elementor support.
+* Add accessible fullscreen viewing, WordPress Media Library selection, SKU-aware product search, and explicit privacy/retention disclosure for local video engagement analytics.
 
 = 1.0.176 =
 * Add optional infinite mouse-wheel and trackpad scrolling for product carousels.

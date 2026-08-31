@@ -44,6 +44,9 @@ class SuperWoo_Plugin {
         if (!empty(superwoo_get_settings()['enable_shop_filters'])) {
             (new SuperWoo_Shop_Filters())->hooks();
         }
+        if (!empty(superwoo_get_settings()['enable_shoppable_videos'])) {
+            (new SuperWoo_Shoppable_Videos())->hooks();
+        }
 
         if ($is_regular_admin) {
             return;
@@ -66,9 +69,13 @@ class SuperWoo_Plugin {
         if (!get_option('superwoo_settings')) {
             add_option('superwoo_settings', superwoo_get_settings());
         }
+        if (class_exists('SuperWoo_Shoppable_Videos')) {
+            SuperWoo_Shoppable_Videos::install();
+        }
     }
 
     public static function deactivate() {
+        wp_clear_scheduled_hook('superwoo_video_cleanup_analytics');
         flush_rewrite_rules();
     }
 
@@ -153,6 +160,13 @@ class SuperWoo_Plugin {
             'enable_reviews'        => !empty($_POST['enable_reviews']),
             'enable_variation_cards' => !empty($_POST['enable_variation_cards']),
             'enable_shop_filters'    => !empty($_POST['enable_shop_filters']),
+            'enable_shoppable_videos' => !empty($_POST['enable_shoppable_videos']),
+            'shoppable_videos_fullscreen' => !empty($_POST['shoppable_videos_fullscreen']),
+            'shoppable_videos_autoplay' => !empty($_POST['shoppable_videos_autoplay']),
+            'shoppable_videos_muted' => !empty($_POST['shoppable_videos_muted']),
+            'shoppable_videos_quick_buy' => !empty($_POST['shoppable_videos_quick_buy']),
+            'shoppable_videos_product_page' => !empty($_POST['shoppable_videos_product_page']),
+            'shoppable_videos_product_position' => in_array($_POST['shoppable_videos_product_position'] ?? '', ['after_summary', 'after_tabs', 'before_related'], true) ? sanitize_key(wp_unslash($_POST['shoppable_videos_product_position'])) : 'after_summary',
             'shop_filter_show_search' => !empty($_POST['shop_filter_show_search']),
             'shop_filter_show_categories' => !empty($_POST['shop_filter_show_categories']),
             'shop_filter_show_price' => !empty($_POST['shop_filter_show_price']),

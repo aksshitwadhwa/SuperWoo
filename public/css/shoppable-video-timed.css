@@ -1,0 +1,15 @@
+/* Timed product cards are progressively enhanced by shoppable-videos.js. */
+.superwoo-video-product[hidden] {
+    display: none !important;
+}
+
+.superwoo-video-card__provider {
+    align-items: center;
+    background-position: center;
+    background-size: cover;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    min-height: 100%;
+    text-decoration: none;
+}
