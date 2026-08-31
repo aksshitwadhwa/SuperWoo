@@ -12,6 +12,7 @@ class SuperWoo_Elementor_Products_Carousel {
         add_action('elementor/frontend/widget/before_render', [$this, 'before_render']);
         add_action('elementor/preview/enqueue_styles', [$this, 'enqueue_styles']);
         add_action('elementor/preview/enqueue_scripts', [$this, 'enqueue_scripts']);
+        add_filter('rocket_delay_js_exclusions', [$this, 'exclude_from_rocket_delay']);
     }
 
     public function register_controls($element, $args) { // phpcs:ignore Generic.CodeAnalysis.UnusedFunctionParameter.FoundAfterLastUsed
@@ -270,6 +271,13 @@ class SuperWoo_Elementor_Products_Carousel {
 
     public function enqueue_scripts() {
         wp_enqueue_script('superwoo-elementor-products-carousel', SUPERWOO_URL . 'public/js/elementor-products-carousel.js', [], SUPERWOO_VERSION, true);
+    }
+
+    /** The carousel must initialize before the first product-card interaction. */
+    public function exclude_from_rocket_delay($exclusions) {
+        $exclusions[] = 'superwoo-elementor-products-carousel';
+        $exclusions[] = '/superwoo/public/js/elementor-products-carousel.js';
+        return array_unique($exclusions);
     }
 
     private function number($value, $default, $min, $max) {
