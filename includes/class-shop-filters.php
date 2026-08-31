@@ -86,10 +86,16 @@ class SuperWoo_Shop_Filters {
             'orderby' => 'name',
             'order' => 'ASC',
         ]);
+        $filter_id = wp_unique_id('superwoo-shop-filters-');
 
         ob_start();
         ?>
-        <form class="superwoo-shop-filters" method="get" action="" data-superwoo-auto-apply>
+        <div class="superwoo-shop-filters-shell" data-superwoo-filter-shell>
+        <button class="superwoo-shop-filters__mobile-toggle" type="button" aria-expanded="false" aria-controls="<?php echo esc_attr($filter_id); ?>" data-superwoo-filter-toggle>
+            <span><?php esc_html_e('Filter products', 'superwoo'); ?></span>
+            <span class="superwoo-shop-filters__mobile-toggle-icon" aria-hidden="true"></span>
+        </button>
+        <form id="<?php echo esc_attr($filter_id); ?>" class="superwoo-shop-filters" method="get" action="" data-superwoo-auto-apply>
             <?php if (!empty($args['show_title']) && '' !== trim((string) $args['title'])) : ?>
                 <h4 class="superwoo-shop-filters__title"><?php echo esc_html($args['title']); ?></h4>
             <?php endif; ?>
@@ -182,6 +188,7 @@ class SuperWoo_Shop_Filters {
                 <a href="<?php echo esc_url(self::clear_url()); ?>"><?php esc_html_e('Clear filters', 'superwoo'); ?></a>
             </div>
         </form>
+        </div>
         <?php
         return ob_get_clean();
     }
