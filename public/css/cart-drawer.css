@@ -262,18 +262,45 @@ body.single-product form.cart a[href*="buy-now"] {
     margin-right: 0;
     max-width: none;
     width: 100%;
+    grid-column: 2;
+    grid-row: 1;
 }
 
 /* Product purchase layout. These rules replace the former Customizer CSS and
  * are scoped to Elementor's product widgets so other forms are unaffected. */
+body.single-product form.cart:not(.variations_form):not(.grouped_form),
+body.single-product form.cart.variations_form .woocommerce-variation-add-to-cart,
 .elementor-product-simple form.cart,
 .elementor-product-variable .woocommerce-variation-add-to-cart {
     align-items: stretch;
     box-sizing: border-box;
     display: grid !important;
     gap: 12px !important;
-    grid-template-columns: 184px minmax(0, 1fr) !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     width: 100% !important;
+}
+
+body.single-product form.cart:not(.grouped_form) .quantity {
+    display: none !important;
+    grid-column: 1;
+    grid-row: 1;
+    margin: 0 !important;
+    width: 100% !important;
+}
+
+body.single-product form.cart.superwoo-product-quantity-active:not(.grouped_form) .quantity {
+    display: flex !important;
+}
+
+body.single-product form.cart:not(.grouped_form) .single_add_to_cart_button:not(.superwoo-native-buy-now-mobile) {
+    grid-column: 1;
+    grid-row: 1;
+    margin: 0 !important;
+    width: 100% !important;
+}
+
+body.single-product form.cart.superwoo-product-quantity-active:not(.grouped_form) .single_add_to_cart_button:not(.superwoo-native-buy-now-mobile) {
+    display: none !important;
 }
 
 .elementor-product-simple form.cart .quantity,
@@ -281,13 +308,20 @@ body.single-product form.cart a[href*="buy-now"] {
     align-items: center;
     background: #f1f1f1 !important;
     box-sizing: border-box;
-    display: flex;
+    display: none !important;
+    grid-column: 1;
+    grid-row: 1;
     /* height: 52px !important; */
     justify-content: space-between;
     margin: 0 !important;
     /* min-width: 184px !important; */
     /* width: 184px !important; */
     gap: 0 !important;
+}
+
+.elementor-product-simple form.cart.superwoo-product-quantity-active .quantity,
+.elementor-product-variable form.cart.superwoo-product-quantity-active .woocommerce-variation-add-to-cart .quantity {
+    display: flex !important;
 }
 
 .elementor-product-simple form.cart .quantity .qty,
@@ -334,6 +368,13 @@ body.single-product form.cart a[href*="buy-now"] {
     justify-content: center;
     margin: 0 !important;
     width: 100% !important;
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.elementor-product-simple form.cart.superwoo-product-quantity-active .single_add_to_cart_button,
+.elementor-product-variable form.cart.superwoo-product-quantity-active .woocommerce-variation-add-to-cart .single_add_to_cart_button {
+    display: none !important;
 }
 
 .elementor-product-simple form.cart .single_add_to_cart_button:not(#btn-1cc-pdp),
@@ -348,7 +389,8 @@ body.single-product form.cart a[href*="buy-now"] {
     background: transparent !important;
     border: 1px solid var(--superwoo-button, #056b9d) !important;
     color: var(--superwoo-button, #056b9d) !important;
-    grid-column: 1 / -1;
+    grid-column: 2;
+    grid-row: 1;
     margin: 0 !important;
     width: 100% !important;
 }
@@ -364,13 +406,13 @@ body.single-product form.cart a[href*="buy-now"] {
     .elementor-product-simple form.cart,
     .elementor-product-variable .woocommerce-variation-add-to-cart {
         gap: 8px !important;
-        grid-template-columns: 120px minmax(0, 1fr) !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     }
 
     .elementor-product-simple form.cart .quantity,
     .elementor-product-variable .woocommerce-variation-add-to-cart .quantity {
-        min-width: 120px !important;
-        width: 120px !important;
+        min-width: 0 !important;
+        width: 100% !important;
     }
 
     .elementor-product-simple form.cart .quantity .qty,
@@ -1664,7 +1706,7 @@ color-mix(in srgb, var(--superwoo-mobile-bottom-nav-active) 16%, #ffffff) !impor
         display: grid !important;
         gap: 10px !important;
         grid-auto-flow: row !important;
-        grid-template-columns: calc(30% - 5px) calc(70% - 5px) !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
         width: 100% !important;
     }
 
@@ -1683,7 +1725,7 @@ color-mix(in srgb, var(--superwoo-mobile-bottom-nav-active) 16%, #ffffff) !impor
         display: grid !important;
         gap: 10px !important;
         grid-auto-flow: row !important;
-        grid-template-columns: calc(30% - 5px) calc(70% - 5px) !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
         margin: 0 !important;
         max-width: none !important;
         width: 100% !important;
@@ -1698,7 +1740,7 @@ color-mix(in srgb, var(--superwoo-mobile-bottom-nav-active) 16%, #ffffff) !impor
 
     body.single-product.superwoo-has-mobile-buy-now form.cart:not(.grouped_form) .quantity {
         align-items: stretch !important;
-        display: grid !important;
+        display: none !important;
         grid-column: 1 !important;
         grid-row: 1 !important;
         grid-template-columns: 1fr 1fr 1fr !important;
@@ -1707,6 +1749,10 @@ color-mix(in srgb, var(--superwoo-mobile-bottom-nav-active) 16%, #ffffff) !impor
         min-width: 0 !important;
         overflow: visible !important;
         width: 100% !important;
+    }
+
+    body.single-product.superwoo-has-mobile-buy-now form.cart.superwoo-product-quantity-active:not(.grouped_form) .quantity {
+        display: grid !important;
     }
 
     body.single-product.superwoo-mobile-cart-enabled form.cart:not(.grouped_form) .single_variation,
@@ -1743,7 +1789,7 @@ color-mix(in srgb, var(--superwoo-mobile-bottom-nav-active) 16%, #ffffff) !impor
         align-items: center !important;
         box-sizing: border-box !important;
         display: inline-flex !important;
-        grid-column: 2 !important;
+        grid-column: 1 !important;
         grid-row: 1 !important;
         justify-content: center !important;
         margin: 0 !important;
@@ -1757,7 +1803,13 @@ color-mix(in srgb, var(--superwoo-mobile-bottom-nav-active) 16%, #ffffff) !impor
     body.single-product.superwoo-mobile-cart-enabled form.cart:not(.grouped_form) .quantity + .single_add_to_cart_button,
     body.single-product.superwoo-has-mobile-buy-now form.cart:not(.grouped_form) .quantity + button[name="add-to-cart"],
     body.single-product.superwoo-has-mobile-buy-now form.cart:not(.grouped_form) .quantity + .single_add_to_cart_button {
-        grid-column: 2 !important;
+        grid-column: 1 !important;
+    }
+
+    body.single-product.superwoo-mobile-cart-enabled form.cart.superwoo-product-quantity-active:not(.grouped_form) .single_add_to_cart_button:not(.superwoo-native-buy-now-mobile),
+    body.single-product.superwoo-has-mobile-buy-now form.cart.superwoo-product-quantity-active:not(.grouped_form) .single_add_to_cart_button:not(.superwoo-native-buy-now-mobile),
+    body.single-product.superwoo-has-mobile-buy-now form.cart.superwoo-product-quantity-active:not(.grouped_form) .superwoo-native-add-to-cart-mobile {
+        display: none !important;
     }
 
     body.single-product.superwoo-mobile-cart-enabled form.cart:not(.grouped_form) .superwoo-native-buy-now-mobile,
@@ -1775,8 +1827,8 @@ color-mix(in srgb, var(--superwoo-mobile-bottom-nav-active) 16%, #ffffff) !impor
     body.single-product.superwoo-mobile-cart-enabled form.cart:not(.grouped_form) a[href*="buy-now"] {
         box-sizing: border-box !important;
         display: flex !important;
-        grid-column: 1 / -1 !important;
-        grid-row: 2 !important;
+        grid-column: 2 !important;
+        grid-row: 1 !important;
         justify-content: center !important;
         margin: 0 !important;
         max-width: none !important;

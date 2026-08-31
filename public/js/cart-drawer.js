@@ -782,7 +782,7 @@
             form.style.setProperty('display', 'grid', 'important');
             form.style.setProperty('gap', '10px', 'important');
             form.style.setProperty('grid-auto-flow', 'row', 'important');
-            form.style.setProperty('grid-template-columns', 'calc(30% - 5px) calc(70% - 5px)', 'important');
+            form.style.setProperty('grid-template-columns', 'repeat(2, minmax(0, 1fr))', 'important');
         }
 
         $layout = $form.find('.woocommerce-variation-add-to-cart').first();
@@ -790,7 +790,7 @@
             $layout.get(0).style.setProperty('display', 'grid', 'important');
             $layout.get(0).style.setProperty('gap', '10px', 'important');
             $layout.get(0).style.setProperty('grid-auto-flow', 'row', 'important');
-            $layout.get(0).style.setProperty('grid-template-columns', 'calc(30% - 5px) calc(70% - 5px)', 'important');
+            $layout.get(0).style.setProperty('grid-template-columns', 'repeat(2, minmax(0, 1fr))', 'important');
             $layout.get(0).style.setProperty('width', '100%', 'important');
         }
 
@@ -808,7 +808,7 @@
         $quantity = $form.find('.quantity').first();
         if ($quantity.length) {
             $quantity.get(0).style.setProperty('align-items', 'stretch', 'important');
-            $quantity.get(0).style.setProperty('display', 'grid', 'important');
+            $quantity.get(0).style.setProperty('display', $form.hasClass('superwoo-product-quantity-active') ? 'grid' : 'none', 'important');
             $quantity.get(0).style.setProperty('grid-column', '1', 'important');
             $quantity.get(0).style.setProperty('grid-row', '1', 'important');
             $quantity.get(0).style.setProperty('grid-template-columns', '1fr 1fr 1fr', 'important');
@@ -834,8 +834,8 @@
 
         $addToCart = nativeAddToCartButton($form);
         if ($addToCart.length) {
-            $addToCart.get(0).style.setProperty('display', 'inline-flex', 'important');
-            $addToCart.get(0).style.setProperty('grid-column', '2', 'important');
+            $addToCart.get(0).style.setProperty('display', $form.hasClass('superwoo-product-quantity-active') ? 'none' : 'inline-flex', 'important');
+            $addToCart.get(0).style.setProperty('grid-column', '1', 'important');
             $addToCart.get(0).style.setProperty('grid-row', '1', 'important');
             $addToCart.get(0).style.setProperty('justify-content', 'center', 'important');
             $addToCart.get(0).style.setProperty('margin', '0', 'important');
@@ -845,8 +845,8 @@
         $buyNow = $form.find('.superwoo-native-buy-now-mobile').first();
         if ($buyNow.length) {
             $buyNow.get(0).style.setProperty('display', 'flex', 'important');
-            $buyNow.get(0).style.setProperty('grid-column', '1 / -1', 'important');
-            $buyNow.get(0).style.setProperty('grid-row', '2', 'important');
+            $buyNow.get(0).style.setProperty('grid-column', '2', 'important');
+            $buyNow.get(0).style.setProperty('grid-row', '1', 'important');
             $buyNow.get(0).style.setProperty('justify-content', 'center', 'important');
             $buyNow.get(0).style.setProperty('margin', '0', 'important');
             $buyNow.get(0).style.setProperty('width', '100%', 'important');
@@ -883,6 +883,15 @@
             }
         });
 
+        forceInlineCartGrid($form);
+    }
+
+    function activateInlineProductQuantity($form) {
+        if (!$form || !$form.length) {
+            return;
+        }
+
+        $form.addClass('superwoo-product-quantity-active');
         forceInlineCartGrid($form);
     }
 
@@ -1290,6 +1299,21 @@
     });
 
     $(document).on('click', '[data-superwoo-sticky-add-to-cart]', clickStickyBuyNow);
+    $(document).on('click', 'body.single-product form.cart .single_add_to_cart_button', function () {
+        var $button = $(this);
+        var $form = $button.closest('form.cart');
+
+        if (isBuyNowControl(this) || $button.is(':disabled, .disabled') || $button.attr('aria-disabled') === 'true') {
+            return;
+        }
+
+        activateInlineProductQuantity($form);
+        try {
+            window.sessionStorage.setItem('superwoo-product-quantity-active', '1');
+        } catch (storageError) {
+            // Storage access is optional.
+        }
+    });
     $(document).on('submit', 'body.single-product form.cart', function () {
         // Native WooCommerce submissions normally reload the product page and
         // do not emit `added_to_cart`. Preserve the user's intent so the
@@ -1331,6 +1355,7 @@
     });
 
     $(document.body).on('added_to_cart', function () {
+        activateInlineProductQuantity(productCartForm());
         try {
             window.sessionStorage.removeItem('superwoo-open-cart-after-native-product-submit');
         } catch (storageError) {
@@ -1374,6 +1399,15 @@
         syncCartTriggerBadges();
         startTriggerObserver();
         fetchCartCount();
+        try {
+            if (window.sessionStorage.getItem('superwoo-product-quantity-active') === '1') {
+                activateInlineProductQuantity(productCartForm());
+                window.sessionStorage.removeItem('superwoo-product-quantity-active');
+            }
+        } catch (storageError) {
+            // Storage access is optional.
+        }
+
         syncStickyBuyNow();
         // Some product builders finish rendering the form after DOM-ready.
         // A bounded retry keeps the observer lightweight while still finding it.
