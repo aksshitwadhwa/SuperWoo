@@ -895,6 +895,26 @@
         forceInlineCartGrid($form);
     }
 
+    function prepareInlineProductActions() {
+        var $form = productCartForm();
+        var $quantity;
+
+        if (!$form.length || $form.hasClass('grouped_form')) {
+            return;
+        }
+
+        $form.addClass('superwoo-product-actions-ready');
+        $form.find('.single_add_to_cart_button').each(function () {
+            $(this).toggleClass('superwoo-inline-buy-now', isBuyNowControl(this));
+        });
+
+        $quantity = $form.find('.quantity').first();
+        if ($quantity.length && !$quantity.find('[data-superwoo-product-qty-minus]').length) {
+            $quantity.prepend('<button type="button" class="qty-btn" data-superwoo-product-qty-minus aria-label="Decrease quantity">−</button>');
+            $quantity.append('<button type="button" class="qty-btn" data-superwoo-product-qty-plus aria-label="Increase quantity">+</button>');
+        }
+    }
+
     function nativeAddToCartButton($form) {
         var $classified = $form.find('.superwoo-native-add-to-cart-mobile').first();
 
@@ -1308,11 +1328,22 @@
         }
 
         activateInlineProductQuantity($form);
-        try {
-            window.sessionStorage.setItem('superwoo-product-quantity-active', '1');
-        } catch (storageError) {
-            // Storage access is optional.
+    });
+    $(document).on('click', '[data-superwoo-product-qty-minus], [data-superwoo-product-qty-plus]', function (event) {
+        var $input = $(this).siblings('input.qty, input[name="quantity"]').first();
+        var current = parseFloat($input.val()) || 1;
+        var step = parseFloat($input.attr('step')) || 1;
+        var min = parseFloat($input.attr('min')) || 1;
+        var max = parseFloat($input.attr('max'));
+        var next = $(this).is('[data-superwoo-product-qty-plus]') ? current + step : current - step;
+
+        event.preventDefault();
+        event.stopPropagation();
+        next = Math.max(min, next);
+        if (!isNaN(max)) {
+            next = Math.min(max, next);
         }
+        $input.val(next).trigger('input').trigger('change');
     });
     $(document).on('submit', 'body.single-product form.cart', function () {
         // Native WooCommerce submissions normally reload the product page and
@@ -1399,20 +1430,14 @@
         syncCartTriggerBadges();
         startTriggerObserver();
         fetchCartCount();
-        try {
-            if (window.sessionStorage.getItem('superwoo-product-quantity-active') === '1') {
-                activateInlineProductQuantity(productCartForm());
-                window.sessionStorage.removeItem('superwoo-product-quantity-active');
-            }
-        } catch (storageError) {
-            // Storage access is optional.
-        }
-
+        prepareInlineProductActions();
         syncStickyBuyNow();
         // Some product builders finish rendering the form after DOM-ready.
         // A bounded retry keeps the observer lightweight while still finding it.
         window.setTimeout(syncStickyBuyNow, 350);
         window.setTimeout(syncStickyBuyNow, 1200);
+        window.setTimeout(prepareInlineProductActions, 350);
+        window.setTimeout(prepareInlineProductActions, 1200);
 
         try {
             if (window.sessionStorage.getItem('superwoo-open-cart-after-native-product-submit') === '1') {

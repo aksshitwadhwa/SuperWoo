@@ -248,6 +248,7 @@ body.single-product form.cart .single_add_to_cart_button.superwoo-product-adding
 /* Keep the product purchase actions aligned when a theme places Buy Now in a
  * separate grid column. */
 body.single-product form.cart .superwoo-native-buy-now-mobile,
+body.single-product form.cart .superwoo-inline-buy-now,
 body.single-product form.cart button.buy-now,
 body.single-product form.cart button.buy_now,
 body.single-product form.cart button[name="buy_now"],
@@ -268,8 +269,8 @@ body.single-product form.cart a[href*="buy-now"] {
 
 /* Product purchase layout. These rules replace the former Customizer CSS and
  * are scoped to Elementor's product widgets so other forms are unaffected. */
-body.single-product form.cart:not(.variations_form):not(.grouped_form),
-body.single-product form.cart.variations_form .woocommerce-variation-add-to-cart,
+body.single-product form.cart.superwoo-product-actions-ready:not(.variations_form):not(.grouped_form),
+body.single-product form.cart.superwoo-product-actions-ready.variations_form .woocommerce-variation-add-to-cart,
 .elementor-product-simple form.cart,
 .elementor-product-variable .woocommerce-variation-add-to-cart {
     align-items: stretch;
@@ -280,7 +281,7 @@ body.single-product form.cart.variations_form .woocommerce-variation-add-to-cart
     width: 100% !important;
 }
 
-body.single-product form.cart:not(.grouped_form) .quantity {
+body.single-product form.cart.superwoo-product-actions-ready:not(.grouped_form) .quantity {
     display: none !important;
     grid-column: 1;
     grid-row: 1;
@@ -292,14 +293,14 @@ body.single-product form.cart.superwoo-product-quantity-active:not(.grouped_form
     display: flex !important;
 }
 
-body.single-product form.cart:not(.grouped_form) .single_add_to_cart_button:not(.superwoo-native-buy-now-mobile) {
+body.single-product form.cart.superwoo-product-actions-ready:not(.grouped_form) .single_add_to_cart_button:not(.superwoo-native-buy-now-mobile):not(.superwoo-inline-buy-now) {
     grid-column: 1;
     grid-row: 1;
     margin: 0 !important;
     width: 100% !important;
 }
 
-body.single-product form.cart.superwoo-product-quantity-active:not(.grouped_form) .single_add_to_cart_button:not(.superwoo-native-buy-now-mobile) {
+body.single-product form.cart.superwoo-product-quantity-active:not(.grouped_form) .single_add_to_cart_button:not(.superwoo-native-buy-now-mobile):not(.superwoo-inline-buy-now) {
     display: none !important;
 }
 
@@ -372,8 +373,8 @@ body.single-product form.cart.superwoo-product-quantity-active:not(.grouped_form
     grid-row: 1;
 }
 
-.elementor-product-simple form.cart.superwoo-product-quantity-active .single_add_to_cart_button,
-.elementor-product-variable form.cart.superwoo-product-quantity-active .woocommerce-variation-add-to-cart .single_add_to_cart_button {
+.elementor-product-simple form.cart.superwoo-product-quantity-active .single_add_to_cart_button:not(#btn-1cc-pdp):not(.superwoo-inline-buy-now),
+.elementor-product-variable form.cart.superwoo-product-quantity-active .woocommerce-variation-add-to-cart .single_add_to_cart_button:not(#btn-1cc-pdp):not(.superwoo-inline-buy-now) {
     display: none !important;
 }
 
@@ -1783,8 +1784,8 @@ color-mix(in srgb, var(--superwoo-mobile-bottom-nav-active) 16%, #ffffff) !impor
         width: 100% !important;
     }
 
-    body.single-product.superwoo-mobile-cart-enabled form.cart:not(.grouped_form) .single_add_to_cart_button:not(.superwoo-native-buy-now-mobile),
-    body.single-product.superwoo-has-mobile-buy-now form.cart:not(.grouped_form) .single_add_to_cart_button:not(.superwoo-native-buy-now-mobile),
+    body.single-product.superwoo-mobile-cart-enabled form.cart:not(.grouped_form) .single_add_to_cart_button:not(.superwoo-native-buy-now-mobile):not(.superwoo-inline-buy-now),
+    body.single-product.superwoo-has-mobile-buy-now form.cart:not(.grouped_form) .single_add_to_cart_button:not(.superwoo-native-buy-now-mobile):not(.superwoo-inline-buy-now),
     body.single-product.superwoo-has-mobile-buy-now form.cart:not(.grouped_form) .superwoo-native-add-to-cart-mobile {
         align-items: center !important;
         box-sizing: border-box !important;
@@ -1806,8 +1807,8 @@ color-mix(in srgb, var(--superwoo-mobile-bottom-nav-active) 16%, #ffffff) !impor
         grid-column: 1 !important;
     }
 
-    body.single-product.superwoo-mobile-cart-enabled form.cart.superwoo-product-quantity-active:not(.grouped_form) .single_add_to_cart_button:not(.superwoo-native-buy-now-mobile),
-    body.single-product.superwoo-has-mobile-buy-now form.cart.superwoo-product-quantity-active:not(.grouped_form) .single_add_to_cart_button:not(.superwoo-native-buy-now-mobile),
+    body.single-product.superwoo-mobile-cart-enabled form.cart.superwoo-product-quantity-active:not(.grouped_form) .single_add_to_cart_button:not(.superwoo-native-buy-now-mobile):not(.superwoo-inline-buy-now),
+    body.single-product.superwoo-has-mobile-buy-now form.cart.superwoo-product-quantity-active:not(.grouped_form) .single_add_to_cart_button:not(.superwoo-native-buy-now-mobile):not(.superwoo-inline-buy-now),
     body.single-product.superwoo-has-mobile-buy-now form.cart.superwoo-product-quantity-active:not(.grouped_form) .superwoo-native-add-to-cart-mobile {
         display: none !important;
     }
