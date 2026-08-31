@@ -1,432 +1,60 @@
 (function () {
     'use strict';
-
-    var instanceKey = '__superwooProductsCarousel';
-
-    function deviceValue(values) {
-        var mode = 'desktop';
-        if (window.elementorFrontend && typeof window.elementorFrontend.getCurrentDeviceMode === 'function') {
-            mode = window.elementorFrontend.getCurrentDeviceMode();
-        } else if (window.matchMedia('(max-width: 767px)').matches) {
-            mode = 'mobile';
-        } else if (window.matchMedia('(max-width: 1024px)').matches) {
-            mode = 'tablet';
-        }
-        if (mode.indexOf('mobile') !== -1) {
-            return values.mobile;
-        }
-        if (mode.indexOf('tablet') !== -1) {
-            return values.tablet;
-        }
-        return values.desktop;
-    }
-
-    function arrowGlyph(style, direction) {
-        var glyphs = {
-            chevron: { previous: '\u2039', next: '\u203a' },
-            angle: { previous: '\u276e', next: '\u276f' },
-            arrow: { previous: '\u2190', next: '\u2192' },
-            triangle: { previous: '\u25c0', next: '\u25b6' }
-        };
-        var selected = glyphs[style] || glyphs.chevron;
-        return selected[direction];
-    }
-
-    function number(value, fallback, min, max) {
-        value = Number(value);
-        if (!isFinite(value)) { value = fallback; }
-        return Math.max(min, Math.min(max, value));
-    }
-
-    function sliderValue(value, fallback) {
-        return number(value && typeof value === 'object' ? value.size : value, fallback, 0, 100);
-    }
-
-    function cssValue(root, property, fallback) {
-        var value = window.getComputedStyle(root).getPropertyValue(property).trim();
-        return value || fallback;
-    }
-
-    function previewConfigFromCss(root, config) {
-        var isEditor = root.classList.contains('elementor-element-edit-mode');
-        if (!isEditor) { return config; }
-        if (!root.classList.contains('superwoo-carousel-enabled-yes')) { return null; }
-        var allowedExtended = ['none', 'both', 'left', 'right'];
-        var allowedPosition = ['inside', 'outside', 'top-right', 'bottom-right'];
-        var extended = cssValue(root, '--superwoo-preview-extended', 'none');
-        var position = root.className.match(/superwoo-carousel-arrow-position-([\w-]+)/);
-        var style = root.className.match(/superwoo-carousel-arrow-style-([\w-]+)/);
-        var slides = number(cssValue(root, '--superwoo-preview-slides', 4), 4, 1, 8);
-        var gap = number(cssValue(root, '--superwoo-preview-gap', 20), 20, 0, 100);
-        var previewExtended = allowedExtended.indexOf(extended) !== -1 ? extended : 'none';
-        config = config || {};
-        // Elementor resolves responsive CSS custom properties for the active preview device.
-        // Use that resolved value for every breakpoint so a control change is reflected immediately.
-        config.slidesToShow = { desktop: slides, tablet: slides, mobile: slides };
-        config.spaceBetween = { desktop: gap, tablet: gap, mobile: gap };
-        config.slidesToScroll = number(cssValue(root, '--superwoo-preview-scroll', 1), 1, 1, 8);
-        config.productsLimit = number(cssValue(root, '--superwoo-preview-product-limit', 12), 12, 1, 100);
-        config.arrows = root.classList.contains('superwoo-carousel-arrows-yes');
-        config.dots = root.classList.contains('superwoo-carousel-dots-yes');
-        config.autoplay = root.classList.contains('superwoo-carousel-autoplay-yes');
-        config.loop = root.classList.contains('superwoo-carousel-loop-yes');
-        config.infiniteScroll = root.classList.contains('superwoo-carousel-infinite-scroll-yes');
-        config.pauseOnHover = root.classList.contains('superwoo-carousel-pause_hover-yes');
-        config.arrowStyle = style && ['chevron', 'angle', 'arrow', 'triangle'].indexOf(style[1]) !== -1 ? style[1] : 'chevron';
-        config.arrowPosition = position && allowedPosition.indexOf(position[1]) !== -1 ? position[1] : 'inside';
-        config.extended = { desktop: previewExtended, tablet: previewExtended, mobile: previewExtended };
-        return config;
-    }
+    var key = '__superwooProductsCarousel';
+    var focusable = 'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]';
+    function n(value, fallback, min, max) { value = Number(value); return isFinite(value) ? Math.max(min, Math.min(max, value)) : fallback; }
+    function device(values) { var width = window.innerWidth; return width <= 767 ? values.mobile : (width <= 1024 ? values.tablet : values.desktop); }
+    function emit(name, detail) { document.dispatchEvent(new CustomEvent('superwoo:carousel:' + name, { detail: detail })); }
+    function rtl() { return document.documentElement.dir === 'rtl'; }
+    function report(error, root) { if (window.console && (window.SUPERWOO_DEBUG || document.body.classList.contains('elementor-editor-active'))) { console.error('[SuperWoo Products Carousel] Initialization failed', { error: error, widgetId: root && root.dataset.id }); } }
 
     function Carousel(root, config) {
-        this.root = root;
-        this.config = config;
-        this.track = root.querySelector('.elementor-widget-container ul.products');
-        this.index = 0;
-        this.timer = null;
-        this.pointerStart = null;
-        this.resizeObserver = null;
-        if (!this.track || !this.track.children.length) {
-            return;
-        }
-        this.allSlides = Array.prototype.slice.call(this.track.children);
-        this.syncProductsLimit();
-        this.build();
-        this.syncExtendedClass();
-        this.bind();
-        this.update();
-        this.startAutoplay();
+        this.root = root; this.config = config || {}; this.track = root.querySelector('.elementor-widget-container ul.products');
+        if (!this.track || !this.track.children.length) { throw new Error('Product track not found'); }
+        this.real = Array.prototype.slice.call(this.track.children); this.limit = n(this.config.productsLimit, 12, 1, 100); this.real = this.real.slice(0, this.limit);
+        this.real.forEach(function (slide, index) { slide.hidden = false; slide.classList.add('superwoo-carousel__slide'); slide.dataset.superwooReal = index; });
+        Array.prototype.slice.call(this.track.children).slice(this.real.length).forEach(function (slide) { slide.hidden = true; });
+        this.index = 0; this.timer = null; this.userPaused = false; this.hoverPaused = false; this.focusPaused = false; this.visibilityPaused = false; this.viewportPaused = false; this.drag = null; this.suppressClick = false; this.impressions = {}; this.raf = null;
+        this.build(); this.bind(); this.update();
     }
-
-    Carousel.prototype.syncProductsLimit = function () {
-        var limit = number(this.config.productsLimit, this.allSlides.length, 1, 100);
-        this.slides = this.allSlides.filter(function (slide, index) {
-            slide.hidden = index >= limit;
-            return index < limit;
-        });
-    };
-
+    Carousel.prototype.metric = function () { var show = Math.max(1, n(device(this.config.slidesToShow || { desktop: 4, tablet: 2, mobile: 1 }), 1, 1, 8)); var gap = Math.max(0, n(device(this.config.spaceBetween || { desktop: 20, tablet: 20, mobile: 20 }), 20, 0, 100)); var peek = device(this.config.extended || { desktop: 'none', tablet: 'none', mobile: 'none' }); if (peek === 'both') { show += .5; } else if (peek === 'left' || peek === 'right') { show += .25; } return { show: show, visible: Math.ceil(show), gap: gap, peek: peek }; };
+    Carousel.prototype.canMove = function () { return this.real.length > this.metric().visible; };
     Carousel.prototype.build = function () {
-        this.viewport = document.createElement('div');
-        this.viewport.className = 'superwoo-carousel__viewport';
-        this.track.parentNode.insertBefore(this.viewport, this.track);
-        this.viewport.appendChild(this.track);
-        this.track.classList.add('superwoo-carousel__track');
-        this.slides.forEach(function (slide, index) {
-            slide.classList.add('superwoo-carousel__slide');
-            slide.setAttribute('role', 'group');
-            slide.setAttribute('aria-label', (index + 1) + ' / ' + this.slides.length);
-        }, this);
-
-        if (this.config.arrows) {
-            this.previous = this.button('previous');
-            this.next = this.button('next');
-            this.root.appendChild(this.previous);
-            this.root.appendChild(this.next);
-        }
-        if (this.config.dots) {
-            this.dots = document.createElement('div');
-            this.dots.className = 'superwoo-carousel__dots';
-            this.dots.setAttribute('role', 'tablist');
-            this.root.appendChild(this.dots);
-        }
+        this.viewport = document.createElement('div'); this.viewport.className = 'superwoo-carousel__viewport'; this.viewport.tabIndex = 0; this.viewport.setAttribute('aria-label', this.config.label || 'Products carousel');
+        this.track.parentNode.insertBefore(this.viewport, this.track); this.viewport.appendChild(this.track); this.track.classList.add('superwoo-carousel__track');
+        this.status = document.createElement('div'); this.status.className = 'screen-reader-text superwoo-carousel__status'; this.status.setAttribute('aria-live', 'polite'); this.status.setAttribute('aria-atomic', 'true'); this.root.appendChild(this.status);
+        this.header(); if (this.config.arrows && this.canMove()) { this.previous = this.button('previous'); this.next = this.button('next'); this.root.appendChild(this.previous); this.root.appendChild(this.next); }
+        if (this.config.dots && this.canMove()) { this.dots = document.createElement('div'); this.dots.className = 'superwoo-carousel__dots'; this.root.appendChild(this.dots); }
+        if (this.config.autoplay && this.canMove()) { this.toggle = document.createElement('button'); this.toggle.type = 'button'; this.toggle.className = 'superwoo-carousel__toggle'; this.root.appendChild(this.toggle); }
         this.root.classList.add('superwoo-carousel--ready');
-        this.root.classList.add('superwoo-carousel-arrows-' + (this.config.arrowPosition || 'inside'));
     };
-
-    Carousel.prototype.button = function (direction) {
-        var button = document.createElement('button');
-        var icon = document.createElement('span');
-        button.type = 'button';
-        button.className = 'superwoo-carousel__arrow superwoo-carousel__arrow--' + direction;
-        button.setAttribute('aria-label', direction === 'previous' ? 'Previous products' : 'Next products');
-        icon.setAttribute('aria-hidden', 'true');
-        icon.textContent = arrowGlyph(this.config.arrowStyle, direction);
-        button.appendChild(icon);
-        return button;
+    Carousel.prototype.header = function () { var h = this.config.header; if (!h || (!h.show && !h.viewAll)) { return; } var header = document.createElement('div'), text = document.createElement('div'); header.className = 'superwoo-carousel__header superwoo-carousel__header--' + (h.alignment || 'left'); text.className = 'superwoo-carousel__heading-wrap'; if (h.show && h.heading) { var title = document.createElement(['h2','h3','h4','div'].indexOf(h.tag) !== -1 ? h.tag : 'h2'); title.className = 'superwoo-carousel__heading'; title.textContent = h.heading; text.appendChild(title); if (h.subheading) { var sub = document.createElement('p'); sub.className = 'superwoo-carousel__subheading'; sub.textContent = h.subheading; text.appendChild(sub); } } header.appendChild(text); if (h.viewAll && h.viewAllUrl) { var link = document.createElement('a'); link.className = 'superwoo-carousel__view-all'; link.href = h.viewAllUrl; link.textContent = h.viewAllText || 'View All Products'; if (h.viewAllNewTab) { link.target = '_blank'; link.rel = h.viewAllNofollow ? 'noopener nofollow' : 'noopener'; } else if (h.viewAllNofollow) { link.rel = 'nofollow'; } header.appendChild(link); } this.root.insertBefore(header, this.viewport); };
+    Carousel.prototype.button = function (dir) { var button = document.createElement('button'); button.type = 'button'; button.className = 'superwoo-carousel__arrow superwoo-carousel__arrow--' + dir; button.setAttribute('aria-label', dir === 'previous' ? 'Previous products' : 'Next products'); button.textContent = dir === 'previous' ? '‹' : '›'; return button; };
+    Carousel.prototype.cloneBoundaries = function () { Array.prototype.slice.call(this.track.querySelectorAll('[data-superwoo-clone]')).forEach(function (node) { node.remove(); }); this.cloneCount = 0; if (!this.config.loop || !this.canMove()) { return; } this.cloneCount = Math.min(this.real.length, this.metric().visible + Math.max(1, n(this.config.slidesToScroll, 1, 1, 8))); var head = this.real.slice(-this.cloneCount), tail = this.real.slice(0, this.cloneCount), self = this; function clone(slide) { var node = slide.cloneNode(true); node.dataset.superwooClone = '1'; node.setAttribute('aria-hidden', 'true'); node.setAttribute('inert', ''); node.querySelectorAll('[id]').forEach(function (item) { item.removeAttribute('id'); }); node.querySelectorAll(focusable).forEach(function (item) { item.tabIndex = -1; }); return node; } head.forEach(function (slide) { self.track.insertBefore(clone(slide), self.track.firstChild); }); tail.forEach(function (slide) { self.track.appendChild(clone(slide)); }); };
+    Carousel.prototype.bind = function () { var self = this; this.onResize = function () { cancelAnimationFrame(self.raf); self.raf = requestAnimationFrame(function () { self.update(); }); }; window.addEventListener('resize', this.onResize); this.resizeObserver = window.ResizeObserver ? new ResizeObserver(this.onResize) : null; if (this.resizeObserver) { this.resizeObserver.observe(this.viewport); }
+        this.onVisibility = function () { self.visibilityPaused = document.visibilityState !== 'visible'; self.syncAutoplay(); }; document.addEventListener('visibilitychange', this.onVisibility);
+        this.onFocusIn = function () { self.focusPaused = true; self.syncAutoplay(); }; this.onFocusOut = function () { setTimeout(function () { self.focusPaused = self.root.contains(document.activeElement); self.syncAutoplay(); }, 0); }; this.root.addEventListener('focusin', this.onFocusIn); this.root.addEventListener('focusout', this.onFocusOut);
+        this.onEnter = function () { self.hoverPaused = true; self.syncAutoplay(); }; this.onLeave = function () { self.hoverPaused = false; self.syncAutoplay(); }; this.root.addEventListener('mouseenter', this.onEnter); this.root.addEventListener('mouseleave', this.onLeave);
+        this.onPointerDown = function (event) { if (event.button && event.pointerType === 'mouse') { return; } self.drag = { x: event.clientX, y: event.clientY, horizontal: false }; self.interactionPaused = true; self.syncAutoplay(); self.viewport.setPointerCapture && self.viewport.setPointerCapture(event.pointerId); };
+        this.onPointerMove = function (event) { if (!self.drag) { return; } var dx = event.clientX - self.drag.x, dy = event.clientY - self.drag.y; if (!self.drag.horizontal && Math.abs(dx) > 8 && Math.abs(dx) > Math.abs(dy)) { self.drag.horizontal = true; self.viewport.classList.add('is-grabbing'); self.track.style.transition = 'none'; } if (self.drag.horizontal) { self.track.style.transform = 'translate3d(' + (self.offset() + dx) + 'px,0,0)'; } };
+        this.onPointerUp = function (event) { if (!self.drag) { return; } var dx = event.clientX - self.drag.x, dragged = self.drag.horizontal; self.drag = null; self.track.style.transition = ''; self.viewport.classList.remove('is-grabbing'); self.interactionPaused = false; self.syncAutoplay(); if (dragged) { self.suppressClick = true; self.go((dx > 0) === !rtl() ? -1 : 1, 'swipe'); setTimeout(function () { self.suppressClick = false; }, 250); } };
+        this.onClick = function (event) { if (self.suppressClick) { event.preventDefault(); event.stopPropagation(); } }; this.onWheel = function (event) { if (!self.config.infiniteScroll || Math.abs(event.deltaX) <= Math.abs(event.deltaY) || Math.abs(event.deltaX) < 12) { return; } event.preventDefault(); if (!self.wheelLock) { self.wheelLock = true; self.go((event.deltaX > 0) === !rtl() ? 1 : -1, 'wheel'); setTimeout(function () { self.wheelLock = false; }, 220); } };
+        this.viewport.addEventListener('pointerdown', this.onPointerDown); this.viewport.addEventListener('pointermove', this.onPointerMove); this.viewport.addEventListener('pointerup', this.onPointerUp); this.viewport.addEventListener('pointercancel', this.onPointerUp); this.viewport.addEventListener('click', this.onClick, true); this.viewport.addEventListener('wheel', this.onWheel, { passive: false });
+        if (this.previous) { this.previous.onclick = function () { self.go(-1, 'previous'); }; this.next.onclick = function () { self.go(1, 'next'); }; } if (this.toggle) { this.toggle.onclick = function () { self.userPaused = !self.userPaused; self.syncAutoplay(); self.updateToggle(); }; }
+        if (window.IntersectionObserver) { this.visibilityObserver = new IntersectionObserver(function (entries) { self.viewportPaused = !entries[0].isIntersecting; self.syncAutoplay(); }, { threshold: .2 }); this.visibilityObserver.observe(this.root); }
     };
-
-    Carousel.prototype.bind = function () {
-        this.onResize = this.update.bind(this);
-        this.onKeydown = function (event) {
-            if (event.key === 'ArrowLeft') { this.go(-1); }
-            if (event.key === 'ArrowRight') { this.go(1); }
-        }.bind(this);
-        this.onPointerDown = function (event) {
-            if (event.pointerType !== 'mouse' || event.button === 0) {
-                this.pointerStart = event.clientX;
-                this.track.style.transition = 'none';
-                this.viewport.classList.add('is-grabbing');
-                if (this.viewport.setPointerCapture) {
-                    this.viewport.setPointerCapture(event.pointerId);
-                }
-            }
-        }.bind(this);
-        this.onPointerMove = function (event) {
-            if (this.pointerStart === null) { return; }
-            var distance = event.clientX - this.pointerStart;
-            this.track.style.transform = 'translate3d(' + ((-this.index * (this.slideWidth + this.metrics().gap)) + distance) + 'px,0,0)';
-        }.bind(this);
-        this.onPointerUp = function (event) {
-            if (this.pointerStart === null) { return; }
-            var distance = event.clientX - this.pointerStart;
-            this.pointerStart = null;
-            this.track.style.transition = '';
-            this.viewport.classList.remove('is-grabbing');
-            if (this.viewport.releasePointerCapture && this.viewport.hasPointerCapture && this.viewport.hasPointerCapture(event.pointerId)) {
-                this.viewport.releasePointerCapture(event.pointerId);
-            }
-            if (Math.abs(distance) > 40) { this.go(distance > 0 ? -1 : 1); }
-        }.bind(this);
-        this.onWheel = function (event) {
-            if (!this.config.infiniteScroll) { return; }
-            var distance = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
-            if (Math.abs(distance) < 12) { return; }
-            event.preventDefault();
-            if (this.wheelLocked) { return; }
-            this.wheelLocked = true;
-            this.go(distance > 0 ? 1 : -1);
-            window.setTimeout(function () { this.wheelLocked = false; }.bind(this), 250);
-        }.bind(this);
-        window.addEventListener('resize', this.onResize);
-        this.viewport.addEventListener('keydown', this.onKeydown);
-        this.viewport.addEventListener('pointerdown', this.onPointerDown);
-        this.viewport.addEventListener('pointermove', this.onPointerMove);
-        this.viewport.addEventListener('pointerup', this.onPointerUp);
-        this.viewport.addEventListener('pointercancel', this.onPointerUp);
-        this.viewport.addEventListener('wheel', this.onWheel, { passive: false });
-        this.viewport.setAttribute('tabindex', '0');
-        if (this.previous) { this.previous.addEventListener('click', function () { this.go(-1); }.bind(this)); }
-        if (this.next) { this.next.addEventListener('click', function () { this.go(1); }.bind(this)); }
-        if (this.config.pauseOnHover) {
-            this.onMouseEnter = this.stopAutoplay.bind(this);
-            this.onMouseLeave = this.startAutoplay.bind(this);
-            this.root.addEventListener('mouseenter', this.onMouseEnter);
-            this.root.addEventListener('mouseleave', this.onMouseLeave);
-        }
-        if (window.ResizeObserver) {
-            this.resizeObserver = new ResizeObserver(this.onResize);
-            this.resizeObserver.observe(this.viewport);
-        }
-    };
-
-    Carousel.prototype.metrics = function () {
-        var isEditorPreview = this.root.classList.contains('elementor-element-edit-mode');
-        // Elementor's preview iframe can report "desktop" even while its mobile
-        // canvas is active. Its generated custom properties are the reliable
-        // source for the current preview device.
-        var show = isEditorPreview
-            ? number(cssValue(this.root, '--superwoo-preview-slides', 4), 4, 1, 8)
-            : Math.max(1, Number(deviceValue(this.config.slidesToShow)) || 1);
-        var extended = isEditorPreview
-            ? cssValue(this.root, '--superwoo-preview-extended', 'none')
-            : deviceValue(this.config.extended || { desktop: 'none', tablet: 'none', mobile: 'none' });
-        if (['none', 'both', 'left', 'right'].indexOf(extended) === -1) { extended = 'none'; }
-        var gap = isEditorPreview
-            ? number(cssValue(this.root, '--superwoo-preview-gap', 20), 20, 0, 100)
-            : Math.max(0, Number(deviceValue(this.config.spaceBetween)) || 0);
-        if (extended === 'both') { show += 0.5; }
-        if (extended === 'left' || extended === 'right') { show += 0.25; }
-        return { show: show, gap: gap, extended: extended };
-    };
-
-    Carousel.prototype.syncExtendedClass = function () {
-        var extended = this.metrics().extended;
-        this.root.classList.remove('superwoo-carousel-extended-none', 'superwoo-carousel-extended-both', 'superwoo-carousel-extended-left', 'superwoo-carousel-extended-right');
-        this.root.classList.add('superwoo-carousel-extended-' + extended);
-    };
-
-    Carousel.prototype.update = function () {
-        if (!this.viewport) { return; }
-        var metrics = this.metrics();
-        this.syncExtendedClass();
-        var width = this.viewport.clientWidth;
-        this.slideWidth = (width - (metrics.show - 1) * metrics.gap) / metrics.show;
-        this.maxIndex = Math.max(0, this.slides.length - Math.ceil(metrics.show));
-        this.index = Math.min(this.index, this.maxIndex);
-        this.track.style.gap = metrics.gap + 'px';
-        this.slides.forEach(function (slide) {
-            slide.style.setProperty('flex', '0 0 ' + this.slideWidth + 'px', 'important');
-            slide.style.setProperty('width', this.slideWidth + 'px', 'important');
-        }, this);
-        this.renderDots();
-        this.render();
-    };
-
-    Carousel.prototype.go = function (direction) {
-        var step = Math.max(1, Math.round(Number(this.config.slidesToScroll) || 1));
-        var target = this.index + direction * step;
-        if ((this.config.loop || this.config.infiniteScroll) && this.maxIndex > 0) {
-            target = target > this.maxIndex ? 0 : (target < 0 ? this.maxIndex : target);
-        } else {
-            target = Math.max(0, Math.min(this.maxIndex, target));
-        }
-        this.index = target;
-        this.render();
-    };
-
-    Carousel.prototype.render = function () {
-        var gap = this.metrics().gap;
-        this.track.style.transform = 'translate3d(' + (-this.index * (this.slideWidth + gap)) + 'px,0,0)';
-        if (this.previous) {
-            this.previous.disabled = !this.config.loop && this.index === 0;
-            this.next.disabled = !this.config.loop && this.index === this.maxIndex;
-        }
-        if (this.dots) {
-            Array.prototype.forEach.call(this.dots.children, function (dot) {
-                var active = Number(dot.dataset.index) === this.index;
-                dot.classList.toggle('is-active', active);
-                dot.setAttribute('aria-current', active ? 'true' : 'false');
-            }, this);
-        }
-    };
-
-    Carousel.prototype.renderDots = function () {
-        if (!this.dots) { return; }
-        var step = Math.max(1, Math.round(Number(this.config.slidesToScroll) || 1));
-        var indexes = [];
-        for (var index = 0; index <= this.maxIndex; index += step) { indexes.push(index); }
-        if (indexes[indexes.length - 1] !== this.maxIndex) { indexes.push(this.maxIndex); }
-        this.dots.innerHTML = '';
-        indexes.forEach(function (target, position) {
-            var dot = document.createElement('button');
-            dot.type = 'button'; dot.dataset.index = target;
-            dot.setAttribute('aria-label', 'Go to product group ' + (position + 1));
-            dot.addEventListener('click', function () { this.index = target; this.render(); }.bind(this));
-            this.dots.appendChild(dot);
-        }, this);
-    };
-
-    Carousel.prototype.startAutoplay = function () {
-        if (!this.config.autoplay || window.matchMedia('(prefers-reduced-motion: reduce)').matches || !this.viewport) { return; }
-        this.stopAutoplay();
-        this.timer = window.setInterval(function () { this.go(1); }.bind(this), this.config.autoplaySpeed || 3000);
-    };
-    Carousel.prototype.stopAutoplay = function () { window.clearInterval(this.timer); this.timer = null; };
-
-    Carousel.prototype.destroy = function () {
-        this.stopAutoplay();
-        window.removeEventListener('resize', this.onResize);
-        if (this.onMouseEnter) {
-            this.root.removeEventListener('mouseenter', this.onMouseEnter);
-            this.root.removeEventListener('mouseleave', this.onMouseLeave);
-        }
-        if (this.resizeObserver) { this.resizeObserver.disconnect(); }
-        if (!this.viewport) { return; }
-        this.viewport.removeEventListener('wheel', this.onWheel);
-        this.allSlides.forEach(function (slide) {
-            slide.classList.remove('superwoo-carousel__slide'); slide.style.removeProperty('flex'); slide.style.removeProperty('width');
-            slide.removeAttribute('role'); slide.removeAttribute('aria-label'); slide.hidden = false;
-        });
-        this.track.classList.remove('superwoo-carousel__track'); this.track.style.gap = ''; this.track.style.transform = '';
-        this.viewport.parentNode.insertBefore(this.track, this.viewport); this.viewport.remove();
-        if (this.previous) { this.previous.remove(); this.next.remove(); }
-        if (this.dots) { this.dots.remove(); }
-        this.root.classList.remove('superwoo-carousel--ready', 'superwoo-carousel-arrows-inside', 'superwoo-carousel-arrows-outside', 'superwoo-carousel-arrows-top-right', 'superwoo-carousel-arrows-bottom-right');
-    };
-
-    function initialize(scope) {
-        var root = scope && scope.nodeType ? scope : (scope && scope[0] && scope[0].nodeType ? scope[0] : document);
-        if (root.matches && !root.matches('[data-superwoo-products-carousel], .superwoo-carousel-enabled-yes')) {
-            root = root.querySelector('[data-superwoo-products-carousel], .superwoo-carousel-enabled-yes');
-        }
-        if (!root || !root.matches || !root.matches('[data-superwoo-products-carousel], .superwoo-carousel-enabled-yes')) { return; }
-        var config = null;
-        try { config = root.hasAttribute('data-superwoo-products-carousel') ? JSON.parse(root.getAttribute('data-superwoo-products-carousel')) : {}; } catch (error) { config = {}; }
-        config = previewConfigFromCss(root, config);
-        if (!config) {
-            if (root[instanceKey]) { root[instanceKey].destroy(); root[instanceKey] = null; }
-            return;
-        }
-        var signature = JSON.stringify(config);
-        if (root[instanceKey] && root.__superwooCarouselSignature === signature) { return; }
-        if (root[instanceKey]) { root[instanceKey].destroy(); }
-        try {
-            root[instanceKey] = new Carousel(root, config);
-            root.__superwooCarouselSignature = signature;
-        } catch (error) { root[instanceKey] = null; }
-    }
-
-    function initializeAll() {
-        document.querySelectorAll('[data-superwoo-products-carousel], .superwoo-carousel-enabled-yes').forEach(initialize);
-    }
-
-    function bindEditorStylePreview() {
-        if (!document.body.classList.contains('elementor-editor-active') || !window.MutationObserver) { return; }
-        var queued = false;
-        var refresh = function () {
-            if (queued) { return; }
-            queued = true;
-            window.requestAnimationFrame(function () { queued = false; initializeAll(); });
-        };
-        new MutationObserver(refresh).observe(document.head, { childList: true, subtree: true, characterData: true });
-        new MutationObserver(refresh).observe(document.body, { attributes: true, subtree: true, attributeFilter: ['class'] });
-    }
-
-    function editorConfig(settings) {
-        var enabled = settings.superwoo_carousel_enabled === 'yes';
-        if (!enabled) { return null; }
-        var value = function (key, fallback) { return settings[key] === undefined || settings[key] === '' ? fallback : settings[key]; };
-        return {
-            slidesToShow: {
-                desktop: number(value('superwoo_carousel_slides_to_show', 4), 4, 1, 8),
-                tablet: number(value('superwoo_carousel_slides_to_show_tablet', 2), 2, 1, 8),
-                mobile: number(value('superwoo_carousel_slides_to_show_mobile', 1), 1, 1, 8)
-            },
-            spaceBetween: {
-                desktop: sliderValue(value('superwoo_carousel_space_between', 20), 20),
-                tablet: sliderValue(value('superwoo_carousel_space_between_tablet', 20), 20),
-                mobile: sliderValue(value('superwoo_carousel_space_between_mobile', 20), 20)
-            },
-            slidesToScroll: number(value('superwoo_carousel_slides_to_scroll', 1), 1, 1, 8),
-            productsLimit: number(value('superwoo_carousel_products_limit', 12), 12, 1, 100),
-            arrows: value('superwoo_carousel_arrows', 'yes') === 'yes',
-            arrowStyle: ['chevron', 'angle', 'arrow', 'triangle'].indexOf(value('superwoo_carousel_arrow_style', 'chevron')) !== -1 ? value('superwoo_carousel_arrow_style', 'chevron') : 'chevron',
-            dots: value('superwoo_carousel_dots', '') === 'yes',
-            autoplay: value('superwoo_carousel_autoplay', '') === 'yes',
-            autoplaySpeed: number(value('superwoo_carousel_autoplay_speed', 3000), 3000, 500, 60000),
-            loop: value('superwoo_carousel_loop', 'yes') === 'yes',
-            infiniteScroll: value('superwoo_carousel_infinite_scroll', '') === 'yes',
-            pauseOnHover: value('superwoo_carousel_pause_hover', 'yes') === 'yes',
-            extended: {
-                desktop: value('superwoo_carousel_extended', 'none'),
-                tablet: value('superwoo_carousel_extended_tablet', value('superwoo_carousel_extended', 'none')),
-                mobile: value('superwoo_carousel_extended_mobile', value('superwoo_carousel_extended_tablet', value('superwoo_carousel_extended', 'none')))
-            },
-            arrowPosition: value('superwoo_carousel_arrow_position', 'inside')
-        };
-    }
-
-    function bindEditorPreview() {
-        if (!window.elementor || !window.elementor.channels || !window.elementor.channels.editor) { return; }
-        window.elementor.channels.editor.on('change:element', function (model) {
-            if (!model || model.get('widgetType') !== 'woocommerce-products') { return; }
-            var settings = model.get('settings');
-            var attributes = settings && settings.attributes ? settings.attributes : null;
-            var config = attributes && editorConfig(attributes);
-            var id = model.get('id');
-            var root = id ? document.querySelector('.elementor-element-' + id) : null;
-            if (!root) { return; }
-            if (!config) {
-                if (root[instanceKey]) { root[instanceKey].destroy(); root[instanceKey] = null; }
-                root.removeAttribute('data-superwoo-products-carousel');
-                return;
-            }
-            root.setAttribute('data-superwoo-products-carousel', JSON.stringify(config));
-            initialize(root);
-        });
-    }
-
-    document.addEventListener('DOMContentLoaded', function () {
-        initializeAll();
-        bindEditorStylePreview();
-    });
-    window.addEventListener('elementor/frontend/init', function () {
-        if (window.elementorFrontend && window.elementorFrontend.hooks) {
-            window.elementorFrontend.hooks.addAction('frontend/element_ready/woocommerce-products.default', initialize);
-        }
-        initializeAll();
-        bindEditorPreview();
-        bindEditorStylePreview();
-    });
+    Carousel.prototype.update = function () { var m = this.metric(); this.cloneBoundaries(); this.width = (this.viewport.clientWidth - (m.show - 1) * m.gap) / m.show; this.max = this.config.loop && this.canMove() ? this.real.length - 1 : Math.max(0, this.real.length - m.visible); this.index = Math.min(this.index, this.max); this.track.style.gap = m.gap + 'px'; Array.prototype.slice.call(this.track.children).forEach(function (slide) { slide.style.flex = '0 0 ' + this.width + 'px'; slide.style.width = this.width + 'px'; }, this); this.renderDots(); this.render(false); };
+    Carousel.prototype.offset = function (physical) { var pos = physical === undefined ? this.cloneCount + this.index : physical; return (rtl() ? 1 : -1) * pos * (this.width + this.metric().gap); };
+    Carousel.prototype.go = function (direction, method) { if (!this.canMove()) { return; } var step = Math.max(1, Math.round(n(this.config.slidesToScroll, 1, 1, 8))), target = this.index + direction * step, wrap = false; if (this.config.loop) { if (target > this.real.length - 1) { target = 0; wrap = 'end'; } if (target < 0) { target = this.real.length - 1; wrap = 'start'; } } else { target = Math.max(0, Math.min(this.max, target)); } this.index = target; this.render(true, wrap); emit(method || 'next', { widgetId: this.root.dataset.id || '', index: this.index, method: method || 'next' }); };
+    Carousel.prototype.render = function (announce, wrap) { var physical = this.cloneCount + this.index, self = this; if (wrap === 'end') { physical = this.cloneCount + this.real.length; } if (wrap === 'start') { physical = this.cloneCount - 1; } this.track.style.transform = 'translate3d(' + this.offset(physical) + 'px,0,0)'; if (wrap) { setTimeout(function () { self.track.style.transition = 'none'; self.track.style.transform = 'translate3d(' + self.offset() + 'px,0,0)'; self.track.offsetHeight; self.track.style.transition = ''; }, 310); } this.updateControls(); this.updateFocus(); if (announce) { this.status.textContent = 'Showing products ' + (this.index + 1) + '–' + Math.min(this.real.length, this.index + this.metric().visible) + ' of ' + this.real.length; } };
+    Carousel.prototype.updateControls = function () { if (this.previous) { this.previous.disabled = !this.config.loop && this.index === 0; this.next.disabled = !this.config.loop && this.index === this.max; } this.updateToggle(); };
+    Carousel.prototype.updateToggle = function () { if (!this.toggle) { return; } var paused = this.userPaused || this.hoverPaused || this.focusPaused || this.visibilityPaused || this.viewportPaused || this.interactionPaused; this.toggle.textContent = paused ? 'Play carousel' : 'Pause carousel'; this.toggle.setAttribute('aria-label', paused ? 'Play carousel' : 'Pause carousel'); this.toggle.setAttribute('aria-pressed', paused ? 'true' : 'false'); };
+    Carousel.prototype.updateFocus = function () { var self = this, visible = {}; for (var i = 0; i < this.metric().visible; i++) { visible[(this.index + i) % this.real.length] = true; } this.real.forEach(function (slide, index) { var show = !!visible[index]; slide.setAttribute('aria-hidden', show ? 'false' : 'true'); if ('inert' in slide) { slide.inert = !show; } slide.querySelectorAll(focusable).forEach(function (item) { if (!item.dataset.superwooTabindex) { item.dataset.superwooTabindex = item.hasAttribute('tabindex') ? item.getAttribute('tabindex') : '__none__'; } if (!show) { item.setAttribute('tabindex', '-1'); } else if (item.dataset.superwooTabindex === '__none__') { item.removeAttribute('tabindex'); } else { item.setAttribute('tabindex', item.dataset.superwooTabindex); } }); if (show && !self.impressions[index]) { self.impressions[index] = true; emit('product-impression', { widgetId: self.root.dataset.id || '', productId: slide.querySelector('[data-product_id]') && slide.querySelector('[data-product_id]').dataset.product_id, position: index + 1 }); } }); };
+    Carousel.prototype.renderDots = function () { if (!this.dots) { return; } var self = this; this.dots.innerHTML = ''; for (var i = 0; i <= this.max; i += Math.max(1, Math.round(n(this.config.slidesToScroll, 1, 1, 8)))) { (function (target) { var dot = document.createElement('button'); dot.type = 'button'; dot.setAttribute('aria-label', 'Go to slide ' + (target + 1)); dot.setAttribute('aria-current', target === self.index ? 'true' : 'false'); dot.className = target === self.index ? 'is-active' : ''; dot.onclick = function () { self.index = target; self.render(true); emit('dot', { widgetId: self.root.dataset.id || '', index: target }); }; self.dots.appendChild(dot); }(i)); } };
+    Carousel.prototype.syncAutoplay = function () { var pause = this.userPaused || this.hoverPaused || this.focusPaused || this.visibilityPaused || this.viewportPaused || this.interactionPaused; clearInterval(this.timer); this.timer = null; if (this.config.autoplay && this.canMove() && !pause && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) { var self = this; this.timer = setInterval(function () { self.go(1, 'next'); }, n(this.config.autoplaySpeed, 3000, 500, 60000)); } this.updateToggle(); };
+    Carousel.prototype.destroy = function () { clearInterval(this.timer); window.removeEventListener('resize', this.onResize); document.removeEventListener('visibilitychange', this.onVisibility); this.resizeObserver && this.resizeObserver.disconnect(); this.visibilityObserver && this.visibilityObserver.disconnect(); Array.prototype.slice.call(this.track.querySelectorAll('[data-superwoo-clone]')).forEach(function (node) { node.remove(); }); this.real.forEach(function (slide) { slide.hidden = false; slide.classList.remove('superwoo-carousel__slide'); slide.removeAttribute('aria-hidden'); slide.querySelectorAll('[data-superwoo-tabindex]').forEach(function (item) { item.dataset.superwooTabindex === '__none__' ? item.removeAttribute('tabindex') : item.setAttribute('tabindex', item.dataset.superwooTabindex); delete item.dataset.superwooTabindex; }); }); this.viewport.parentNode.insertBefore(this.track, this.viewport); this.viewport.remove(); [this.previous,this.next,this.dots,this.toggle,this.status].forEach(function (node) { if (node) { node.remove(); } }); this.root.classList.remove('superwoo-carousel--ready'); };
+    function start(root) { if (root[key]) { return; } try { var config = JSON.parse(root.getAttribute('data-superwoo-products-carousel') || '{}'); root[key] = new Carousel(root, config); emit('view', { widgetId: root.dataset.id || '' }); } catch (error) { report(error, root); } }
+    function init(root) { if (!root || !root.matches('[data-superwoo-products-carousel]')) { return; } if (root.classList.contains('elementor-element-edit-mode') || !window.IntersectionObserver) { start(root); return; } var observer = new IntersectionObserver(function (entries) { if (entries[0].isIntersecting) { observer.disconnect(); start(root); } }, { rootMargin: '300px 0px' }); observer.observe(root); root.__superwooCarouselLazy = observer; }
+    function all() { document.querySelectorAll('[data-superwoo-products-carousel]').forEach(init); }
+    document.addEventListener('DOMContentLoaded', all); window.addEventListener('elementor/frontend/init', function () { all(); if (window.elementorFrontend && window.elementorFrontend.hooks) { window.elementorFrontend.hooks.addAction('frontend/element_ready/woocommerce-products.default', function ($scope) { init($scope[0]); }); } });
 }());

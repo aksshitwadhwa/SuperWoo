@@ -160,6 +160,44 @@ class SuperWoo_Elementor_Products_Carousel {
             'label' => __('Dot Size', 'superwoo'), 'type' => \Elementor\Controls_Manager::SLIDER,
             'size_units' => ['px'], 'range' => ['px' => ['min' => 4, 'max' => 24]], 'selectors' => ['{{WRAPPER}}.superwoo-products-carousel-enabled .superwoo-carousel__dots button' => 'width: {{SIZE}}{{UNIT}}; height: {{SIZE}}{{UNIT}};'], 'condition' => $condition,
         ]);
+        $element->add_control('superwoo_carousel_accessibility_label', [
+            'label' => __('Carousel Accessibility Label', 'superwoo'), 'type' => \Elementor\Controls_Manager::TEXT,
+            'default' => __('Products carousel', 'superwoo'), 'condition' => $condition,
+        ]);
+        $element->add_control('superwoo_carousel_show_heading', [
+            'label' => __('Show Heading', 'superwoo'), 'type' => \Elementor\Controls_Manager::SWITCHER,
+            'return_value' => 'yes', 'default' => '', 'condition' => $condition,
+        ]);
+        $element->add_control('superwoo_carousel_heading', [
+            'label' => __('Heading', 'superwoo'), 'type' => \Elementor\Controls_Manager::TEXT,
+            'condition' => ['superwoo_carousel_enabled' => 'yes', 'superwoo_carousel_show_heading' => 'yes'],
+        ]);
+        $element->add_control('superwoo_carousel_heading_tag', [
+            'label' => __('Heading HTML Tag', 'superwoo'), 'type' => \Elementor\Controls_Manager::SELECT,
+            'options' => ['h2' => 'H2', 'h3' => 'H3', 'h4' => 'H4', 'div' => 'div'], 'default' => 'h2',
+            'condition' => ['superwoo_carousel_enabled' => 'yes', 'superwoo_carousel_show_heading' => 'yes'],
+        ]);
+        $element->add_control('superwoo_carousel_subheading', [
+            'label' => __('Subheading', 'superwoo'), 'type' => \Elementor\Controls_Manager::TEXT,
+            'condition' => ['superwoo_carousel_enabled' => 'yes', 'superwoo_carousel_show_heading' => 'yes'],
+        ]);
+        $element->add_responsive_control('superwoo_carousel_header_alignment', [
+            'label' => __('Header Alignment', 'superwoo'), 'type' => \Elementor\Controls_Manager::CHOOSE,
+            'options' => ['left' => ['title' => __('Left', 'superwoo'), 'icon' => 'eicon-text-align-left'], 'center' => ['title' => __('Center', 'superwoo'), 'icon' => 'eicon-text-align-center'], 'right' => ['title' => __('Right', 'superwoo'), 'icon' => 'eicon-text-align-right']],
+            'default' => 'left', 'condition' => ['superwoo_carousel_enabled' => 'yes', 'superwoo_carousel_show_heading' => 'yes'],
+        ]);
+        $element->add_control('superwoo_carousel_show_view_all', [
+            'label' => __('Show View All', 'superwoo'), 'type' => \Elementor\Controls_Manager::SWITCHER,
+            'return_value' => 'yes', 'default' => '', 'condition' => $condition,
+        ]);
+        $element->add_control('superwoo_carousel_view_all_text', [
+            'label' => __('View All Text', 'superwoo'), 'type' => \Elementor\Controls_Manager::TEXT,
+            'default' => __('View All Products', 'superwoo'), 'condition' => ['superwoo_carousel_enabled' => 'yes', 'superwoo_carousel_show_view_all' => 'yes'],
+        ]);
+        $element->add_control('superwoo_carousel_view_all_url', [
+            'label' => __('View All URL', 'superwoo'), 'type' => \Elementor\Controls_Manager::URL,
+            'condition' => ['superwoo_carousel_enabled' => 'yes', 'superwoo_carousel_show_view_all' => 'yes'],
+        ]);
         $element->end_controls_section();
     }
 
@@ -210,11 +248,24 @@ class SuperWoo_Elementor_Products_Carousel {
                 'mobile' => $this->extended_value($settings['superwoo_carousel_extended_mobile'] ?? ($settings['superwoo_carousel_extended_tablet'] ?? ($settings['superwoo_carousel_extended'] ?? 'none'))),
             ],
             'arrowPosition' => in_array(($settings['superwoo_carousel_arrow_position'] ?? 'inside'), ['inside', 'outside', 'top-right', 'bottom-right'], true) ? $settings['superwoo_carousel_arrow_position'] : 'inside',
+            'label' => sanitize_text_field($settings['superwoo_carousel_accessibility_label'] ?? __('Products carousel', 'superwoo')) ?: __('Products carousel', 'superwoo'),
+            'header' => [
+                'show' => 'yes' === ($settings['superwoo_carousel_show_heading'] ?? ''),
+                'heading' => sanitize_text_field($settings['superwoo_carousel_heading'] ?? ''),
+                'tag' => in_array(($settings['superwoo_carousel_heading_tag'] ?? 'h2'), ['h2', 'h3', 'h4', 'div'], true) ? $settings['superwoo_carousel_heading_tag'] : 'h2',
+                'subheading' => sanitize_text_field($settings['superwoo_carousel_subheading'] ?? ''),
+                'alignment' => in_array(($settings['superwoo_carousel_header_alignment'] ?? 'left'), ['left', 'center', 'right'], true) ? $settings['superwoo_carousel_header_alignment'] : 'left',
+                'viewAll' => 'yes' === ($settings['superwoo_carousel_show_view_all'] ?? ''),
+                'viewAllText' => sanitize_text_field($settings['superwoo_carousel_view_all_text'] ?? __('View All Products', 'superwoo')),
+                'viewAllUrl' => !empty($settings['superwoo_carousel_view_all_url']['url']) ? esc_url_raw($settings['superwoo_carousel_view_all_url']['url']) : '',
+                'viewAllNewTab' => !empty($settings['superwoo_carousel_view_all_url']['is_external']),
+                'viewAllNofollow' => !empty($settings['superwoo_carousel_view_all_url']['nofollow']),
+            ],
         ];
         $element->add_render_attribute('_wrapper', 'class', 'superwoo-products-carousel-enabled');
         $element->add_render_attribute('_wrapper', 'data-superwoo-products-carousel', wp_json_encode($config));
         $element->add_render_attribute('_wrapper', 'role', 'region');
-        $element->add_render_attribute('_wrapper', 'aria-label', __('Products carousel', 'superwoo'));
+        $element->add_render_attribute('_wrapper', 'aria-label', $config['label']);
         $this->enqueue_styles();
         $this->enqueue_scripts();
     }
