@@ -1067,6 +1067,11 @@
     }
 
     function productIdentity($form) {
+        $form = $form && $form.jquery ? $form : $($form);
+        if (!$form.length) {
+            return { productId: 0, variationId: 0 };
+        }
+
         var $button = nativeAddToCartButton($form);
         var data = serializeForm($form, $button);
 
@@ -1077,6 +1082,7 @@
     }
 
     function matchingDrawerItemsForProductForm($form) {
+        $form = $form && $form.jquery ? $form : $($form);
         var identity = productIdentity($form);
 
         if (!identity.productId) {
@@ -1542,7 +1548,7 @@
         }
         $input.val(next).trigger('input').trigger('change');
 
-        var $drawerItem = matchingDrawerItemsForProductForm($control.closest('form.cart')).first();
+        var $drawerItem = matchingDrawerItemsForProductForm($(control).closest('form.cart')).first();
         if ($drawerItem.length) {
             updateItem($drawerItem, next);
         }
