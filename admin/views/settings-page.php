@@ -109,7 +109,7 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'
                                 <label><input type="checkbox" name="shop_filter_show_<?php echo esc_attr($filter_key); ?>" value="1" <?php checked(!empty($settings['shop_filter_show_' . $filter_key])); ?>> <?php echo esc_html($filter_label); ?></label><br>
                             <?php endforeach; ?>
                         </fieldset>
-                        <p class="description"><?php esc_html_e('These are the default filters for the Shop Filters shortcode and new Elementor Shop Filters widgets. Individual widget controls can override them.', 'superwoo'); ?></p>
+                        <p class="description"><?php esc_html_e('These settings control filter visibility globally for the Shop Filters shortcode and all Elementor Shop Filters widgets.', 'superwoo'); ?></p>
                     </td>
                 </tr>
             </table>

@@ -76,6 +76,15 @@ class SuperWoo_Shop_Filters {
             'show_rating' => $visibility['show_rating'],
             'show_sort' => $visibility['show_sort'],
         ]);
+
+        // SuperWoo settings are the global visibility source of truth. This
+        // also keeps existing Elementor widgets in sync after an admin
+        // disables a filter, even when that widget has older saved controls.
+        foreach ($visibility as $key => $enabled) {
+            if (!$enabled) {
+                $args[$key] = false;
+            }
+        }
         wp_enqueue_style('superwoo-shop-filters');
         wp_enqueue_script('superwoo-shop-filters');
 
