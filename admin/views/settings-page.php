@@ -78,6 +78,27 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'
                         </fieldset>
                     </td>
                 </tr>
+                <tr>
+                    <th scope="row"><?php esc_html_e('Shop filters to show', 'superwoo'); ?></th>
+                    <td>
+                        <fieldset>
+                            <legend class="screen-reader-text"><?php esc_html_e('Shop filters to show', 'superwoo'); ?></legend>
+                            <?php foreach ([
+                                'search' => __('Product search', 'superwoo'),
+                                'categories' => __('Categories', 'superwoo'),
+                                'price' => __('Price range', 'superwoo'),
+                                'attributes' => __('Product attributes', 'superwoo'),
+                                'stock' => __('Availability', 'superwoo'),
+                                'sale' => __('On-sale toggle', 'superwoo'),
+                                'rating' => __('Customer rating', 'superwoo'),
+                                'sort' => __('Sort order', 'superwoo'),
+                            ] as $filter_key => $filter_label) : ?>
+                                <label><input type="checkbox" name="shop_filter_show_<?php echo esc_attr($filter_key); ?>" value="1" <?php checked(!empty($settings['shop_filter_show_' . $filter_key])); ?>> <?php echo esc_html($filter_label); ?></label><br>
+                            <?php endforeach; ?>
+                        </fieldset>
+                        <p class="description"><?php esc_html_e('These are the default filters for the Shop Filters shortcode and new Elementor Shop Filters widgets. Individual widget controls can override them.', 'superwoo'); ?></p>
+                    </td>
+                </tr>
             </table>
         </div>
 

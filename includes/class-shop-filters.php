@@ -16,17 +16,18 @@ class SuperWoo_Shop_Filters {
     }
 
     public function shortcode($atts) {
+        $visibility = self::visibility_defaults();
         $atts = shortcode_atts([
             'title' => __('Filter products', 'superwoo'),
             'show_title' => 'yes',
-            'show_search' => 'yes',
-            'show_categories' => 'yes',
-            'show_price' => 'yes',
-            'show_attributes' => 'yes',
-            'show_stock' => 'yes',
-            'show_sale' => 'yes',
-            'show_rating' => 'yes',
-            'show_sort' => 'yes',
+            'show_search' => $visibility['show_search'] ? 'yes' : 'no',
+            'show_categories' => $visibility['show_categories'] ? 'yes' : 'no',
+            'show_price' => $visibility['show_price'] ? 'yes' : 'no',
+            'show_attributes' => $visibility['show_attributes'] ? 'yes' : 'no',
+            'show_stock' => $visibility['show_stock'] ? 'yes' : 'no',
+            'show_sale' => $visibility['show_sale'] ? 'yes' : 'no',
+            'show_rating' => $visibility['show_rating'] ? 'yes' : 'no',
+            'show_sort' => $visibility['show_sort'] ? 'yes' : 'no',
         ], $atts, 'superwoo_shop_filters');
 
         return self::render([
@@ -61,17 +62,18 @@ class SuperWoo_Shop_Filters {
             return '';
         }
 
+        $visibility = self::visibility_defaults();
         $args = wp_parse_args($args, [
             'title' => __('Filter products', 'superwoo'),
             'show_title' => true,
-            'show_search' => true,
-            'show_categories' => true,
-            'show_price' => true,
-            'show_attributes' => true,
-            'show_stock' => true,
-            'show_sale' => true,
-            'show_rating' => true,
-            'show_sort' => true,
+            'show_search' => $visibility['show_search'],
+            'show_categories' => $visibility['show_categories'],
+            'show_price' => $visibility['show_price'],
+            'show_attributes' => $visibility['show_attributes'],
+            'show_stock' => $visibility['show_stock'],
+            'show_sale' => $visibility['show_sale'],
+            'show_rating' => $visibility['show_rating'],
+            'show_sort' => $visibility['show_sort'],
         ]);
         wp_enqueue_style('superwoo-shop-filters');
 
@@ -180,6 +182,16 @@ class SuperWoo_Shop_Filters {
         </form>
         <?php
         return ob_get_clean();
+    }
+
+    /** Default filter visibility configured from WooCommerce > SuperWoo. */
+    public static function visibility_defaults() {
+        $settings = superwoo_get_settings();
+        $visibility = [];
+        foreach (['search', 'categories', 'price', 'attributes', 'stock', 'sale', 'rating', 'sort'] as $filter) {
+            $visibility['show_' . $filter] = !empty($settings['shop_filter_show_' . $filter]);
+        }
+        return $visibility;
     }
 
     public function apply_archive_filters($query) {
