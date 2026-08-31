@@ -16,3 +16,5 @@
 .superwoo-shop-filters__actions button { background: var(--superwoo-button, #005b7f); border: 0; border-radius: 7px; color: var(--superwoo-button-text, #fff); cursor: pointer; font-weight: 700; min-height: 42px; padding: 9px 15px; }
 .superwoo-shop-filters__actions button:hover, .superwoo-shop-filters__actions button:focus { background: var(--superwoo-button-hover, #004866); color: var(--superwoo-button-text, #fff); }
 .superwoo-shop-filters__actions a { color: var(--superwoo-primary, #005b7f); font-size: 14px; font-weight: 700; }
+.superwoo-shop-filters.is-auto-apply .superwoo-shop-filters__actions button { display: none; }
+.superwoo-shop-filters.is-applying { opacity: .7; pointer-events: none; }

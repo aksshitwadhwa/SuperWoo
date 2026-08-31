@@ -46,6 +46,7 @@ class SuperWoo_Shop_Filters {
 
     public function register_assets() {
         wp_register_style('superwoo-shop-filters', SUPERWOO_URL . 'public/css/shop-filters.css', [], SUPERWOO_VERSION);
+        wp_register_script('superwoo-shop-filters', SUPERWOO_URL . 'public/js/shop-filters.js', [], SUPERWOO_VERSION, true);
     }
 
     public function register_elementor_widget($widgets_manager) {
@@ -76,6 +77,7 @@ class SuperWoo_Shop_Filters {
             'show_sort' => $visibility['show_sort'],
         ]);
         wp_enqueue_style('superwoo-shop-filters');
+        wp_enqueue_script('superwoo-shop-filters');
 
         $attributes = self::attributes();
         $categories = get_terms([
@@ -87,7 +89,7 @@ class SuperWoo_Shop_Filters {
 
         ob_start();
         ?>
-        <form class="superwoo-shop-filters" method="get" action="">
+        <form class="superwoo-shop-filters" method="get" action="" data-superwoo-auto-apply>
             <?php if (!empty($args['show_title']) && '' !== trim((string) $args['title'])) : ?>
                 <h4 class="superwoo-shop-filters__title"><?php echo esc_html($args['title']); ?></h4>
             <?php endif; ?>
