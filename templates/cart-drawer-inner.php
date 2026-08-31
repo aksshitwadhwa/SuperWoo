@@ -43,7 +43,10 @@
                 $permalink = $product->is_visible() ? $product->get_permalink($cart_item) : '';
                 $is_free_gift = !empty($cart_item['superwoo_free_gift']);
                 ?>
-                <div class="superwoo-cart-item" data-cart-item-key="<?php echo esc_attr($cart_item_key); ?>">
+                <div class="superwoo-cart-item"
+                     data-cart-item-key="<?php echo esc_attr($cart_item_key); ?>"
+                     data-product-id="<?php echo esc_attr($product_id); ?>"
+                     data-variation-id="<?php echo esc_attr(absint($cart_item['variation_id'] ?? 0)); ?>">
                     <div class="superwoo-cart-item__image">
                         <?php echo $product->get_image('woocommerce_thumbnail'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                     </div>

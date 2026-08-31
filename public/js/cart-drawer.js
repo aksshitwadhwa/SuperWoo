@@ -444,6 +444,7 @@
             .done(function (response) {
                 if (response && response.success && response.data) {
                     replaceFragments(response.data.fragments);
+                    syncProductQuantityFromDrawer();
                     syncOfferState(response.data.offerState, showOfferEvents(response.data.offerEvents));
                     if (typeof response.data.count !== 'undefined') {
                         setCartCount(response.data.count);
@@ -1065,6 +1066,53 @@
         return $form.find('input.qty[name="quantity"], input[name="quantity"]').first();
     }
 
+    function productIdentity($form) {
+        var $button = nativeAddToCartButton($form);
+        var data = serializeForm($form, $button);
+
+        return {
+            productId: parseInt(data.product_id, 10) || 0,
+            variationId: parseInt(data.variation_id, 10) || 0
+        };
+    }
+
+    function matchingDrawerItemsForProductForm($form) {
+        var identity = productIdentity($form);
+
+        if (!identity.productId) {
+            return $();
+        }
+
+        return $('.superwoo-cart-item[data-product-id="' + identity.productId + '"][data-variation-id="' + identity.variationId + '"]');
+    }
+
+    function syncProductQuantityFromDrawer() {
+        var $form = productCartForm();
+        var $input;
+        var $items;
+        var quantity = 0;
+
+        if (!$form.length) {
+            return;
+        }
+
+        $input = productQuantityInput($form);
+        $items = matchingDrawerItemsForProductForm($form);
+        $items.each(function () {
+            quantity += parseInt($(this).find('[data-superwoo-qty-input]').val(), 10) || 0;
+        });
+
+        if (quantity > 0) {
+            $input.val(quantity).trigger('input').trigger('change');
+            activateInlineProductQuantity($form);
+            return;
+        }
+
+        $input.val(1).trigger('input').trigger('change');
+        $form.removeClass('superwoo-product-quantity-active');
+        forceInlineCartGrid($form);
+    }
+
     function syncStickyQuantity($form, $sticky) {
         var $formQty = productQuantityInput($form);
         var $stickyQty = $sticky.find('[data-superwoo-mobile-qty-input]').first();
@@ -1493,6 +1541,11 @@
             next = Math.min(max, next);
         }
         $input.val(next).trigger('input').trigger('change');
+
+        var $drawerItem = matchingDrawerItemsForProductForm($control.closest('form.cart')).first();
+        if ($drawerItem.length) {
+            updateItem($drawerItem, next);
+        }
     }, true);
     $(document).on('submit', 'body.single-product form.cart', function () {
         // Native WooCommerce submissions normally reload the product page and
@@ -1580,6 +1633,7 @@
         startTriggerObserver();
         fetchCartCount();
         prepareInlineProductActions();
+        syncProductQuantityFromDrawer();
         syncStickyBuyNow();
         // Some product builders finish rendering the form after DOM-ready.
         // A bounded retry keeps the observer lightweight while still finding it.
@@ -1587,6 +1641,7 @@
         window.setTimeout(syncStickyBuyNow, 1200);
         window.setTimeout(prepareInlineProductActions, 350);
         window.setTimeout(prepareInlineProductActions, 1200);
+        window.setTimeout(syncProductQuantityFromDrawer, 400);
 
         try {
             if (window.sessionStorage.getItem('superwoo-open-cart-after-native-product-submit') === '1') {
