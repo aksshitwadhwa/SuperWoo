@@ -17,6 +17,7 @@
 
 .superwoo-products-carousel-enabled .superwoo-carousel__viewport.is-grabbing {
     cursor: grabbing;
+    user-select: none;
 }
 
 .superwoo-products-carousel-enabled ul.products.superwoo-carousel__track {
