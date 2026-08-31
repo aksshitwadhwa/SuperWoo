@@ -123,12 +123,14 @@ class SuperWoo_Cart_Drawer {
         $quantity = isset($_POST['quantity']) ? max(1, absint($_POST['quantity'])) : 1;
 
         if (!$cart_item_key || !$this->get_cart_item($cart_item_key)) {
+            superwoo_log('Cart drawer quantity update rejected: invalid cart item', [], 'warning');
             wp_send_json_error(['message' => __('Invalid cart item.', 'superwoo')], 400);
         }
 
         $previous_offer_state = $this->get_offer_state();
 
         if (!WC()->cart->set_quantity($cart_item_key, $quantity, true)) {
+            superwoo_log('Cart drawer quantity update failed', ['quantity' => $quantity], 'error');
             wp_send_json_error(['message' => __('This item could not be updated.', 'superwoo')], 400);
         }
 
@@ -144,12 +146,14 @@ class SuperWoo_Cart_Drawer {
         $cart_item_key = isset($_POST['cart_item_key']) ? sanitize_text_field(wp_unslash($_POST['cart_item_key'])) : '';
 
         if (!$cart_item_key || !$this->get_cart_item($cart_item_key)) {
+            superwoo_log('Cart drawer removal rejected: invalid cart item', [], 'warning');
             wp_send_json_error(['message' => __('Invalid cart item.', 'superwoo')], 400);
         }
 
         $previous_offer_state = $this->get_offer_state();
 
         if (!WC()->cart->remove_cart_item($cart_item_key)) {
+            superwoo_log('Cart drawer item removal failed', [], 'error');
             wp_send_json_error(['message' => __('This item could not be removed from the cart.', 'superwoo')], 400);
         }
 
@@ -175,6 +179,7 @@ class SuperWoo_Cart_Drawer {
 
         $product_id = isset($_POST['product_id']) ? absint($_POST['product_id']) : 0;
         if (!$product_id) {
+            superwoo_log('Cross-sell add rejected: missing product ID', [], 'warning');
             wp_send_json_error(['message' => __('Invalid product.', 'superwoo')], 400);
         }
 
@@ -183,6 +188,7 @@ class SuperWoo_Cart_Drawer {
         $added = WC()->cart->add_to_cart($product_id, 1);
         superwoo_log('Cross-sell add attempted', ['product_id' => $product_id, 'success' => (bool) $added]);
         if (!$added) {
+            superwoo_log('Cross-sell add failed', ['product_id' => $product_id], 'error');
             wp_send_json_error(['message' => __('Product could not be added.', 'superwoo')], 400);
         }
 
@@ -348,6 +354,7 @@ class SuperWoo_Cart_Drawer {
 
     private function verify_ajax() {
         if (!superwoo_is_woocommerce_active() || !WC()->cart) {
+            superwoo_log('Cart drawer AJAX failed: WooCommerce cart unavailable', [], 'error');
             wp_send_json_error(['message' => __('WooCommerce cart is unavailable.', 'superwoo')], 400);
         }
 
@@ -357,6 +364,7 @@ class SuperWoo_Cart_Drawer {
         }
 
         if (!$nonce || !wp_verify_nonce($nonce, 'superwoo_cart_nonce')) {
+            superwoo_log('Cart drawer AJAX failed: invalid security token', [], 'warning');
             wp_send_json_error(['message' => __('Security check failed.', 'superwoo')], 403);
         }
     }
@@ -413,16 +421,14 @@ class SuperWoo_Cart_Drawer {
             return;
         }
 
-        // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Optional troubleshooting log, enabled only by an administrator.
-        error_log('SuperWoo add-to-cart diagnostic ' . wp_json_encode([
+        superwoo_log('Add-to-cart diagnostic', [
             'action_id' => $action_id,
             'cart_quantity' => $this->get_matching_cart_quantity($product_id, $variation_id),
             'product_id' => absint($product_id),
             'requested_quantity' => absint($requested_quantity),
-            'request_path' => wp_parse_url(esc_url_raw(wp_unslash($_SERVER['REQUEST_URI'] ?? '')), PHP_URL_PATH),
             'stage' => sanitize_key($stage),
             'variation_id' => absint($variation_id),
-        ]));
+        ], 'debug');
     }
 
     private function get_matching_cart_quantity($product_id, $variation_id) {

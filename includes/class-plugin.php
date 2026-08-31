@@ -22,6 +22,13 @@ class SuperWoo_Plugin {
         add_action('admin_init', [$this, 'save_settings']);
         add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_assets']);
         add_action('wp_enqueue_scripts', [$this, 'enqueue_appearance'], 99);
+        add_action('woocommerce_add_to_cart', [$this, 'log_cart_add'], 10, 6);
+        add_filter('woocommerce_add_to_cart_validation', [$this, 'log_cart_add_validation'], PHP_INT_MAX, 6);
+        add_action('woocommerce_cart_item_removed', [$this, 'log_cart_remove'], 10, 2);
+        add_action('woocommerce_after_checkout_validation', [$this, 'log_checkout_validation'], 10, 2);
+        add_action('woocommerce_checkout_order_processed', [$this, 'log_checkout_success'], 10, 3);
+        add_action('woocommerce_payment_complete', [$this, 'log_payment_complete']);
+        add_action('woocommerce_order_status_failed', [$this, 'log_failed_order']);
 
         if (!$this->guard->is_available()) {
             $this->guard->hooks();
@@ -113,16 +120,24 @@ class SuperWoo_Plugin {
         $path = superwoo_log_file_path();
         $contents = $path && file_exists($path) ? file_get_contents($path) : '';
         $lines = $contents ? array_slice(array_filter(explode("\n", $contents)), -300) : [];
+        $fatal_path = superwoo_fatal_log_file_path();
+        $fatal_contents = $fatal_path && file_exists($fatal_path) ? file_get_contents($fatal_path) : '';
+        $fatal_lines = $fatal_contents ? array_slice(array_filter(explode("\n", $fatal_contents)), -100) : [];
+        $logging_enabled = !empty(superwoo_get_settings()['enable_logging']);
         ?>
         <div class="wrap superwoo-admin-page">
             <h1><?php esc_html_e('SuperWoo Logs', 'superwoo'); ?></h1>
-            <p><?php esc_html_e('Recent diagnostic events from SuperWoo. Enable logging from SuperWoo → Settings → Cart.', 'superwoo'); ?></p>
+            <p><?php esc_html_e('Recent diagnostic events from SuperWoo. Logs omit customer, payment, authentication, and secret values.', 'superwoo'); ?></p>
+            <?php if (!$logging_enabled) : ?><div class="notice notice-warning inline"><p><?php esc_html_e('Diagnostic logging is currently disabled. Enable it from SuperWoo → Settings → Cart to record new events.', 'superwoo'); ?></p></div><?php endif; ?>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                 <input type="hidden" name="action" value="superwoo_clear_logs">
                 <?php wp_nonce_field('superwoo_clear_logs'); ?>
                 <?php submit_button(__('Clear Logs', 'superwoo'), 'delete', 'submit', false); ?>
             </form>
-            <pre style="background:#111827;color:#e5e7eb;max-height:650px;overflow:auto;padding:18px;white-space:pre-wrap;"><?php echo esc_html(implode("\n", $lines) ?: __('No logs available.', 'superwoo')); ?></pre>
+            <h2><?php esc_html_e('Diagnostic log', 'superwoo'); ?></h2>
+            <pre style="background:#111827;color:#e5e7eb;max-height:500px;overflow:auto;padding:18px;white-space:pre-wrap;"><?php echo esc_html(implode("\n", $lines) ?: __('No diagnostic logs available.', 'superwoo')); ?></pre>
+            <h2><?php esc_html_e('Fatal error log', 'superwoo'); ?></h2>
+            <pre style="background:#3b0d0d;color:#fee2e2;max-height:300px;overflow:auto;padding:18px;white-space:pre-wrap;"><?php echo esc_html(implode("\n", $fatal_lines) ?: __('No fatal errors recorded.', 'superwoo')); ?></pre>
         </div>
         <?php
     }
@@ -134,6 +149,10 @@ class SuperWoo_Plugin {
         $path = superwoo_log_file_path();
         if ($path && file_exists($path)) {
             file_put_contents($path, ''); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+        }
+        $fatal_path = superwoo_fatal_log_file_path();
+        if ($fatal_path && file_exists($fatal_path)) {
+            file_put_contents($fatal_path, ''); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
         }
         wp_safe_redirect(admin_url('admin.php?page=superwoo-logs&cleared=1'));
         exit;
@@ -246,6 +265,39 @@ class SuperWoo_Plugin {
 
         wp_enqueue_style('superwoo-appearance', SUPERWOO_URL . 'public/css/appearance.css', [], SUPERWOO_VERSION);
         wp_add_inline_style('superwoo-appearance', ':root{' . implode(';', $declarations) . '}');
+    }
+
+    public function log_cart_add($cart_item_key, $product_id, $quantity, $variation_id, $variation, $cart_item_data) {
+        superwoo_log('Cart item added', ['cart_item_key' => (string) $cart_item_key, 'product_id' => absint($product_id), 'quantity' => absint($quantity), 'variation_id' => absint($variation_id)]);
+    }
+
+    public function log_cart_add_validation($passed, $product_id, $quantity, $variation_id = 0, $variation = [], $cart_item_data = []) {
+        if (!$passed) {
+            superwoo_log('Cart add validation failed', ['product_id' => absint($product_id), 'quantity' => absint($quantity), 'variation_id' => absint($variation_id)], 'warning');
+        }
+        return $passed;
+    }
+
+    public function log_cart_remove($cart_item_key, $cart) {
+        superwoo_log('Cart item removed', ['cart_item_key' => (string) $cart_item_key, 'cart_count' => $cart ? $cart->get_cart_contents_count() : 0]);
+    }
+
+    public function log_checkout_validation($data, $errors) {
+        if ($errors instanceof WP_Error && $errors->has_errors()) {
+            superwoo_log('Checkout validation failed', ['error_codes' => $errors->get_error_codes(), 'error_count' => count($errors->get_error_codes())], 'warning');
+        }
+    }
+
+    public function log_checkout_success($order_id, $posted_data, $order) {
+        superwoo_log('Checkout order created', ['order_id' => absint($order_id), 'item_count' => $order instanceof WC_Order ? count($order->get_items()) : 0]);
+    }
+
+    public function log_payment_complete($order_id) {
+        superwoo_log('Payment completed', ['order_id' => absint($order_id)]);
+    }
+
+    public function log_failed_order($order_id) {
+        superwoo_log('Order entered failed status', ['order_id' => absint($order_id)], 'error');
     }
 
     private function sanitize_color($key, $fallback) {

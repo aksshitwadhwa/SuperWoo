@@ -110,8 +110,12 @@ function superwoo_log($message, $context = [], $level = 'info') {
         return;
     }
 
-    $context = is_array($context) ? $context : [];
+    $levels = ['emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'info', 'debug'];
+    $level = in_array($level, $levels, true) ? $level : 'info';
+    $context = superwoo_sanitize_log_context(is_array($context) ? $context : []);
     $context['plugin_version'] = defined('SUPERWOO_VERSION') ? SUPERWOO_VERSION : '';
+    $context['request_id'] = superwoo_log_request_id();
+    $context['request_type'] = wp_doing_ajax() ? 'ajax' : (is_admin() ? 'admin' : 'frontend');
     $line = '[' . current_time('mysql') . '] [' . strtoupper($level) . '] ' . (string) $message . ' ' . wp_json_encode($context) . "\n";
 
     $uploads = wp_upload_dir();
@@ -119,6 +123,10 @@ function superwoo_log($message, $context = [], $level = 'info') {
         $log_dir = trailingslashit($uploads['basedir']) . 'superwoo-logs';
         if (wp_mkdir_p($log_dir)) {
             $log_file = trailingslashit($log_dir) . 'superwoo.log';
+            if (file_exists($log_file) && filesize($log_file) > 2 * MB_IN_BYTES) {
+                $recent = file_get_contents($log_file, false, null, max(0, filesize($log_file) - MB_IN_BYTES));
+                file_put_contents($log_file, $recent ?: ''); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+            }
             file_put_contents($log_file, $line, FILE_APPEND | LOCK_EX); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
         }
     }
@@ -129,6 +137,31 @@ function superwoo_log($message, $context = [], $level = 'info') {
         // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Fallback when WooCommerce logging is unavailable.
         error_log('SuperWoo [' . strtoupper($level) . '] ' . $message . ' ' . wp_json_encode($context));
     }
+}
+
+function superwoo_log_request_id() {
+    static $request_id = null;
+    if (null === $request_id) {
+        $request_id = substr(wp_generate_uuid4(), 0, 8);
+    }
+    return $request_id;
+}
+
+function superwoo_sanitize_log_context($context) {
+    $blocked = ['address', 'authorization', 'card', 'cookie', 'cvv', 'email', 'nonce', 'password', 'payment', 'phone', 'token'];
+    $clean = [];
+    foreach ((array) $context as $key => $value) {
+        $key = is_int($key) ? 'item_' . $key : sanitize_key((string) $key);
+        if (!$key || in_array($key, $blocked, true) || preg_match('/(address|authorization|card|cookie|cvv|email|nonce|password|payment|phone|token)/', $key)) {
+            continue;
+        }
+        if (is_array($value)) {
+            $clean[$key] = superwoo_sanitize_log_context($value);
+        } elseif (is_scalar($value) || null === $value) {
+            $clean[$key] = is_string($value) ? wp_strip_all_tags($value) : $value;
+        }
+    }
+    return $clean;
 }
 
 function superwoo_log_file_path() {
