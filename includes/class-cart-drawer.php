@@ -260,6 +260,8 @@ class SuperWoo_Cart_Drawer {
         $expected_quantity = max(1, $before_quantity + $quantity);
         WC()->cart->set_quantity($added, $expected_quantity, false);
         $protected_quantities = [$added => $expected_quantity];
+        $allowed_quantities = $this->get_customer_cart_quantities();
+        $allowed_quantities[$added] = $expected_quantity;
 
         $this->remember_product_add_action($action_id);
         $this->remember_product_add_signature($add_signature);
@@ -268,7 +270,7 @@ class SuperWoo_Cart_Drawer {
 
         $this->send_fragments(
             $previous_offer_state,
-            $this->get_customer_cart_quantities(),
+            $allowed_quantities,
             $this->get_product_add_diagnostic_data($action_id, $product_id, $variation_id, $quantity, $before_quantity, $this->get_matching_cart_quantity($product_id, $variation_id), 'added'),
             $protected_quantities
         );
