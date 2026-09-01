@@ -1466,7 +1466,7 @@
         var current = parseInt($input.val(), 10) || 1;
 
         if (current <= 1) {
-            $input.val(1);
+            removeItem($item);
             return;
         }
 
@@ -1577,6 +1577,8 @@
         var min;
         var max;
         var next;
+        var isMinus;
+        var $drawerItem;
 
         if (!control) {
             return;
@@ -1592,11 +1594,24 @@
         step = parseFloat($input.attr('step')) || 1;
         min = parseFloat($input.attr('min')) || 1;
         max = parseFloat($input.attr('max'));
-        next = $control.is('[data-superwoo-product-qty-plus]') ? current + step : current - step;
+        isMinus = $control.is('[data-superwoo-product-qty-minus]');
+        next = isMinus ? current - step : current + step;
+        $drawerItem = matchingDrawerItemsForProductForm($(control).closest('form.cart')).first();
 
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
+
+        if (isMinus && current <= min) {
+            if ($drawerItem.length) {
+                removeItem($drawerItem);
+            } else {
+                $input.val(min).trigger('input').trigger('change');
+                $(control).closest('form.cart').removeClass('superwoo-product-quantity-active');
+                forceInlineCartGrid($(control).closest('form.cart'));
+            }
+            return;
+        }
 
         next = Math.max(min, next);
         if (!isNaN(max)) {
@@ -1604,7 +1619,6 @@
         }
         $input.val(next).trigger('input').trigger('change');
 
-        var $drawerItem = matchingDrawerItemsForProductForm($(control).closest('form.cart')).first();
         if ($drawerItem.length) {
             updateItem($drawerItem, next);
         }
