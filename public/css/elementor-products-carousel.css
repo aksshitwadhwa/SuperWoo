@@ -108,7 +108,6 @@
 }
 
 .superwoo-carousel__dots button.is-active { opacity: 1; }
-.superwoo-carousel__toggle { margin-top: .75rem; padding: .45rem .75rem; border: 1px solid currentColor; background: transparent; color: inherit; cursor: pointer; }
 .superwoo-carousel__header { display:flex; align-items:center; justify-content:space-between; gap:1rem; margin-bottom:1rem; }
 .superwoo-carousel__header--center { text-align:center; justify-content:center; flex-wrap:wrap; }
 .superwoo-carousel__header--right { text-align:right; justify-content:flex-end; }
