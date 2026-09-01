@@ -268,7 +268,36 @@ class SuperWoo_Plugin {
     }
 
     public function log_cart_add($cart_item_key, $product_id, $quantity, $variation_id, $variation, $cart_item_data) {
+        static $request_add_counts = [];
+        $signature = absint($product_id) . ':' . absint($variation_id) . ':' . (string) $cart_item_key;
+        $request_add_counts[$signature] = ($request_add_counts[$signature] ?? 0) + 1;
+
         superwoo_log('Cart item added', ['cart_item_key' => (string) $cart_item_key, 'product_id' => absint($product_id), 'quantity' => absint($quantity), 'variation_id' => absint($variation_id)]);
+
+        $settings = superwoo_get_settings();
+        if ($request_add_counts[$signature] < 2 || empty($settings['enable_add_to_cart_diagnostics'])) {
+            return;
+        }
+
+        $trace = [];
+        foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 24) as $frame) {
+            $file = isset($frame['file']) ? wp_normalize_path((string) $frame['file']) : '';
+            if ($file && defined('ABSPATH')) {
+                $file = str_replace(wp_normalize_path(ABSPATH), '', $file);
+            }
+            $trace[] = [
+                'call' => (string) ($frame['class'] ?? '') . (string) ($frame['type'] ?? '') . (string) ($frame['function'] ?? ''),
+                'file' => $file,
+                'line' => absint($frame['line'] ?? 0),
+            ];
+        }
+
+        superwoo_log('Duplicate cart-add call stack', [
+            'cart_item_key' => (string) $cart_item_key,
+            'product_id' => absint($product_id),
+            'variation_id' => absint($variation_id),
+            'trace' => $trace,
+        ], 'warning');
     }
 
     public function log_cart_add_validation($passed, $product_id, $quantity, $variation_id = 0, $variation = [], $cart_item_data = []) {
