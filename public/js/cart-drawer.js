@@ -1,6 +1,13 @@
 (function ($) {
     'use strict';
 
+    // Optimizers and Elementor preview transitions can evaluate the same
+    // bundle more than once. Only one instance may own cart event handlers.
+    if (window.__superwooCartDrawerInitialized) {
+        return;
+    }
+    window.__superwooCartDrawerInitialized = true;
+
     var lastFocus = null;
     var triggerObserver = null;
     var triggerSyncTimer = null;
@@ -1517,6 +1524,13 @@
 
         if ($button.is(':disabled, .disabled') || $button.attr('aria-disabled') === 'true') {
             return true;
+        }
+
+        if (event && event.__superwooProductAddHandled) {
+            return true;
+        }
+        if (event) {
+            event.__superwooProductAddHandled = true;
         }
 
         event.preventDefault();

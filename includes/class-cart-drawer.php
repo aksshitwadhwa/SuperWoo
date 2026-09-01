@@ -237,6 +237,11 @@ class SuperWoo_Cart_Drawer {
             $this->send_fragments(null, null, $this->get_product_add_diagnostic_data($action_id, $product_id, $variation_id, $quantity, $before_quantity, $before_quantity, 'duplicate_skipped'));
         }
 
+        $add_signature = $this->get_product_add_signature($product_id, $variation_id, $quantity, $variation);
+        if ($this->is_recent_product_add_signature($add_signature)) {
+            $this->send_fragments(null, null, $this->get_product_add_diagnostic_data($action_id, $product_id, $variation_id, $quantity, $before_quantity, $before_quantity, 'duplicate_skipped'));
+        }
+
         $passed = apply_filters('woocommerce_add_to_cart_validation', true, $product_id, $quantity, $variation_id, $variation);
         if (!$passed) {
             wp_send_json_error(['message' => $this->get_cart_error_message()], 400);
@@ -257,6 +262,7 @@ class SuperWoo_Cart_Drawer {
         $protected_quantities = [$added => $expected_quantity];
 
         $this->remember_product_add_action($action_id);
+        $this->remember_product_add_signature($add_signature);
         $this->log_product_add_diagnostic('added', $product_id, $variation_id, $quantity, $action_id);
         do_action('woocommerce_ajax_added_to_cart', $product_id);
 
@@ -482,6 +488,48 @@ class SuperWoo_Cart_Drawer {
         }
 
         WC()->session->set('superwoo_product_add_actions', $actions);
+    }
+
+    private function get_product_add_signature($product_id, $variation_id, $quantity, $variation) {
+        ksort($variation);
+
+        return md5(wp_json_encode([
+            absint($product_id),
+            absint($variation_id),
+            max(1, absint($quantity)),
+            $variation,
+        ]));
+    }
+
+    private function is_recent_product_add_signature($signature) {
+        if (!$signature || !WC()->session) {
+            return false;
+        }
+
+        $recent = WC()->session->get('superwoo_recent_product_adds', []);
+        $recent = is_array($recent) ? $recent : [];
+        $now = microtime(true);
+
+        foreach ($recent as $key => $timestamp) {
+            if ($now - (float) $timestamp > 5) {
+                unset($recent[$key]);
+            }
+        }
+
+        WC()->session->set('superwoo_recent_product_adds', $recent);
+
+        return isset($recent[$signature]) && $now - (float) $recent[$signature] < 2.5;
+    }
+
+    private function remember_product_add_signature($signature) {
+        if (!$signature || !WC()->session) {
+            return;
+        }
+
+        $recent = WC()->session->get('superwoo_recent_product_adds', []);
+        $recent = is_array($recent) ? $recent : [];
+        $recent[$signature] = microtime(true);
+        WC()->session->set('superwoo_recent_product_adds', array_slice($recent, -20, null, true));
     }
 
     private function log_product_add_diagnostic($stage, $product_id, $variation_id, $requested_quantity, $action_id) {
