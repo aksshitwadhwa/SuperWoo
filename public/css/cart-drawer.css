@@ -783,6 +783,13 @@ body.single-product .woocommerce .star-rating {
     width: 42px;
 }
 
+.superwoo-cart-shell .superwoo-qty input[type="number"]::-webkit-inner-spin-button,
+.superwoo-cart-shell .superwoo-qty input[type="number"]::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    appearance: none;
+    margin: 0;
+}
+
 .superwoo-cart-shell .superwoo-cross-sells {
     border-top: 1px solid var(--superwoo-drawer-border);
     flex: 0 0 auto;
