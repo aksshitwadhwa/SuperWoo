@@ -9,6 +9,8 @@
     var observedProductCartForm = null;
     var productQuantityObserver = null;
     var productQuantityNormalizeTimer = null;
+    var razorpayOverlayObserver = null;
+    var razorpayOverlayTimer = null;
     var storeApiNonce = '';
     var currentOfferState = window.SuperWooCart && SuperWooCart.offerState ? SuperWooCart.offerState : { discounts: {}, gifts: {} };
     var productAddInFlight = false;
@@ -745,6 +747,36 @@
 
         label = ($(element).is('input') ? $(element).val() : $(element).text()) || '';
         return /^buy\s*now\b/i.test($.trim(label));
+    }
+
+    function syncRazorpayOverlayState() {
+        var container = document.querySelector('.razorpay-container');
+        var isOpen = !!(container && window.getComputedStyle(container).display !== 'none');
+
+        $('body').toggleClass('superwoo-razorpay-open', isOpen);
+
+        if (container && window.MutationObserver && (!razorpayOverlayObserver || razorpayOverlayObserver._superwooTarget !== container)) {
+            if (razorpayOverlayObserver) {
+                razorpayOverlayObserver.disconnect();
+            }
+            razorpayOverlayObserver = new MutationObserver(syncRazorpayOverlayState);
+            razorpayOverlayObserver._superwooTarget = container;
+            razorpayOverlayObserver.observe(container, { attributes: true, attributeFilter: ['class', 'style'] });
+        }
+
+        return isOpen;
+    }
+
+    function watchRazorpayOverlay() {
+        var attempts = 0;
+
+        window.clearInterval(razorpayOverlayTimer);
+        razorpayOverlayTimer = window.setInterval(function () {
+            attempts += 1;
+            if (syncRazorpayOverlayState() || attempts >= 80) {
+                window.clearInterval(razorpayOverlayTimer);
+            }
+        }, 100);
     }
 
     function isNativeAddToCartControl(element) {
@@ -1493,6 +1525,10 @@
     document.addEventListener('click', function (event) {
         var control = event.target && event.target.closest ? event.target.closest('body.single-product form.cart button, body.single-product form.cart input[type="submit"]') : null;
         if (control) {
+            if (isBuyNowControl(control)) {
+                watchRazorpayOverlay();
+                return;
+            }
             handleSingleProductAdd(control, event);
         }
     }, true);
@@ -1640,6 +1676,7 @@
         fetchCartCount();
         prepareInlineProductActions();
         syncProductQuantityFromDrawer();
+        syncRazorpayOverlayState();
         syncStickyBuyNow();
         // Some product builders finish rendering the form after DOM-ready.
         // A bounded retry keeps the observer lightweight while still finding it.
