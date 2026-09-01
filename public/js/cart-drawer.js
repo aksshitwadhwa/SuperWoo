@@ -667,8 +667,18 @@
 
     function ajaxSubmitProductForm($form, $button) {
         var data = serializeForm($form, $button);
+        var isInitialAdd = !$form.hasClass('superwoo-product-quantity-active');
         var key = productAddKey(data);
         var request;
+
+        // The first Add to Cart click always represents one unit. Elementor,
+        // variation plugins, and restored browser form state can leave a stale
+        // value in the native quantity input; quantity changes after the add
+        // are handled exclusively by SuperWoo's inline controls.
+        if (isInitialAdd) {
+            data.quantity = 1;
+            key = productAddKey(data);
+        }
 
         if (shouldBlockDuplicateProductAdd($form, key)) {
             return true;
