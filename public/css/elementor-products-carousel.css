@@ -64,6 +64,11 @@
     display: none;
 }
 
+/* Backstop for pages still serving an older, optimized carousel script. */
+.superwoo-products-carousel-enabled .superwoo-carousel__toggle {
+    display: none !important;
+}
+
 .superwoo-carousel__arrow {
     position: absolute;
     z-index: 2;
