@@ -1,10 +1,10 @@
 {
   "name": "SuperWoo",
   "slug": "superwoo",
-  "version": "1.0.206",
+  "version": "1.0.207",
   "requires": "6.2",
   "requires_php": "7.4",
-  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.0.206.zip",
+  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.0.207.zip",
   "homepage": "https://digtize.com/plugins/superwoo/",
   "description": "SuperWoo product and cart enhancements."
 }

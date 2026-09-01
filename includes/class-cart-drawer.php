@@ -2,6 +2,8 @@
 defined('ABSPATH') || exit;
 
 class SuperWoo_Cart_Drawer {
+    private $active_add_protection = [];
+
     public function hooks() {
         $settings = superwoo_get_settings();
         if (empty($settings['enable_cart_drawer'])) {
@@ -24,6 +26,7 @@ class SuperWoo_Cart_Drawer {
         add_action('wp_ajax_nopriv_superwoo_add_cross_sell', [$this, 'ajax_add_cross_sell']);
         add_action('wp_ajax_superwoo_add_product_to_cart', [$this, 'ajax_add_product_to_cart']);
         add_action('wp_ajax_nopriv_superwoo_add_product_to_cart', [$this, 'ajax_add_product_to_cart']);
+        add_action('woocommerce_add_to_cart', [$this, 'enforce_active_add_quantity'], PHP_INT_MAX, 6);
     }
 
     public function enqueue_assets() {
@@ -248,8 +251,15 @@ class SuperWoo_Cart_Drawer {
         }
 
         $previous_offer_state = $this->get_offer_state();
+        $expected_quantity = max(1, $before_quantity + $quantity);
+        $this->active_add_protection = [
+            'product_id' => $product_id,
+            'variation_id' => $variation_id,
+            'quantity' => $expected_quantity,
+        ];
         $added = WC()->cart->add_to_cart($product_id, $quantity, $variation_id, $variation);
         if (!$added) {
+            $this->active_add_protection = [];
             wp_send_json_error(['message' => $this->get_cart_error_message()], 400);
         }
 
@@ -257,7 +267,6 @@ class SuperWoo_Cart_Drawer {
         // hooks even though this request was submitted once. The cart line
         // returned by WooCommerce belongs to this request, so lock it to the
         // exact customer-requested result before totals and fragments run.
-        $expected_quantity = max(1, $before_quantity + $quantity);
         $current_added_quantity = isset(WC()->cart->cart_contents[$added]['quantity'])
             ? max(1, absint(WC()->cart->cart_contents[$added]['quantity']))
             : 0;
@@ -283,6 +292,28 @@ class SuperWoo_Cart_Drawer {
             $allowed_quantities,
             $this->get_product_add_diagnostic_data($action_id, $product_id, $variation_id, $quantity, $before_quantity, $this->get_matching_cart_quantity($product_id, $variation_id), 'added'),
             $protected_quantities
+        );
+    }
+
+    public function enforce_active_add_quantity($cart_item_key, $product_id, $quantity, $variation_id, $variation, $cart_item_data) {
+        if (empty($this->active_add_protection) || !WC()->cart) {
+            return;
+        }
+
+        if (
+            absint($product_id) !== absint($this->active_add_protection['product_id'] ?? 0)
+            || absint($variation_id) !== absint($this->active_add_protection['variation_id'] ?? 0)
+            || !isset(WC()->cart->cart_contents[$cart_item_key])
+        ) {
+            return;
+        }
+
+        // This runs at the final add-to-cart priority. If another callback
+        // recursively adds the same product, both the nested and outer action
+        // passes end with the exact quantity requested by the customer.
+        WC()->cart->cart_contents[$cart_item_key]['quantity'] = max(
+            1,
+            absint($this->active_add_protection['quantity'] ?? 1)
         );
     }
 
