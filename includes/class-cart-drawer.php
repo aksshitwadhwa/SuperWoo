@@ -248,6 +248,14 @@ class SuperWoo_Cart_Drawer {
             wp_send_json_error(['message' => $this->get_cart_error_message()], 400);
         }
 
+        // Some variation/bundle integrations mutate line quantities from cart
+        // hooks even though this request was submitted once. The cart line
+        // returned by WooCommerce belongs to this request, so lock it to the
+        // exact customer-requested result before totals and fragments run.
+        $expected_quantity = max(1, $before_quantity + $quantity);
+        WC()->cart->set_quantity($added, $expected_quantity, false);
+        $protected_quantities = [$added => $expected_quantity];
+
         $this->remember_product_add_action($action_id);
         $this->log_product_add_diagnostic('added', $product_id, $variation_id, $quantity, $action_id);
         do_action('woocommerce_ajax_added_to_cart', $product_id);
@@ -255,7 +263,8 @@ class SuperWoo_Cart_Drawer {
         $this->send_fragments(
             $previous_offer_state,
             $this->get_customer_cart_quantities(),
-            $this->get_product_add_diagnostic_data($action_id, $product_id, $variation_id, $quantity, $before_quantity, $this->get_matching_cart_quantity($product_id, $variation_id), 'added')
+            $this->get_product_add_diagnostic_data($action_id, $product_id, $variation_id, $quantity, $before_quantity, $this->get_matching_cart_quantity($product_id, $variation_id), 'added'),
+            $protected_quantities
         );
     }
 

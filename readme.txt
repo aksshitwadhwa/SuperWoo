@@ -4,7 +4,7 @@ Tags: woocommerce, cart drawer, product benefits, faq, bundle discounts
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.199
+Stable tag: 1.0.200
 License: GPLv2 or later
 
 SuperWoo adds WooCommerce product benefit icons, how-to content, product FAQs, shoppable videos, bundle offer rules, cart notices, and an AJAX cart drawer.
@@ -48,6 +48,9 @@ Elementor:
 5. Configure offer rules under WooCommerce > Offers.
 
 == Changelog ==
+
+= 1.0.200 =
+* Protect variation cart lines from third-party quantity mutations so one Add to Cart action adds exactly the requested quantity.
 
 = 1.0.199 =
 * Normalize mini-cart checkout taps to Razorpay's button target so Magic Checkout opens reliably on mobile.
