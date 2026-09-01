@@ -262,7 +262,12 @@ class SuperWoo_Cart_Drawer {
             ? max(1, absint(WC()->cart->cart_contents[$added]['quantity']))
             : 0;
         if ($current_added_quantity !== $expected_quantity) {
-            WC()->cart->set_quantity($added, $expected_quantity, false);
+            // Do not call set_quantity() here. A third-party product-page hook
+            // re-enters add_to_cart() from WooCommerce quantity-update hooks,
+            // turning one requested unit back into two. This cart line belongs
+            // to the current AJAX request, so correct its payload directly and
+            // let the normal totals/session pass persist it below.
+            WC()->cart->cart_contents[$added]['quantity'] = $expected_quantity;
         }
         $protected_quantities = [$added => $expected_quantity];
         $allowed_quantities = $this->get_customer_cart_quantities();
@@ -734,7 +739,10 @@ class SuperWoo_Cart_Drawer {
                         ? max(1, absint($cart->cart_contents[$cart_item_key]['quantity']))
                         : 0;
                     if ($current_quantity && $current_quantity !== max(1, absint($expected_quantity))) {
-                        $cart->set_quantity($cart_item_key, max(1, absint($expected_quantity)), false);
+                        // This protector intentionally avoids public quantity
+                        // hooks; those hooks caused the duplicate addition this
+                        // request is protecting against.
+                        $cart->cart_contents[$cart_item_key]['quantity'] = max(1, absint($expected_quantity));
                     }
                 }
             };
