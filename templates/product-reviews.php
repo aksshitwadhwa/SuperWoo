@@ -123,9 +123,6 @@ $image_thumbs = isset($summary['image_thumbs']) && is_array($summary['image_thum
                     <?php if (!empty($review['verified'])) : ?>
                         <span class="superwoo-review-verified"><?php esc_html_e('Verified owner', 'superwoo'); ?></span>
                     <?php endif; ?>
-                    <?php if (!empty($review['title'])) : ?>
-                        <h3><?php echo esc_html($review['title']); ?></h3>
-                    <?php endif; ?>
                     <?php if (!empty($review['content'])) : ?>
                         <p><?php echo esc_html($review['content']); ?></p>
                     <?php endif; ?>

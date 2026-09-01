@@ -398,15 +398,6 @@
     width: fit-content;
 }
 
-.superwoo-review-card h3 {
-    color: var(--superwoo-review-black);
-    font-size: 21px;
-    line-height: 1.18;
-    margin: 0 0 8px;
-    padding: 0;
-    text-transform: none;
-}
-
 .superwoo-review-card p {
     color: var(--superwoo-review-black);
     font-size: 16px;
