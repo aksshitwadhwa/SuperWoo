@@ -251,7 +251,12 @@ class SuperWoo_Cart_Drawer {
         }
 
         $previous_offer_state = $this->get_offer_state();
-        $expected_quantity = max(1, $before_quantity + $quantity);
+        // The product-page Add button represents the transition from the
+        // normal button to SuperWoo's inline quantity controls. It must set
+        // the cart line to the submitted quantity, not increment a stale or
+        // already-present server-side line. Subsequent +/- actions use the
+        // dedicated cart quantity endpoint.
+        $expected_quantity = max(1, $quantity);
         $this->active_add_protection = [
             'product_id' => $product_id,
             'variation_id' => $variation_id,
