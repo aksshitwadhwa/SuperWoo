@@ -1533,6 +1533,26 @@
         }
     }, true);
 
+    document.addEventListener('click', function (event) {
+        var button = event.target && event.target.closest ? event.target.closest('#btn-1cc-mini-cart') : null;
+
+        if (!button) {
+            return;
+        }
+
+        watchRazorpayOverlay();
+
+        // Razorpay's delegated listener checks event.target.id rather than
+        // closest(). Normalize taps on the icon/text children back to the
+        // actual mini-cart button so Magic Checkout receives the click.
+        if (event.target !== button) {
+            event.preventDefault();
+            event.stopPropagation();
+            event.stopImmediatePropagation();
+            button.click();
+        }
+    }, true);
+
     document.addEventListener('submit', function (event) {
         var form = event.target;
         var $form;

@@ -489,6 +489,10 @@ body.single-product .woocommerce .star-rating {
     letter-spacing: 0;
 }
 
+#btn-1cc-mini-cart > * {
+    pointer-events: none !important;
+}
+
 .superwoo-cart-shell.is-open {
     opacity: 1;
     pointer-events: none;
