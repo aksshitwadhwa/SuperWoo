@@ -258,7 +258,12 @@ class SuperWoo_Cart_Drawer {
         // returned by WooCommerce belongs to this request, so lock it to the
         // exact customer-requested result before totals and fragments run.
         $expected_quantity = max(1, $before_quantity + $quantity);
-        WC()->cart->set_quantity($added, $expected_quantity, false);
+        $current_added_quantity = isset(WC()->cart->cart_contents[$added]['quantity'])
+            ? max(1, absint(WC()->cart->cart_contents[$added]['quantity']))
+            : 0;
+        if ($current_added_quantity !== $expected_quantity) {
+            WC()->cart->set_quantity($added, $expected_quantity, false);
+        }
         $protected_quantities = [$added => $expected_quantity];
         $allowed_quantities = $this->get_customer_cart_quantities();
         $allowed_quantities[$added] = $expected_quantity;
@@ -725,7 +730,10 @@ class SuperWoo_Cart_Drawer {
                 }
 
                 foreach ($protected_quantities as $cart_item_key => $expected_quantity) {
-                    if (isset($cart->cart_contents[$cart_item_key])) {
+                    $current_quantity = isset($cart->cart_contents[$cart_item_key]['quantity'])
+                        ? max(1, absint($cart->cart_contents[$cart_item_key]['quantity']))
+                        : 0;
+                    if ($current_quantity && $current_quantity !== max(1, absint($expected_quantity))) {
                         $cart->set_quantity($cart_item_key, max(1, absint($expected_quantity)), false);
                     }
                 }
