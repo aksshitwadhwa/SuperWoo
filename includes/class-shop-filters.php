@@ -95,6 +95,7 @@ class SuperWoo_Shop_Filters {
             'orderby' => 'name',
             'order' => 'ASC',
         ]);
+        $selected_categories = self::selected_categories();
         $filter_id = wp_unique_id('superwoo-shop-filters-');
         $price_bounds = self::price_bounds();
         $price_min = self::request_number('min_price');
@@ -129,7 +130,7 @@ class SuperWoo_Shop_Filters {
                     <legend><?php esc_html_e('Categories', 'superwoo'); ?></legend>
                     <div class="superwoo-shop-filters__choices">
                         <?php foreach ($categories as $category) : ?>
-                            <label><input type="checkbox" name="<?php echo esc_attr(self::CATEGORY_PARAM); ?>[]" value="<?php echo esc_attr($category->slug); ?>" <?php checked(in_array($category->slug, self::request_array(self::CATEGORY_PARAM), true)); ?>> <span><?php echo esc_html($category->name); ?></span></label>
+                            <label><input type="checkbox" name="<?php echo esc_attr(self::CATEGORY_PARAM); ?>[]" value="<?php echo esc_attr($category->slug); ?>" <?php checked(in_array($category->slug, $selected_categories, true)); ?>> <span><?php echo esc_html($category->name); ?></span></label>
                         <?php endforeach; ?>
                     </div>
                 </fieldset>
@@ -316,6 +317,20 @@ class SuperWoo_Shop_Filters {
     private static function request_array($key) {
         $values = isset($_GET[$key]) ? (array) wp_unslash($_GET[$key]) : [];
         return array_values(array_unique(array_filter(array_map('sanitize_title', $values))));
+    }
+
+    /** Include the current product-category archive in the visible selection. */
+    private static function selected_categories() {
+        $categories = self::request_array(self::CATEGORY_PARAM);
+
+        if (is_product_category()) {
+            $term = get_queried_object();
+            if ($term instanceof WP_Term && 'product_cat' === $term->taxonomy) {
+                $categories[] = $term->slug;
+            }
+        }
+
+        return array_values(array_unique(array_filter($categories)));
     }
 
     private static function clear_url() {
