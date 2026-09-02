@@ -129,10 +129,6 @@
 [dir="rtl"] .superwoo-carousel__arrow--previous { right:calc(.5rem + var(--superwoo-carousel-arrow-left-offset)); left:auto; }
 [dir="rtl"] .superwoo-carousel__arrow--next { left:calc(.5rem + var(--superwoo-carousel-arrow-right-offset)); right:auto; }
 
-.superwoo-products-carousel-enabled.superwoo-carousel-extended-both .superwoo-carousel__viewport,
-.superwoo-products-carousel-enabled.superwoo-carousel-extended-left .superwoo-carousel__viewport,
-.superwoo-products-carousel-enabled.superwoo-carousel-extended-right .superwoo-carousel__viewport { overflow: visible; }
-
 @media (prefers-reduced-motion: reduce) {
     .superwoo-products-carousel-enabled ul.products.superwoo-carousel__track { transition-duration: 0.01ms; }
     .superwoo-carousel__arrow { transition: none; }

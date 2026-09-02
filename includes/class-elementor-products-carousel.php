@@ -9,11 +9,7 @@ class SuperWoo_Elementor_Products_Carousel {
         add_action('elementor/element/' . self::WIDGET_NAME . '/section_layout/after_section_end', [$this, 'register_controls'], 10, 2);
         add_action('elementor/element/' . self::WIDGET_NAME . '/section_content/after_section_end', [$this, 'register_controls'], 10, 2);
         add_action('elementor/element/after_section_end', [$this, 'register_controls_fallback'], 10, 3);
-        // This runs immediately before the Products widget builds its
-        // WooCommerce query. The frontend wrapper hook is too late for query
-        // changes, but is retained below for the carousel HTML attributes.
-        add_action('elementor/widget/before_render_content', [$this, 'prepare_product_query'], 1, 2);
-        add_action('elementor/frontend/widget/before_render', [$this, 'before_render']);
+        add_action('elementor/frontend/widget/before_render', [$this, 'before_render'], 1);
         add_action('elementor/preview/enqueue_styles', [$this, 'enqueue_styles']);
         add_action('elementor/preview/enqueue_scripts', [$this, 'enqueue_scripts']);
         add_filter('rocket_delay_js_exclusions', [$this, 'exclude_from_rocket_delay']);
@@ -205,36 +201,6 @@ class SuperWoo_Elementor_Products_Carousel {
         $this->register_controls($element, $args);
     }
 
-    public function prepare_product_query($element) {
-        if (!is_object($element) || !method_exists($element, 'get_name') || self::WIDGET_NAME !== $element->get_name()) {
-            return;
-        }
-        // Read the raw settings here. Calling get_settings_for_display() at
-        // this point would cache the original grid Rows value before the
-        // carousel can override it for Elementor's product query.
-        $settings = $element->get_settings();
-        if ('yes' !== ($settings['superwoo_carousel_enabled'] ?? '')) {
-            return;
-        }
-
-        // Elementor's Products widget normally builds its query from its
-        // native Columns × Rows controls. Carousel mode must bypass that
-        // display limit so it can load the requested total independently of
-        // the number of slides visible at once.
-        $products_limit = (int) $this->number($settings['superwoo_carousel_products_limit'] ?? 12, 12, 1, 100);
-        $query_columns = max(
-            (int) $this->number($settings['columns'] ?? 4, 4, 1, 12),
-            (int) $this->number($settings['columns_tablet'] ?? 1, 1, 1, 12),
-            (int) $this->number($settings['columns_mobile'] ?? 1, 1, 1, 12)
-        );
-        $query_rows = (int) ceil($products_limit / $query_columns);
-        if (method_exists($element, 'set_settings')) {
-            $element->set_settings('posts_per_page', $products_limit);
-            $element->set_settings('rows', $query_rows);
-        }
-
-    }
-
     public function before_render($element) {
         if (!is_object($element) || !method_exists($element, 'get_name') || self::WIDGET_NAME !== $element->get_name()) {
             return;
@@ -246,6 +212,19 @@ class SuperWoo_Elementor_Products_Carousel {
         }
 
         $products_limit = (int) $this->number($settings['superwoo_carousel_products_limit'] ?? 12, 12, 1, 100);
+        $query_columns = max(1, (int) $this->number($settings['columns'] ?? 4, 4, 1, 12));
+        $query_rows = (int) ceil($products_limit / $query_columns);
+        if (method_exists($element, 'set_settings')) {
+            $element->set_settings('posts_per_page', $products_limit);
+            $element->set_settings('rows', $query_rows);
+        }
+        // Elementor computes and caches get_settings_for_display() before
+        // this hook. Reset that cache after applying the carousel query limit
+        // so Products_Renderer receives the new posts_per_page/rows values.
+        if (method_exists($element, 'reset_render_state')) {
+            $element->reset_render_state();
+        }
+
         $config = [
             'slidesToShow' => [
                 'desktop' => $this->number($settings['superwoo_carousel_slides_to_show'] ?? 4, 4, 1, 8),
