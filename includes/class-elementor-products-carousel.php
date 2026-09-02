@@ -210,11 +210,20 @@ class SuperWoo_Elementor_Products_Carousel {
             return;
         }
 
-        // Elementor's Products widget reads this setting when it builds the
-        // WooCommerce query, so the carousel only loads the requested amount.
+        // Elementor's Products widget normally builds its query from its
+        // native Columns × Rows controls. Carousel mode must bypass that
+        // display limit so it can load the requested total independently of
+        // the number of slides visible at once.
         $products_limit = (int) $this->number($settings['superwoo_carousel_products_limit'] ?? 12, 12, 1, 100);
+        $query_columns = max(
+            (int) $this->number($settings['columns'] ?? 4, 4, 1, 12),
+            (int) $this->number($settings['columns_tablet'] ?? 1, 1, 1, 12),
+            (int) $this->number($settings['columns_mobile'] ?? 1, 1, 1, 12)
+        );
+        $query_rows = (int) ceil($products_limit / $query_columns);
         if (method_exists($element, 'set_settings')) {
             $element->set_settings('posts_per_page', $products_limit);
+            $element->set_settings('rows', $query_rows);
         }
 
         $config = [
