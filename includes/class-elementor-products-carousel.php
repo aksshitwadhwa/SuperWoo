@@ -9,6 +9,10 @@ class SuperWoo_Elementor_Products_Carousel {
         add_action('elementor/element/' . self::WIDGET_NAME . '/section_layout/after_section_end', [$this, 'register_controls'], 10, 2);
         add_action('elementor/element/' . self::WIDGET_NAME . '/section_content/after_section_end', [$this, 'register_controls'], 10, 2);
         add_action('elementor/element/after_section_end', [$this, 'register_controls_fallback'], 10, 3);
+        // This runs immediately before the Products widget builds its
+        // WooCommerce query. The frontend wrapper hook is too late for query
+        // changes, but is retained below for the carousel HTML attributes.
+        add_action('elementor/widget/before_render_content', [$this, 'prepare_product_query'], 1, 2);
         add_action('elementor/frontend/widget/before_render', [$this, 'before_render']);
         add_action('elementor/preview/enqueue_styles', [$this, 'enqueue_styles']);
         add_action('elementor/preview/enqueue_scripts', [$this, 'enqueue_scripts']);
@@ -201,7 +205,7 @@ class SuperWoo_Elementor_Products_Carousel {
         $this->register_controls($element, $args);
     }
 
-    public function before_render($element) {
+    public function prepare_product_query($element) {
         if (!is_object($element) || !method_exists($element, 'get_name') || self::WIDGET_NAME !== $element->get_name()) {
             return;
         }
@@ -229,6 +233,19 @@ class SuperWoo_Elementor_Products_Carousel {
             $element->set_settings('rows', $query_rows);
         }
 
+    }
+
+    public function before_render($element) {
+        if (!is_object($element) || !method_exists($element, 'get_name') || self::WIDGET_NAME !== $element->get_name()) {
+            return;
+        }
+
+        $settings = $element->get_settings();
+        if ('yes' !== ($settings['superwoo_carousel_enabled'] ?? '')) {
+            return;
+        }
+
+        $products_limit = (int) $this->number($settings['superwoo_carousel_products_limit'] ?? 12, 12, 1, 100);
         $config = [
             'slidesToShow' => [
                 'desktop' => $this->number($settings['superwoo_carousel_slides_to_show'] ?? 4, 4, 1, 8),
