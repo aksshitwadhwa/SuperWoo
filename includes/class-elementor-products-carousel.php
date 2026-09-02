@@ -5,6 +5,9 @@ defined('ABSPATH') || exit;
 class SuperWoo_Elementor_Products_Carousel {
     const WIDGET_NAME = 'woocommerce-products';
 
+    /** @var array<string, int> Carousel query IDs registered for this request. */
+    private static $carousel_query_limits = [];
+
     public function hooks() {
         add_action('elementor/element/' . self::WIDGET_NAME . '/section_layout/after_section_end', [$this, 'register_controls'], 10, 2);
         add_action('elementor/element/' . self::WIDGET_NAME . '/section_content/after_section_end', [$this, 'register_controls'], 10, 2);
@@ -221,9 +224,13 @@ class SuperWoo_Elementor_Products_Carousel {
             (int) $this->number($settings['columns_mobile'] ?? 1, 1, 1, 12)
         );
         $query_rows = (int) ceil($products_limit / $query_columns);
+        $query_id = 'superwoo_products_carousel_' . sanitize_key($element->get_id());
+
+        self::register_query_limit($query_id, $products_limit);
         if (method_exists($element, 'set_settings')) {
             $element->set_settings('posts_per_page', $products_limit);
             $element->set_settings('rows', $query_rows);
+            $element->set_settings('query_id', $query_id);
         }
 
         $config = [
@@ -304,5 +311,22 @@ class SuperWoo_Elementor_Products_Carousel {
 
     private function arrow_style_value($value) {
         return in_array($value, ['chevron', 'angle', 'arrow', 'triangle'], true) ? $value : 'chevron';
+    }
+
+    /** Force Elementor's final WooCommerce query to use the carousel limit. */
+    private static function register_query_limit($query_id, $products_limit) {
+        if (isset(self::$carousel_query_limits[$query_id])) {
+            return;
+        }
+
+        self::$carousel_query_limits[$query_id] = $products_limit;
+        add_action('elementor/query/' . $query_id, static function ($query) use ($products_limit) {
+            if (!$query instanceof WP_Query) {
+                return;
+            }
+
+            $query->set('posts_per_page', $products_limit);
+            $query->set('nopaging', false);
+        }, 999);
     }
 }
