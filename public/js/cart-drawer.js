@@ -21,6 +21,7 @@
     var storeApiNonce = '';
     var currentOfferState = window.SuperWooCart && SuperWooCart.offerState ? SuperWooCart.offerState : { discounts: {}, gifts: {} };
     var productAddInFlight = false;
+    var productBuyNowInFlight = false;
     var lastProductAddKey = '';
     var lastProductAddAt = 0;
 
@@ -715,6 +716,105 @@
             $(document.body).trigger('added_to_cart', [response.data.fragments || {}, response.data.cart_hash || '', $button]);
         }).always(function () {
             productAddInFlight = false;
+            $form.removeData('superwoo-submitting');
+            setProductButtonPending($button, false);
+        });
+
+        return true;
+    }
+
+    function handleProductBuyNow(control, event) {
+        var $button = $(control);
+        var $form = $button.closest('body.single-product form.cart');
+        var data;
+        var key;
+        var request;
+
+        if (!$form.length || !canAjaxSubmitProductForm($form) || !isBuyNowControl(control)) {
+            return false;
+        }
+
+        if ($button.is(':disabled, .disabled') || $button.attr('aria-disabled') === 'true') {
+            return true;
+        }
+
+        if (event && event.__superwooBuyNowHandled) {
+            return true;
+        }
+        if (event) {
+            event.__superwooBuyNowHandled = true;
+            event.preventDefault();
+            event.stopPropagation();
+            if (event.stopImmediatePropagation) {
+                event.stopImmediatePropagation();
+            }
+        }
+
+        if (productBuyNowInFlight || productAddInFlight || $form.data('superwoo-submitting')) {
+            return true;
+        }
+
+        data = serializeForm($form, $button);
+        if ($form.hasClass('variations_form') && (!data.variation_id || parseInt(data.variation_id, 10) < 1)) {
+            announce(SuperWooCart.i18n.chooseOptions);
+            return true;
+        }
+
+        // Razorpay's PDP shortcut creates an order directly from product data,
+        // before WooCommerce has persisted its shipping package. Prepare the
+        // normal cart first and then launch Razorpay's cart-based checkout so
+        // the order uses WooCommerce's calculated shipping and grand total.
+        data.quantity = Math.max(1, parseInt(data.quantity, 10) || 1);
+        key = productAddKey(data);
+        data.superwoo_action_id = productAddActionId('buy-now|' + key);
+
+        productBuyNowInFlight = true;
+        $form.data('superwoo-submitting', true);
+        setProductButtonPending($button, true);
+
+        request = post('superwoo_add_product_to_cart', data, null, {
+            openCart: false,
+            refreshWooFragments: false
+        });
+
+        request.done(function (response) {
+            var checkoutButton;
+            var overlayChecks;
+            var overlayOpened;
+
+            if (!response || !response.success || !response.data) {
+                return;
+            }
+
+            syncProductQuantityFromDrawer();
+            checkoutButton = document.getElementById('btn-1cc-mini-cart');
+
+            if (checkoutButton) {
+                watchRazorpayOverlay();
+                checkoutButton.click();
+
+                // A checkout optimizer can defer or remove Razorpay's
+                // delegated mini-cart listener. Never leave Buy Now inert: if
+                // the overlay has not opened after the handoff, continue to
+                // WooCommerce checkout with the same prepared cart.
+                overlayChecks = 0;
+                overlayOpened = window.setInterval(function () {
+                    overlayChecks += 1;
+                    if (syncRazorpayOverlayState()) {
+                        window.clearInterval(overlayOpened);
+                        return;
+                    }
+                    if (overlayChecks >= 40) {
+                        window.clearInterval(overlayOpened);
+                        window.location.href = (window.SuperWooCart && SuperWooCart.checkoutUrl) ? SuperWooCart.checkoutUrl : '/checkout/';
+                    }
+                }, 100);
+                return;
+            }
+
+            window.location.href = (window.SuperWooCart && SuperWooCart.checkoutUrl) ? SuperWooCart.checkoutUrl : '/checkout/';
+        }).always(function () {
+            productBuyNowInFlight = false;
             $form.removeData('superwoo-submitting');
             setProductButtonPending($button, false);
         });
@@ -1550,7 +1650,14 @@
         var control = event.target && event.target.closest ? event.target.closest('body.single-product form.cart button, body.single-product form.cart input[type="submit"]') : null;
         if (control) {
             if (isBuyNowControl(control)) {
-                watchRazorpayOverlay();
+                if (isMobileProductView()) {
+                    handleProductBuyNow(control, event);
+                } else {
+                    // Razorpay's native PDP checkout already works correctly
+                    // on desktop. Preserve that integration and only apply the
+                    // cart-backed shipping workaround to the mobile layout.
+                    watchRazorpayOverlay();
+                }
                 return;
             }
             handleSingleProductAdd(control, event);

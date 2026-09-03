@@ -4,7 +4,7 @@ Tags: woocommerce, cart drawer, product benefits, faq, bundle discounts
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.221
+Stable tag: 1.0.222
 License: GPLv2 or later
 
 SuperWoo adds WooCommerce product benefit icons, how-to content, product FAQs, shoppable videos, bundle offer rules, cart notices, and an AJAX cart drawer.
@@ -48,6 +48,11 @@ Elementor:
 5. Configure offer rules under WooCommerce > Offers.
 
 == Changelog ==
+
+= 1.0.222 =
+* On mobile, route product-page Buy Now through the persisted WooCommerce cart before opening Razorpay Magic Checkout, preserving calculated shipping and variation quantities.
+* Preserve Razorpay's existing native product-page Buy Now behavior on desktop.
+* Fall back to the standard WooCommerce checkout if Razorpay's cart checkout overlay cannot be opened.
 
 = 1.0.221 =
 * Reset Elementor's cached display settings after applying the carousel product limit so the requested number of products is queried.

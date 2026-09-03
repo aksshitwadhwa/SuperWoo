@@ -51,6 +51,7 @@ class SuperWoo_Cart_Drawer {
             'wcAjaxUrl'     => class_exists('WC_AJAX') ? WC_AJAX::get_endpoint('%%endpoint%%') : '',
             'nonce'         => wp_create_nonce('superwoo_cart_nonce'),
             'cartUrl'       => wc_get_cart_url(),
+            'checkoutUrl'   => wc_get_checkout_url(),
             'cartApiUrl'    => rest_url('wc/store/v1/cart'),
             'cartCount'     => superwoo_cart_count(),
             'autoOpen'      => !empty($settings['cart_auto_open']),
