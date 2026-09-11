@@ -198,6 +198,7 @@ class SuperWoo_Plugin {
             'enable_cart_drawer'    => !empty($_POST['enable_cart_drawer']),
             'enable_elementor_products_carousel' => !empty($_POST['enable_elementor_products_carousel']),
             'cart_auto_open'        => !empty($_POST['cart_auto_open']),
+            'mobile_bottom_nav_hidden_pages' => isset($_POST['mobile_bottom_nav_hidden_pages']) && is_array($_POST['mobile_bottom_nav_hidden_pages']) ? array_values(array_unique(array_filter(array_map('absint', wp_unslash($_POST['mobile_bottom_nav_hidden_pages']))))) : [],
             'cart_drawer_crosssell' => !empty($_POST['cart_drawer_crosssell']),
             'cart_drawer_coupon'    => isset($_POST['cart_drawer_coupon']) && 'disabled' === $_POST['cart_drawer_coupon'] ? 'disabled' : 'checkout_link',
             'enable_add_to_cart_diagnostics' => !empty($_POST['enable_add_to_cart_diagnostics']),

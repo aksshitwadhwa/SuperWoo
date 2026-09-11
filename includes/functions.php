@@ -90,6 +90,7 @@ function superwoo_get_settings() {
         'enable_cart_drawer'    => true,
         'enable_elementor_products_carousel' => false,
         'cart_auto_open'        => true,
+        'mobile_bottom_nav_hidden_pages' => [],
         'cart_drawer_crosssell' => true,
         'cart_drawer_coupon'    => 'checkout_link',
         'enable_add_to_cart_diagnostics' => false,

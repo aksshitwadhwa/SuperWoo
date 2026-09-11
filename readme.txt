@@ -4,7 +4,7 @@ Tags: woocommerce, cart drawer, product benefits, faq, bundle discounts
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.224
+Stable tag: 1.0.225
 License: GPLv2 or later
 
 SuperWoo adds WooCommerce product benefit icons, how-to content, product FAQs, shoppable videos, bundle offer rules, cart notices, and an AJAX cart drawer.
@@ -50,6 +50,9 @@ Elementor:
 5. Configure offer rules under WooCommerce > Offers.
 
 == Changelog ==
+
+= 1.0.225 =
+Add a Cart setting to hide mobile bottom navigation on selected pages, including the Shop and posts pages, without leaving reserved bottom spacing.
 
 = 1.0.224 =
 Fix review button and filter visibility under theme overrides, enforce circular customer avatars, remove field focus outlines, style the submit button, and compact the review modal with inline uploads and no tips section.

@@ -85,7 +85,7 @@ class SuperWoo_Cart_Drawer {
             $classes[] = 'superwoo-dashboard-page';
         }
 
-        if (!is_checkout() && !$is_dashboard_page) {
+        if ($this->should_render_mobile_bottom_nav()) {
             $classes[] = 'superwoo-has-mobile-bottom-nav';
         }
 
@@ -97,7 +97,20 @@ class SuperWoo_Cart_Drawer {
     }
 
     public function should_render_mobile_bottom_nav() {
-        return !is_checkout() && !$this->is_dashboard_page();
+        if (is_checkout() || $this->is_dashboard_page()) {
+            return false;
+        }
+
+        $settings = superwoo_get_settings();
+        $hidden_pages = array_map('absint', (array) ($settings['mobile_bottom_nav_hidden_pages'] ?? []));
+        $page_id = is_singular('page') ? get_queried_object_id() : 0;
+        if (is_home()) {
+            $page_id = (int) get_option('page_for_posts');
+        } elseif (function_exists('is_shop') && is_shop()) {
+            $page_id = wc_get_page_id('shop');
+        }
+
+        return !$page_id || !in_array((int) $page_id, $hidden_pages, true);
     }
 
     public function fragments($fragments) {

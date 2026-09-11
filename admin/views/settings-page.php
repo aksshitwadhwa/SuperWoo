@@ -161,6 +161,14 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'
                     <td>
                         <fieldset>
                             <label><input type="checkbox" name="cart_auto_open" value="1" <?php checked(!empty($settings['cart_auto_open'])); ?>> <?php esc_html_e('Open drawer after AJAX add to cart', 'superwoo'); ?></label><br>
+                            <p><strong><?php esc_html_e('Hide mobile bottom navigation on these pages', 'superwoo'); ?></strong></p>
+                            <div style="max-height: 220px; overflow: auto; padding: 10px; border: 1px solid #c3c4c7; background: #fff;">
+                                <?php $nav_hidden_pages = array_map('absint', (array) ($settings['mobile_bottom_nav_hidden_pages'] ?? [])); ?>
+                                <?php foreach (get_pages(['sort_column' => 'post_title', 'post_status' => ['publish', 'private', 'draft']]) as $nav_page) : ?>
+                                    <label style="display: block; margin-bottom: 8px;"><input type="checkbox" name="mobile_bottom_nav_hidden_pages[]" value="<?php echo esc_attr($nav_page->ID); ?>" <?php checked(in_array((int) $nav_page->ID, $nav_hidden_pages, true)); ?>> <?php echo esc_html($nav_page->post_title ?: __('(Untitled page)', 'superwoo')); ?> <span class="description">(#<?php echo esc_html($nav_page->ID); ?>)</span></label>
+                                <?php endforeach; ?>
+                            </div>
+                            <p class="description"><?php esc_html_e('Select pages where the mobile bottom bar should be hidden. Leave all unchecked to keep the current behavior. Checkout and dashboard pages remain hidden automatically.', 'superwoo'); ?></p>
                             <label><input type="checkbox" name="cart_drawer_crosssell" value="1" <?php checked(!empty($settings['cart_drawer_crosssell'])); ?>> <?php esc_html_e('Show cross-sell recommendations', 'superwoo'); ?></label><br>
                             <label>
                                 <?php esc_html_e('Coupon row:', 'superwoo'); ?>
