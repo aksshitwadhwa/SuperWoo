@@ -254,26 +254,11 @@
             var ratingHint = formPanel.querySelector('[data-superwoo-rating-hint]');
             var form = formPanel.querySelector('form');
             var uploadPanel = formPanel.querySelector('.superwoo-review-upload-panel');
-            var tipsPanel = formPanel.querySelector('.superwoo-review-tips');
-
-            // Keep WordPress's fields and submission intact; place optional content alongside it.
-            if (form && uploadPanel && tipsPanel) {
-                var body = document.createElement('div');
-                body.className = 'superwoo-review-modal-body';
-                var sidebar = document.createElement('div');
-                sidebar.className = 'superwoo-review-modal-sidebar';
-                form.parentNode.insertBefore(body, form);
-                body.appendChild(form);
-                body.appendChild(sidebar);
-                sidebar.appendChild(uploadPanel);
-                sidebar.appendChild(tipsPanel);
-                if (mediaInput) {
-                    if (!form.id) {
-                        form.id = 'superwoo-review-submit-' + root.getAttribute('data-product-id');
-                    }
-                    mediaInput.setAttribute('form', form.id);
-                    form.setAttribute('enctype', 'multipart/form-data');
-                }
+            // Uploads remain inside the native comment form, immediately before consent/submit.
+            if (form && uploadPanel) {
+                var uploadAnchor = form.querySelector('.comment-form-cookies-consent, .form-submit');
+                form.insertBefore(uploadPanel, uploadAnchor);
+                form.setAttribute('enctype', 'multipart/form-data');
             }
 
             function closeReviewForm() {

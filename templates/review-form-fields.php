@@ -39,12 +39,3 @@ $media_id = wp_unique_id('superwoo-media-');
         <small><?php esc_html_e('Photos: JPG, PNG, WebP, GIF (max 5 MB each). Videos: MP4, WebM, MOV, OGG (max 50 MB each).', 'superwoo'); ?></small>
     </div>
 </div>
-<aside class="superwoo-review-tips">
-    <h3><svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M8 16c0-3-2-3-2-7a6 6 0 0 1 12 0c0 4-2 4-2 7ZM8 19h8m-6 3h4M12 0v1M2 3l2 2M0 10h3m18 0h3m-2-7-2 2"/></svg> <?php esc_html_e('Tips for a great review', 'superwoo'); ?></h3>
-    <ul>
-        <li><?php esc_html_e('Share what you liked (or didn’t like)', 'superwoo'); ?></li>
-        <li><?php esc_html_e('Mention how long you’ve used the product', 'superwoo'); ?></li>
-        <li><?php esc_html_e('Include photos or videos (if possible)', 'superwoo'); ?></li>
-        <li><?php esc_html_e('Be honest and helpful to other customers', 'superwoo'); ?></li>
-    </ul>
-</aside>
