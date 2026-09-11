@@ -140,6 +140,16 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'
                         </label>
                     <?php endforeach; ?>
                 </div>
+                <h2><?php esc_html_e('Review Section Colors', 'superwoo'); ?></h2>
+                <p><?php esc_html_e('Customize the review section independently. Review stars use the Review star color above.', 'superwoo'); ?></p>
+                <div class="superwoo-color-grid">
+                    <?php foreach (superwoo_review_color_fields() as $field_name => $field) : ?>
+                        <label class="superwoo-color-field" for="<?php echo esc_attr($field_name); ?>">
+                            <span><?php echo esc_html($field['label']); ?></span>
+                            <input type="text" id="<?php echo esc_attr($field_name); ?>" name="<?php echo esc_attr($field_name); ?>" value="<?php echo esc_attr($settings[$field_name]); ?>" class="superwoo-color-picker" data-default-color="<?php echo esc_attr($field['default']); ?>">
+                        </label>
+                    <?php endforeach; ?>
+                </div>
                 <p class="description"><?php esc_html_e('Clear any custom page-builder color overrides if they should inherit these global SuperWoo colors.', 'superwoo'); ?></p>
             </div>
         </div>

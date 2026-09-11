@@ -12,6 +12,21 @@ class SuperWoo_Product_Reviews {
         add_shortcode('superwoo_product_reviews', [$this, 'shortcode']);
         add_action('wp_enqueue_scripts', [$this, 'register_assets']);
         add_action('comment_post', [$this, 'save_review_images'], 20, 3);
+        add_filter('comment_post_redirect', [$this, 'review_submission_redirect'], 20, 2);
+    }
+
+    public function review_submission_redirect($location, $comment) {
+        $product_id = (int) $comment->comment_post_ID;
+        $nonce = isset($_POST['superwoo_review_images_nonce']) ? sanitize_text_field(wp_unslash($_POST['superwoo_review_images_nonce'])) : '';
+
+        if ('product' !== get_post_type($product_id) || !wp_verify_nonce($nonce, 'superwoo_review_images_' . $product_id)) {
+            return $location;
+        }
+
+        $status = '0' === (string) $comment->comment_approved ? 'pending' : 'received';
+
+        // Keep WordPress's redirect parameters, including moderation access tokens.
+        return preg_replace('/#.*$/', '', $location) . '#superwoo-review-submitted-' . $product_id . '-' . $status;
     }
 
     public function replace_reviews_tab($tabs) {
@@ -52,8 +67,8 @@ class SuperWoo_Product_Reviews {
     }
 
     public function register_assets() {
-        wp_register_style('superwoo-reviews', SUPERWOO_URL . 'public/css/reviews.css', [], SUPERWOO_VERSION);
-        wp_register_script('superwoo-reviews', SUPERWOO_URL . 'public/js/reviews.js', [], SUPERWOO_VERSION, true);
+        wp_register_style('superwoo-reviews', SUPERWOO_URL . 'public/css/reviews.css', [], SUPERWOO_VERSION . '.' . filemtime(SUPERWOO_PATH . 'public/css/reviews.css'));
+        wp_register_script('superwoo-reviews', SUPERWOO_URL . 'public/js/reviews.js', [], SUPERWOO_VERSION . '.' . filemtime(SUPERWOO_PATH . 'public/js/reviews.js'), true);
 
         if (is_singular('product')) {
             wp_enqueue_style('superwoo-reviews');
@@ -117,6 +132,7 @@ class SuperWoo_Product_Reviews {
             $reviews[] = [
                 'id'        => (int) $comment->comment_ID,
                 'author'    => $comment->comment_author ? $comment->comment_author : __('Customer', 'superwoo'),
+                'avatar'    => get_avatar_url($comment, ['size' => 144, 'default' => 'mystery']),
                 'date'      => mysql2date(get_option('date_format'), $comment->comment_date),
                 'timestamp' => strtotime($comment->comment_date_gmt),
                 'rating'    => $rating,
@@ -176,9 +192,8 @@ class SuperWoo_Product_Reviews {
             }
         }
 
-        $sentences = preg_split('/(?<=[.!?])\s+/', $content);
-        $first = is_array($sentences) && !empty($sentences[0]) ? $sentences[0] : $content;
-        return wp_trim_words($first, 8, '');
+        // Only show titles supplied by the reviewer, rather than repeating their review.
+        return '';
     }
 
     private function get_review_images($comment_id) {
@@ -373,35 +388,25 @@ class SuperWoo_Product_Reviews {
 
         $commenter = wp_get_current_commenter();
         $comment_form = [
-            'title_reply'         => $product->get_review_count() ? __('Add a review', 'superwoo') : sprintf(/* translators: %s: product name. */ __('Be the first to review &ldquo;%s&rdquo;', 'superwoo'), $product->get_name()),
+            'title_reply'         => '',
             /* translators: %s: comment author name. */
             'title_reply_to'      => __('Leave a Reply to %s', 'superwoo'),
             'title_reply_before'  => '<h3 id="reply-title" class="comment-reply-title">',
             'title_reply_after'   => '</h3>',
             'comment_notes_after' => '',
-            'label_submit'        => __('Submit', 'superwoo'),
+            'label_submit'        => __('Submit Review', 'superwoo'),
+            'class_form'          => 'comment-form superwoo-review-submit-form',
+            'id_form'             => wp_unique_id('superwoo-review-submit-'),
+            'comment_notes_before' => '',
             'logged_in_as'        => '',
             'comment_field'       => '',
             'fields'              => [
-                'author' => '<p class="comment-form-author"><label for="author">' . esc_html__('Name', 'superwoo') . '&nbsp;<span class="required">*</span></label><input id="author" name="author" type="text" value="' . esc_attr($commenter['comment_author']) . '" required></p>',
-                'email'  => '<p class="comment-form-email"><label for="email">' . esc_html__('Email', 'superwoo') . '&nbsp;<span class="required">*</span></label><input id="email" name="email" type="email" value="' . esc_attr($commenter['comment_author_email']) . '" required></p>',
+                'author' => '<p class="comment-form-author"><label for="author">' . esc_html__('Name', 'superwoo') . '&nbsp;<span class="required">*</span></label><input id="author" name="author" type="text" autocomplete="name" placeholder="' . esc_attr__('Your name', 'superwoo') . '" value="' . esc_attr($commenter['comment_author']) . '" required></p>',
+                'email'  => '<p class="comment-form-email"><label for="email">' . esc_html__('Email', 'superwoo') . '&nbsp;<span class="required">*</span></label><input id="email" name="email" type="email" autocomplete="email" placeholder="' . esc_attr__('your@email.com', 'superwoo') . '" value="' . esc_attr($commenter['comment_author_email']) . '" required><span class="superwoo-review-email-help">' . esc_html__('Your email address will not be published.', 'superwoo') . '</span></p>',
             ],
         ];
 
-        if (wc_review_ratings_enabled()) {
-            $comment_form['comment_field'] .= '<p class="comment-form-rating"><label for="rating">' . esc_html__('Your rating', 'superwoo') . (wc_review_ratings_required() ? '&nbsp;<span class="required">*</span>' : '') . '</label><select name="rating" id="rating" required>
-                <option value="">' . esc_html__('Rate&hellip;', 'superwoo') . '</option>
-                <option value="5">' . esc_html__('Perfect', 'superwoo') . '</option>
-                <option value="4">' . esc_html__('Good', 'superwoo') . '</option>
-                <option value="3">' . esc_html__('Average', 'superwoo') . '</option>
-                <option value="2">' . esc_html__('Not that bad', 'superwoo') . '</option>
-                <option value="1">' . esc_html__('Very poor', 'superwoo') . '</option>
-            </select></p>';
-        }
-
-        $comment_form['comment_field'] .= '<p class="comment-form-comment"><label for="comment">' . esc_html__('Your review', 'superwoo') . '&nbsp;<span class="required">*</span></label><textarea id="comment" name="comment" cols="45" rows="6" required></textarea></p>';
-        $comment_form['comment_field'] .= wp_nonce_field('superwoo_review_images_' . $product->get_id(), 'superwoo_review_images_nonce', true, false);
-        $comment_form['comment_field'] .= '<p class="comment-form-superwoo-media"><label for="superwoo_review_media">' . esc_html__('Upload product photos or videos', 'superwoo') . '</label><input id="superwoo_review_media" name="superwoo_review_media[]" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime,video/ogg" multiple data-superwoo-review-media><span class="superwoo-review-upload-help" data-superwoo-review-media-help>' . esc_html__('Optional. Upload up to 4 photos and 2 videos.', 'superwoo') . '</span></p>';
+        $comment_form['comment_field'] = superwoo_template('review-form-fields.php', ['product' => $product]);
 
         comment_form(apply_filters('woocommerce_product_review_comment_form_args', $comment_form), $product->get_id());
 

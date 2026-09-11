@@ -4,7 +4,7 @@ Tags: woocommerce, cart drawer, product benefits, faq, bundle discounts
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.222
+Stable tag: 1.0.223
 License: GPLv2 or later
 
 SuperWoo adds WooCommerce product benefit icons, how-to content, product FAQs, shoppable videos, bundle offer rules, cart notices, and an AJAX cart drawer.
@@ -33,6 +33,8 @@ Shortcodes:
 * `[superwoo_cart_button]`
 * `[superwoo_shoppable_videos]`
 
+The review section includes a responsive summary, customer avatars, search and filters, and three-column review cards. Customize its palette under SuperWoo → Colors & Style → Review Section Colors. Star colors use the existing Review star color control. Poppins is bundled locally under the SIL Open Font License (public/fonts/poppins/OFL.txt).
+
 Elementor:
 
 * Dynamic Tag: `SuperWoo Cart Drawer Trigger`
@@ -48,6 +50,9 @@ Elementor:
 5. Configure offer rules under WooCommerce > Offers.
 
 == Changelog ==
+
+= 1.0.223 =
+Redesign product reviews with configurable colors, customer avatars, search and filters, and a responsive review modal with star ratings, character count, uploads, and submission confirmation.
 
 = 1.0.222 =
 * On mobile, route product-page Buy Now through the persisted WooCommerce cart before opening Razorpay Magic Checkout, preserving calculated shipping and variation quantities.

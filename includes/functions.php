@@ -43,6 +43,25 @@ function superwoo_template($template, $args = []) {
     return ob_get_clean();
 }
 
+/** Review appearance defaults shared by settings, sanitization, and CSS output. */
+function superwoo_review_color_fields() {
+    return [
+        'review_color_accent' => ['label' => __('Accent / rating bars', 'superwoo'), 'default' => '#2d8619', 'property' => '--superwoo-review-accent'],
+        'review_color_highlight' => ['label' => __('Results heading', 'superwoo'), 'default' => '#5d9f80', 'property' => '--superwoo-review-highlight'],
+        'review_color_button' => ['label' => __('Button gradient start', 'superwoo'), 'default' => '#28830f', 'property' => '--superwoo-review-button'],
+        'review_color_button_end' => ['label' => __('Button gradient end', 'superwoo'), 'default' => '#104c1e', 'property' => '--superwoo-review-button-end'],
+        'review_color_button_hover' => ['label' => __('Button hover', 'superwoo'), 'default' => '#1b6313', 'property' => '--superwoo-review-button-hover'],
+        'review_color_button_text' => ['label' => __('Button text', 'superwoo'), 'default' => '#ffffff', 'property' => '--superwoo-review-button-text'],
+        'review_color_heading' => ['label' => __('Headings / customer names', 'superwoo'), 'default' => '#111827', 'property' => '--superwoo-review-heading'],
+        'review_color_text' => ['label' => __('Review text', 'superwoo'), 'default' => '#293244', 'property' => '--superwoo-review-text'],
+        'review_color_muted' => ['label' => __('Secondary text', 'superwoo'), 'default' => '#717c92', 'property' => '--superwoo-review-muted'],
+        'review_color_background' => ['label' => __('Section background', 'superwoo'), 'default' => '#f7faf8', 'property' => '--superwoo-review-background'],
+        'review_color_surface' => ['label' => __('Cards / panels', 'superwoo'), 'default' => '#ffffff', 'property' => '--superwoo-review-surface'],
+        'review_color_soft' => ['label' => __('Soft accents / badges', 'superwoo'), 'default' => '#f0f7ef', 'property' => '--superwoo-review-soft'],
+        'review_color_border' => ['label' => __('Borders / empty rating bars', 'superwoo'), 'default' => '#e3e8e9', 'property' => '--superwoo-review-border'],
+    ];
+}
+
 function superwoo_get_settings() {
     $currencylayer_api_url = 'https://api.currencylayer.com/live?access_key={api_key}&source={base}&currencies={symbols}';
     $defaults = [
@@ -95,6 +114,10 @@ function superwoo_get_settings() {
         'exchange_rate_cache_minutes' => 720,
         'manual_exchange_rates' => [],
     ];
+
+    foreach (superwoo_review_color_fields() as $key => $field) {
+        $defaults[$key] = $field['default'];
+    }
 
     $settings = get_option('superwoo_settings', []);
     $settings = wp_parse_args(is_array($settings) ? $settings : [], $defaults);

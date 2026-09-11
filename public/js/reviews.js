@@ -10,19 +10,52 @@
         var cards = grid ? toArray(grid.querySelectorAll('[data-superwoo-review-card]')) : [];
         var search = root.querySelector('[data-superwoo-review-search]');
         var sort = root.querySelector('[data-superwoo-review-sort]');
+        var mediaFilter = root.querySelector('[data-superwoo-review-media-filter]');
         var filterButtons = toArray(root.querySelectorAll('[data-superwoo-rating-filter]'));
         var filterToggle = root.querySelector('[data-superwoo-filter-toggle]');
         var filterMenu = root.querySelector('[data-superwoo-filter-menu]');
+        var filterLabel = root.querySelector('[data-superwoo-filter-label]');
+        var viewButtons = toArray(root.querySelectorAll('[data-superwoo-review-view]'));
         var showMore = root.querySelector('[data-superwoo-show-more]');
         var showMoreWrap = root.querySelector('[data-superwoo-show-more-wrap]');
         var externalShowMore = document.querySelector('.elementor-1065 .elementor-element.elementor-element-5a3dc6b');
         var results = root.querySelector('[data-superwoo-review-results]');
+        var noMatches = root.querySelector('[data-superwoo-review-no-matches]');
         var writeButton = root.querySelector('[data-superwoo-write-review]');
         var formPanel = root.querySelector('[data-superwoo-review-form]');
         var mediaInput = root.querySelector('[data-superwoo-review-media]');
         var mediaHelp = root.querySelector('[data-superwoo-review-media-help]');
-        var visibleLimit = 8;
+        var visibleLimit = 3;
         var activeRating = 0;
+        var activeMedia = 'all';
+
+        function showSubmissionNotice() {
+            var submitted = window.location.hash.match(/^#superwoo-review-submitted-(\d+)-(pending|received)$/);
+            var notice = root.querySelector('[data-superwoo-review-notice]');
+
+            if (!submitted || submitted[1] !== root.getAttribute('data-product-id') || !notice) {
+                return;
+            }
+
+            var pending = notice.querySelector('[data-superwoo-review-pending]');
+            var reviewsTab = document.querySelector('.wc-tabs a[href="#tab-reviews"]');
+            if (reviewsTab && root.closest('#tab-reviews')) {
+                reviewsTab.click();
+            }
+            if (pending) {
+                pending.hidden = submitted[2] !== 'pending';
+            }
+            notice.hidden = false;
+            notice.focus({ preventScroll: true });
+            notice.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        // Wait for WooCommerce to finish selecting its initial product tab.
+        if (document.readyState === 'complete') {
+            showSubmissionNotice();
+        } else {
+            window.addEventListener('load', showSubmissionNotice, { once: true });
+        }
 
         function cardRating(card) {
             return parseInt(card.getAttribute('data-rating') || '0', 10) || 0;
@@ -41,6 +74,14 @@
             var haystack = card.getAttribute('data-search') || '';
 
             if (activeRating && cardRating(card) !== activeRating) {
+                return false;
+            }
+
+            if (activeMedia === 'photos' && card.getAttribute('data-has-images') !== '1') {
+                return false;
+            }
+
+            if (activeMedia === 'media' && !cardHasMedia(card)) {
                 return false;
             }
 
@@ -96,8 +137,12 @@
             }
 
             if (externalShowMore) {
-                externalShowMore.hidden = matched.length <= visibleLimit;
-                externalShowMore.classList.toggle('superwoo-review-external-view-all', matched.length > visibleLimit);
+                externalShowMore.hidden = !!showMoreWrap || matched.length <= visibleLimit;
+                externalShowMore.classList.toggle('superwoo-review-external-view-all', !showMoreWrap && matched.length > visibleLimit);
+            }
+
+            if (noMatches) {
+                noMatches.hidden = !cards.length || matched.length > 0;
             }
 
             if (results) {
@@ -107,14 +152,22 @@
 
         if (search) {
             search.addEventListener('input', function () {
-                visibleLimit = 8;
+                visibleLimit = 3;
                 update();
             });
         }
 
         if (sort) {
             sort.addEventListener('change', function () {
-                visibleLimit = 8;
+                visibleLimit = 3;
+                update();
+            });
+        }
+
+        if (mediaFilter) {
+            mediaFilter.addEventListener('change', function () {
+                activeMedia = mediaFilter.value || 'all';
+                visibleLimit = 3;
                 update();
             });
         }
@@ -122,10 +175,14 @@
         filterButtons.forEach(function (button) {
             button.addEventListener('click', function () {
                 activeRating = parseInt(button.getAttribute('data-superwoo-rating-filter') || '0', 10) || 0;
-                visibleLimit = 8;
+                visibleLimit = 3;
                 filterButtons.forEach(function (item) {
                     item.classList.toggle('is-active', item === button);
+                    item.setAttribute('aria-pressed', item === button ? 'true' : 'false');
                 });
+                if (filterLabel) {
+                    filterLabel.textContent = activeRating ? activeRating + ' Star' + (activeRating === 1 ? '' : 's') : filterLabel.getAttribute('data-default-label');
+                }
                 if (filterMenu && filterToggle) {
                     filterMenu.hidden = true;
                     filterToggle.setAttribute('aria-expanded', 'false');
@@ -140,6 +197,14 @@
                 filterToggle.setAttribute('aria-expanded', filterMenu.hidden ? 'false' : 'true');
             });
 
+            root.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape' && !filterMenu.hidden) {
+                    filterMenu.hidden = true;
+                    filterToggle.setAttribute('aria-expanded', 'false');
+                    filterToggle.focus();
+                }
+            });
+
             document.addEventListener('click', function (event) {
                 if (filterMenu.hidden || root.contains(event.target) && (filterMenu.contains(event.target) || filterToggle.contains(event.target))) {
                     return;
@@ -150,11 +215,23 @@
             });
         }
 
+        viewButtons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                var view = button.getAttribute('data-superwoo-review-view') || 'grid';
+                if (grid) {
+                    grid.classList.toggle('is-list', view === 'list');
+                }
+                viewButtons.forEach(function (item) {
+                    item.classList.toggle('is-active', item === button);
+                });
+            });
+        });
+
         if (showMore) {
             showMore.addEventListener('click', function (event) {
                 event.preventDefault();
                 event.stopPropagation();
-                visibleLimit += 8;
+                visibleLimit += 3;
                 update();
             });
         }
@@ -163,18 +240,95 @@
             externalShowMore.addEventListener('click', function (event) {
                 event.preventDefault();
                 event.stopPropagation();
-                visibleLimit += 8;
+                visibleLimit += 3;
                 update();
             }, true);
         }
 
         if (writeButton && formPanel) {
+            var previousOverflow;
+            var closeButton = formPanel.querySelector('[data-superwoo-review-close]');
+            var reviewText = formPanel.querySelector('[data-superwoo-review-text]');
+            var reviewCount = formPanel.querySelector('[data-superwoo-review-count]');
+            var ratingInputs = toArray(formPanel.querySelectorAll('input[name="rating"]'));
+            var ratingHint = formPanel.querySelector('[data-superwoo-rating-hint]');
+            var form = formPanel.querySelector('form');
+            var uploadPanel = formPanel.querySelector('.superwoo-review-upload-panel');
+            var tipsPanel = formPanel.querySelector('.superwoo-review-tips');
+
+            // Keep WordPress's fields and submission intact; place optional content alongside it.
+            if (form && uploadPanel && tipsPanel) {
+                var body = document.createElement('div');
+                body.className = 'superwoo-review-modal-body';
+                var sidebar = document.createElement('div');
+                sidebar.className = 'superwoo-review-modal-sidebar';
+                form.parentNode.insertBefore(body, form);
+                body.appendChild(form);
+                body.appendChild(sidebar);
+                sidebar.appendChild(uploadPanel);
+                sidebar.appendChild(tipsPanel);
+                if (mediaInput) {
+                    if (!form.id) {
+                        form.id = 'superwoo-review-submit-' + root.getAttribute('data-product-id');
+                    }
+                    mediaInput.setAttribute('form', form.id);
+                    form.setAttribute('enctype', 'multipart/form-data');
+                }
+            }
+
+            function closeReviewForm() {
+                formPanel.close();
+            }
+
             writeButton.addEventListener('click', function () {
-                formPanel.hidden = !formPanel.hidden;
-                if (!formPanel.hidden) {
-                    formPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                previousOverflow = document.body.style.overflow;
+                formPanel.hidden = false;
+                formPanel.showModal();
+                document.body.style.overflow = 'hidden';
+                writeButton.setAttribute('aria-expanded', 'true');
+                // Start at the form, while native dialog provides focus containment.
+                var firstField = formPanel.querySelector('input[name="rating"]:checked') || formPanel.querySelector('input[name="rating"], textarea, input:not([type="hidden"])');
+                if (firstField) {
+                    firstField.focus({ preventScroll: true });
                 }
             });
+            if (closeButton) {
+                closeButton.addEventListener('click', closeReviewForm);
+            }
+            formPanel.addEventListener('click', function (event) {
+                if (event.target !== formPanel) {
+                    return;
+                }
+                var bounds = formPanel.getBoundingClientRect();
+                if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) {
+                    closeReviewForm();
+                }
+            });
+            formPanel.addEventListener('close', function () {
+                formPanel.hidden = true;
+                document.body.style.overflow = previousOverflow;
+                writeButton.setAttribute('aria-expanded', 'false');
+                writeButton.focus({ preventScroll: true });
+            });
+
+            function updateRating() {
+                var selected = ratingInputs.filter(function (input) { return input.checked; })[0];
+                ratingInputs.forEach(function (input) {
+                    input.parentNode.classList.toggle('is-selected', !!selected && Number(input.value) <= Number(selected.value));
+                });
+                if (selected && ratingHint) {
+                    ratingHint.textContent = selected.getAttribute('aria-label');
+                }
+            }
+            ratingInputs.forEach(function (input) { input.addEventListener('change', updateRating); });
+            updateRating();
+            if (reviewText && reviewCount) {
+                function updateCount() {
+                    reviewCount.textContent = reviewText.value.length + '/' + reviewText.maxLength;
+                }
+                reviewText.addEventListener('input', updateCount);
+                updateCount();
+            }
         }
 
         if (mediaInput) {

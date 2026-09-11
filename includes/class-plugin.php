@@ -223,6 +223,10 @@ class SuperWoo_Plugin {
             'manual_exchange_rates' => $this->sanitize_manual_rates(isset($_POST['manual_exchange_rates']) ? sanitize_textarea_field(wp_unslash($_POST['manual_exchange_rates'])) : ''),
         ];
 
+        foreach (superwoo_review_color_fields() as $key => $field) {
+            $settings[$key] = $this->sanitize_color($key, $field['default']);
+        }
+
         update_option('superwoo_settings', $settings);
 
         $active_tab = isset($_POST['superwoo_active_tab']) ? sanitize_key(wp_unslash($_POST['superwoo_active_tab'])) : 'general';
@@ -255,6 +259,9 @@ class SuperWoo_Plugin {
             '--superwoo-body-text'   => $settings['color_body_text'],
             '--superwoo-star'        => $settings['color_star'],
         ];
+        foreach (superwoo_review_color_fields() as $key => $field) {
+            $colors[$field['property']] = $settings[$key];
+        }
         $declarations = [];
         foreach ($colors as $property => $color) {
             $clean = sanitize_hex_color($color);
@@ -263,7 +270,7 @@ class SuperWoo_Plugin {
             }
         }
 
-        wp_enqueue_style('superwoo-appearance', SUPERWOO_URL . 'public/css/appearance.css', [], SUPERWOO_VERSION);
+        wp_enqueue_style('superwoo-appearance', SUPERWOO_URL . 'public/css/appearance.css', [], SUPERWOO_VERSION . '.' . filemtime(SUPERWOO_PATH . 'public/css/appearance.css'));
         wp_add_inline_style('superwoo-appearance', ':root{' . implode(';', $declarations) . '}');
     }
 

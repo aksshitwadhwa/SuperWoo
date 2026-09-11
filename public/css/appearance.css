@@ -44,23 +44,9 @@
     --superwoo-variation-text: var(--superwoo-body-text);
 }
 
+/* Review-specific colors are emitted from the Review Section Colors settings. */
 .superwoo-reviews {
-    --superwoo-review-black: var(--superwoo-body-text);
-    --superwoo-review-button: var(--superwoo-button);
-    --superwoo-review-button-hover: var(--superwoo-button-hover);
-    --superwoo-review-star: var(--superwoo-star);
-}
-
-.superwoo-review-write,
-.superwoo-review-show-more {
-    color: var(--superwoo-button-text);
-}
-
-.superwoo-review-write:hover,
-.superwoo-review-write:focus,
-.superwoo-review-show-more:hover,
-.superwoo-review-show-more:focus {
-    color: var(--superwoo-button-text);
+    --superwoo-review-star: var(--superwoo-star, #ffb400);
 }
 
 body.single-product .elementor-product-simple form.cart .single_add_to_cart_button,
