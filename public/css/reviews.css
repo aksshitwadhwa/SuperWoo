@@ -363,3 +363,18 @@
     position: absolute !important;
     width: 1px !important;
 }
+
+/* Themes frequently target SVG paths directly. Keep the visible star state tied
+ * to the selected rating instead of allowing those rules to leave the final
+ * selected star outlined. */
+.superwoo-reviews .superwoo-review-rating-star.is-selected > svg,
+.superwoo-reviews .superwoo-review-rating-star.is-selected > svg path {
+    fill: var(--review-star) !important;
+    stroke: var(--review-star) !important;
+}
+
+.superwoo-reviews .superwoo-review-rating-star:not(.is-selected) > svg,
+.superwoo-reviews .superwoo-review-rating-star:not(.is-selected) > svg path {
+    fill: transparent !important;
+    stroke: var(--review-muted) !important;
+}
