@@ -283,44 +283,25 @@
 
             function updateRating() {
                 var selected = ratingInputs.filter(function (input) { return input.checked; })[0];
-                var selectedValue = selected ? Number(selected.value) : 0;
-                toArray(formPanel.querySelectorAll('[data-superwoo-rating-value]')).forEach(function (starButton) {
-                    var isSelected = selectedValue && Number(starButton.getAttribute('data-superwoo-rating-value')) <= selectedValue;
-                    starButton.classList.toggle('is-selected', !!isSelected);
-                    starButton.setAttribute('aria-checked', Number(starButton.getAttribute('data-superwoo-rating-value')) === selectedValue ? 'true' : 'false');
+                ratingInputs.forEach(function (input) {
+                    input.parentNode.classList.toggle('is-selected', !!selected && Number(input.value) <= Number(selected.value));
                 });
                 if (selected && ratingHint) {
                     ratingHint.textContent = selected.getAttribute('aria-label');
                 }
             }
             ratingInputs.forEach(function (input) { input.addEventListener('change', updateRating); });
-            // The visible star is a button and the native radio is kept only for
-            // form submission. This avoids theme radio/label hit-area overrides.
-            toArray(formPanel.querySelectorAll('[data-superwoo-rating-value]')).forEach(function (starButton) {
-                function selectRating() {
-                    var value = starButton.getAttribute('data-superwoo-rating-value');
-                    var input = ratingInputs.filter(function (ratingInput) {
-                        return ratingInput.value === value;
-                    })[0];
+            // Resolve every click from its visible label; native radio inputs
+            // remain available to the form without owning the pointer hit area.
+            toArray(formPanel.querySelectorAll('.superwoo-review-rating-star')).forEach(function (starLabel) {
+                starLabel.addEventListener('click', function (event) {
+                    var input = starLabel.querySelector('input[name="rating"]');
                     if (!input) {
                         return;
                     }
+                    event.preventDefault();
                     input.checked = true;
                     input.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-                starButton.addEventListener('click', selectRating);
-                starButton.addEventListener('keydown', function (event) {
-                    var index;
-                    var buttons;
-                    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') {
-                        return;
-                    }
-                    event.preventDefault();
-                    buttons = toArray(formPanel.querySelectorAll('[data-superwoo-rating-value]'));
-                    index = buttons.indexOf(starButton) + (event.key === 'ArrowRight' ? 1 : -1);
-                    index = Math.max(0, Math.min(buttons.length - 1, index));
-                    buttons[index].focus();
-                    buttons[index].click();
                 });
             });
             updateRating();
