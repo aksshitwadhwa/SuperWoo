@@ -9,10 +9,10 @@ $media_id = wp_unique_id('superwoo-media-');
         <div class="superwoo-review-rating-controls">
             <div class="superwoo-review-rating-stars" data-superwoo-rating-stars>
                 <?php for ($star = 1; $star <= 5; $star++) : ?>
-                    <label class="superwoo-review-rating-star" for="<?php echo esc_attr($rating_id . $star); ?>">
-                        <input type="radio" name="rating" id="<?php echo esc_attr($rating_id . $star); ?>" value="<?php echo esc_attr($star); ?>" <?php echo wc_review_ratings_required() ? 'required' : ''; ?> aria-label="<?php echo esc_attr(sprintf(_n('%d star', '%d stars', $star, 'superwoo'), $star)); ?>">
+                    <button class="superwoo-review-rating-star" type="button" data-superwoo-rating-value="<?php echo esc_attr($star); ?>" role="radio" aria-checked="false" aria-label="<?php echo esc_attr(sprintf(_n('%d star', '%d stars', $star, 'superwoo'), $star)); ?>">
                         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3L5.8 21 7 14.2 2 9.3l6.9-1Z"/></svg>
-                    </label>
+                    </button>
+                    <input class="superwoo-review-rating-input" type="radio" name="rating" id="<?php echo esc_attr($rating_id . $star); ?>" value="<?php echo esc_attr($star); ?>" <?php echo wc_review_ratings_required() ? 'required' : ''; ?> tabindex="-1" aria-hidden="true">
                 <?php endfor; ?>
             </div>
             <span class="superwoo-review-rating-hint" data-superwoo-rating-hint aria-live="polite"><?php esc_html_e('Click on a star to rate', 'superwoo'); ?></span>

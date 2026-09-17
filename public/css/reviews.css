@@ -224,11 +224,10 @@
 .superwoo-review-form-panel .superwoo-review-rating-field { border: 0; margin: 0 0 38px; min-width: 0; padding: 0; }
 .superwoo-review-rating-controls { align-items: center; display: flex; flex-wrap: wrap; gap: 14px; margin-top: 4px; }
 .superwoo-review-rating-stars { display: flex; gap: 7px; }
-.superwoo-review-submit-form .superwoo-review-rating-star { cursor: pointer; display: block; height: 40px; margin: 0; position: relative; width: 40px; }
+.superwoo-review-submit-form .superwoo-review-rating-star { appearance: none; background: transparent; border: 0; cursor: pointer; display: block; height: 40px; margin: 0; padding: 0; position: relative; width: 40px; }
 .superwoo-review-rating-star svg { fill: transparent; height: 100%; pointer-events: none; stroke: var(--review-muted); stroke-linejoin: round; stroke-width: 1.5; width: 100%; }
 .superwoo-review-rating-star.is-selected svg { fill: var(--review-star); stroke: var(--review-star); }
-.superwoo-review-submit-form .superwoo-review-rating-star input { cursor: pointer; height: 100%; inset: 0; margin: 0; opacity: 0; position: absolute; width: 100%; }
-.superwoo-review-rating-star:focus-within { border-radius: 5px; outline: 2px solid var(--review-accent); outline-offset: 3px; }
+.superwoo-review-rating-star:focus-visible { border-radius: 5px; outline: 2px solid var(--review-accent); outline-offset: 3px; }
 .superwoo-review-rating-stars:has(.superwoo-review-rating-star:hover) .superwoo-review-rating-star svg { fill: transparent; stroke: var(--review-muted); }
 .superwoo-review-rating-stars .superwoo-review-rating-star:hover svg, .superwoo-review-rating-stars .superwoo-review-rating-star:has(~ .superwoo-review-rating-star:hover) svg { fill: var(--review-star); stroke: var(--review-star); }
 .superwoo-review-rating-hint { background: var(--review-soft); border-radius: 999px; color: var(--review-accent); font-size: 13px; line-height: 1.5; padding: 10px 16px; }
@@ -349,13 +348,13 @@
     .superwoo-review-form-panel .superwoo-review-file-button { grid-column: 1; grid-row: auto; }
     .superwoo-review-submit-form .form-submit::after { right: 12%; }
 }
-.superwoo-reviews .superwoo-review-rating-star:focus-within,
+.superwoo-reviews .superwoo-review-rating-star:focus-visible,
 .superwoo-reviews .superwoo-review-file-button:focus-within {
     outline: none !important; box-shadow: none !important;
 }
 /* Keep native radios from stretching over adjacent stars. The visible label
  * owns the pointer hit area and the radio remains available to keyboards. */
-.superwoo-reviews .superwoo-review-rating-star input[type='radio'] {
+.superwoo-reviews .superwoo-review-rating-input {
     height: 1px !important;
     margin: 0 !important;
     opacity: 0 !important;
