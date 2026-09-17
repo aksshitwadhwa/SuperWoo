@@ -353,3 +353,13 @@
 .superwoo-reviews .superwoo-review-file-button:focus-within {
     outline: none !important; box-shadow: none !important;
 }
+/* Keep native radios from stretching over adjacent stars. The visible label
+ * owns the pointer hit area and the radio remains available to keyboards. */
+.superwoo-reviews .superwoo-review-rating-star input[type='radio'] {
+    height: 1px !important;
+    margin: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    position: absolute !important;
+    width: 1px !important;
+}

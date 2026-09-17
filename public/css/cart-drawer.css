@@ -1360,6 +1360,15 @@ color-mix(in srgb, var(--superwoo-mobile-bottom-nav-active) 16%, #ffffff) !impor
         width: 30px;
     }
 
+    .superwoo-mobile-bottom-nav__icon,
+    .superwoo-mobile-bottom-nav__icon svg,
+    .superwoo-cart-button .superwoo-cart-icon,
+    .superwoo-cart-button .superwoo-cart-icon svg {
+        display: inline-flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
+
     .superwoo-mobile-bottom-nav__label {
         display: block;
         font-size: 11px;
