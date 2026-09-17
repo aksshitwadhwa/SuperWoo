@@ -18,7 +18,6 @@
         var viewButtons = toArray(root.querySelectorAll('[data-superwoo-review-view]'));
         var showMore = root.querySelector('[data-superwoo-show-more]');
         var showMoreWrap = root.querySelector('[data-superwoo-show-more-wrap]');
-        var externalShowMore = document.querySelector('.elementor-1065 .elementor-element.elementor-element-5a3dc6b');
         var results = root.querySelector('[data-superwoo-review-results]');
         var noMatches = root.querySelector('[data-superwoo-review-no-matches]');
         var writeButton = root.querySelector('[data-superwoo-write-review]');
@@ -136,11 +135,6 @@
                 showMoreWrap.hidden = matched.length <= visibleLimit;
             }
 
-            if (externalShowMore) {
-                externalShowMore.hidden = !!showMoreWrap || matched.length <= visibleLimit;
-                externalShowMore.classList.toggle('superwoo-review-external-view-all', !showMoreWrap && matched.length > visibleLimit);
-            }
-
             if (noMatches) {
                 noMatches.hidden = !cards.length || matched.length > 0;
             }
@@ -234,15 +228,6 @@
                 visibleLimit += 3;
                 update();
             });
-        }
-
-        if (externalShowMore) {
-            externalShowMore.addEventListener('click', function (event) {
-                event.preventDefault();
-                event.stopPropagation();
-                visibleLimit += 3;
-                update();
-            }, true);
         }
 
         if (writeButton && formPanel) {

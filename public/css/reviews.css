@@ -183,7 +183,6 @@
     .superwoo-review-grid { grid-template-columns: 1fr; }
     .superwoo-review-card { min-height: 310px; padding: 24px; }
     .superwoo-reviews .superwoo-review-card__avatar { flex-basis: 60px; height: 60px; width: 60px; }
-    .superwoo-review-card p { font-size: 19px; }
     .superwoo-reviews .superwoo-review-search input { font-size: 14px; padding-left: 44px; }
     .superwoo-review-search > .superwoo-review-icon { height: 20px; left: 14px; width: 20px; }
     .superwoo-reviews .superwoo-review-sort select { font-size: 13px; padding: 0 30px 0 12px; }
@@ -191,7 +190,18 @@
     .superwoo-reviews .superwoo-review-filter-toggle { font-size: 14px; gap: 8px; padding: 0 12px; }
     .superwoo-review-form-panel { padding: 18px; }
 }
-@media (max-width: 767px) { .superwoo-reviews { padding: 14px; } }
+@media (max-width: 767px) {
+    .superwoo-reviews {
+        height: auto !important;
+        min-height: 0 !important;
+        padding: 14px;
+    }
+    .superwoo-reviews > .superwoo-review-grid,
+    .superwoo-reviews > .superwoo-review-show-more-wrap {
+        height: auto !important;
+        min-height: 0 !important;
+    }
+}
 @media (prefers-reduced-motion: reduce) { .superwoo-reviews * { scroll-behavior: auto !important; } }
 
 /* Write-a-review dialog. Native dialog keeps it above page-builder stacking contexts. */
