@@ -2,7 +2,7 @@
 /**
  * Plugin Name: SuperWoo
  * Description: WooCommerce product benefits, how-to content, FAQs, modern reviews, shoppable videos, offers, and AJAX cart drawer.
- * Version: 1.0.232
+ * Version: 1.0.233
  * Author: Aksshit Wadhwa
  * Author URI: https://digtize.com/
  * License: GPLv2 or later
@@ -54,7 +54,7 @@ register_shutdown_function(static function () {
     }
 });
 
-define('SUPERWOO_VERSION', '1.0.228');
+define('SUPERWOO_VERSION', '1.0.233');
 define('SUPERWOO_FILE', __FILE__);
 define('SUPERWOO_PATH', plugin_dir_path(__FILE__));
 define('SUPERWOO_URL', plugin_dir_url(__FILE__));
@@ -82,6 +82,14 @@ if (file_exists($superwoo_carousel_file)) {
 require_once SUPERWOO_PATH . 'includes/class-plugin.php';
 require_once SUPERWOO_PATH . 'includes/class-github-updater.php';
 (new SuperWoo_GitHub_Updater())->hooks();
+add_action('elementor/widgets/register', static function ($widgets_manager) {
+    if (!class_exists('Elementor\\Widget_Base') || empty(superwoo_get_settings()['enable_reviews'])) {
+        return;
+    }
+
+    require_once SUPERWOO_PATH . 'includes/class-elementor-product-reviews-widget.php';
+    $widgets_manager->register(new SuperWoo_Elementor_Product_Reviews_Widget());
+});
 register_activation_hook(__FILE__, ['SuperWoo_Plugin', 'activate']);
 register_deactivation_hook(__FILE__, ['SuperWoo_Plugin', 'deactivate']);
 

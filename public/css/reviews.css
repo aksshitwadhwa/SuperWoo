@@ -201,6 +201,13 @@
         height: auto !important;
         min-height: 0 !important;
     }
+    .elementor-widget-woocommerce-product-data-tabs .woocommerce-Tabs-panel--reviews,
+    .elementor-widget-woocommerce-product-data-tabs #tab-reviews,
+    .elementor-widget-woocommerce-product-data-tabs .woocommerce-tabs .panel.entry-content {
+        height: auto !important;
+        min-height: 0 !important;
+        padding-bottom: 0 !important;
+    }
 }
 @media (prefers-reduced-motion: reduce) { .superwoo-reviews * { scroll-behavior: auto !important; } }
 
@@ -352,7 +359,7 @@
 .superwoo-review-upload-inner .superwoo-review-upload-help { grid-column: 1; font-size: 12px; margin: 0; }
 .superwoo-review-upload-inner small { grid-column: 1 / -1; font-size: 11px; margin: 0; }
 @media (max-width: 600px) {
-    .superwoo-reviews dialog.superwoo-review-form-panel { padding: 48px 20px 24px; }
+    .superwoo-reviews dialog.superwoo-review-form-panel { padding: 20px; }
     .superwoo-review-modal-header h2 { font-size: 28px; }
     .superwoo-review-upload-inner { grid-template-columns: 1fr; padding: 12px; }
     .superwoo-review-form-panel .superwoo-review-file-button { grid-column: 1; grid-row: auto; }
