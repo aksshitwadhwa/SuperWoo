@@ -2,7 +2,7 @@
 /**
  * Plugin Name: SuperWoo
  * Description: WooCommerce product benefits, how-to content, FAQs, modern reviews, shoppable videos, offers, and AJAX cart drawer.
- * Version: 1.0.225
+ * Version: 1.0.226
  * Author: Aksshit Wadhwa
  * Author URI: https://digtize.com/
  * License: GPLv2 or later
@@ -54,7 +54,7 @@ register_shutdown_function(static function () {
     }
 });
 
-define('SUPERWOO_VERSION', '1.0.225');
+define('SUPERWOO_VERSION', '1.0.226');
 define('SUPERWOO_FILE', __FILE__);
 define('SUPERWOO_PATH', plugin_dir_path(__FILE__));
 define('SUPERWOO_URL', plugin_dir_url(__FILE__));
@@ -72,6 +72,14 @@ require_once SUPERWOO_PATH . 'includes/class-shoppable-videos.php';
 require_once SUPERWOO_PATH . 'includes/class-shortcodes.php';
 require_once SUPERWOO_PATH . 'includes/class-bundle-offers.php';
 require_once SUPERWOO_PATH . 'includes/class-cart-drawer.php';
+require_once SUPERWOO_PATH . 'includes/cart-recovery/class-cart-recovery-schema.php';
+require_once SUPERWOO_PATH . 'includes/cart-recovery/class-cart-recovery-repository.php';
+require_once SUPERWOO_PATH . 'includes/cart-recovery/class-cart-recovery-tracker.php';
+require_once SUPERWOO_PATH . 'includes/cart-recovery/class-cart-recovery-email.php';
+require_once SUPERWOO_PATH . 'includes/cart-recovery/class-cart-recovery-admin.php';
+require_once SUPERWOO_PATH . 'includes/cart-recovery/class-cart-recovery-automation.php';
+require_once SUPERWOO_PATH . 'includes/cart-recovery/class-cart-recovery-conditions.php';
+require_once SUPERWOO_PATH . 'includes/class-cart-recovery.php';
 require_once SUPERWOO_PATH . 'includes/class-elementor-dynamic-tags.php';
 // The carousel module is optional; never let a missing optional file prevent
 // the core plugin (admin menu, cart drawer, and product hooks) from loading.
@@ -82,6 +90,11 @@ if (file_exists($superwoo_carousel_file)) {
 require_once SUPERWOO_PATH . 'includes/class-plugin.php';
 require_once SUPERWOO_PATH . 'includes/class-github-updater.php';
 (new SuperWoo_GitHub_Updater())->hooks();
+add_action('before_woocommerce_init', static function () {
+    if (class_exists('\\Automattic\\WooCommerce\\Utilities\\FeaturesUtil')) {
+        \Automattic\WooCommerce\Utilities\FeaturesUtil::declare_compatibility('custom_order_tables', SUPERWOO_FILE, true);
+    }
+});
 register_activation_hook(__FILE__, ['SuperWoo_Plugin', 'activate']);
 register_deactivation_hook(__FILE__, ['SuperWoo_Plugin', 'deactivate']);
 

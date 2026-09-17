@@ -306,6 +306,20 @@
                 }
             }
             ratingInputs.forEach(function (input) { input.addEventListener('change', updateRating); });
+            // Theme styles can resize or reposition native radio inputs. Resolve
+            // the click from the visible star label so its value is always exact.
+            toArray(formPanel.querySelectorAll('.superwoo-review-rating-star')).forEach(function (starLabel) {
+                starLabel.addEventListener('click', function (event) {
+                    var input = starLabel.querySelector('input[name="rating"]');
+                    if (!input) {
+                        return;
+                    }
+
+                    event.preventDefault();
+                    input.checked = true;
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                });
+            });
             updateRating();
             if (reviewText && reviewCount) {
                 function updateCount() {
