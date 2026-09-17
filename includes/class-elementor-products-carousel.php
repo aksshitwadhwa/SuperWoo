@@ -92,6 +92,11 @@ class SuperWoo_Elementor_Products_Carousel {
                 'chevron'  => __('Chevron ‹ ›', 'superwoo'),
                 'angle'    => __('Angle ❮ ❯', 'superwoo'),
                 'arrow'    => __('Arrow ← →', 'superwoo'),
+                'long-arrow' => __('Long Arrow ⟵ ⟶', 'superwoo'),
+                'caret'    => __('Caret ‹ ›', 'superwoo'),
+                'double-chevron' => __('Double Chevron ≪ ≫', 'superwoo'),
+                'double-angle' => __('Double Angle « »', 'superwoo'),
+                'bar-arrow' => __('Bar Arrow ⇤ ⇥', 'superwoo'),
                 'triangle' => __('Triangle ◀ ▶', 'superwoo'),
             ],
             'default' => 'chevron',
@@ -302,7 +307,7 @@ class SuperWoo_Elementor_Products_Carousel {
     }
 
     private function arrow_style_value($value) {
-        return in_array($value, ['chevron', 'angle', 'arrow', 'triangle'], true) ? $value : 'chevron';
+        return in_array($value, ['chevron', 'angle', 'arrow', 'long-arrow', 'caret', 'double-chevron', 'double-angle', 'bar-arrow', 'triangle'], true) ? $value : 'chevron';
     }
 
 }

@@ -29,6 +29,9 @@
     max-width: none;
     transition: transform 300ms ease;
     will-change: transform;
+    height: auto !important;
+    min-height: 0 !important;
+    margin-bottom: 0 !important;
 }
 
 .superwoo-products-carousel-enabled ul.products.superwoo-carousel__track > li.product.superwoo-carousel__slide {
@@ -36,6 +39,22 @@
     clear: none;
     margin: 0;
     min-width: 0;
+}
+
+/* Elementor's Products widget calculates a multi-row grid before SuperWoo
+ * converts it to a single-row track. Reset those retained dimensions so an
+ * old Rows value cannot leave a blank row beneath a working carousel. */
+.superwoo-products-carousel-enabled,
+.superwoo-products-carousel-enabled .elementor-widget-container,
+.superwoo-products-carousel-enabled .superwoo-carousel__viewport {
+    height: auto !important;
+    min-height: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+.superwoo-products-carousel-enabled .elementor-widget-container > ul.products,
+.superwoo-products-carousel-enabled .superwoo-carousel__viewport > ul.products {
+    margin-bottom: 0 !important;
 }
 
 /* Elementor can omit runtime render attributes on its first editor-frame

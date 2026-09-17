@@ -54,6 +54,9 @@ class SuperWoo_Plugin {
         if (!empty(superwoo_get_settings()['enable_shoppable_videos'])) {
             (new SuperWoo_Shoppable_Videos())->hooks();
         }
+        // Cart Recovery owns its migrations and future admin screens, so it
+        // must load on ordinary wp-admin requests as well as storefront ones.
+        (new SuperWoo_Cart_Recovery())->hooks();
 
         if ($is_regular_admin) {
             return;
@@ -78,6 +81,9 @@ class SuperWoo_Plugin {
         }
         if (class_exists('SuperWoo_Shoppable_Videos')) {
             SuperWoo_Shoppable_Videos::install();
+        }
+        if (class_exists('SuperWoo_Cart_Recovery')) {
+            SuperWoo_Cart_Recovery::install();
         }
     }
 
