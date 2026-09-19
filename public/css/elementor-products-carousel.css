@@ -83,6 +83,22 @@
     display: none;
 }
 
+/* Preserve WooCommerce's sale-price hierarchy inside Elementor product cards.
+ * Several themes reset text-decoration on price descendants, which makes the
+ * MRP appear as a second current price instead of a crossed-out regular price. */
+.superwoo-products-carousel-enabled .product .price del,
+.superwoo-products-carousel-enabled .product .price del *,
+.superwoo-products-carousel-enabled .product .woocommerce-Price-amount del,
+.superwoo-products-carousel-enabled .product del .woocommerce-Price-amount {
+    text-decoration-line: line-through !important;
+    text-decoration-thickness: 1.5px !important;
+    text-decoration-color: currentColor !important;
+}
+
+.superwoo-products-carousel-enabled .product .price ins {
+    text-decoration: none !important;
+}
+
 /* Backstop for pages still serving an older, optimized carousel script. */
 .superwoo-products-carousel-enabled .superwoo-carousel__toggle {
     display: none !important;
