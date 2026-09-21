@@ -237,7 +237,7 @@ body.single-product form.cart .single_add_to_cart_button.superwoo-product-adding
     pointer-events: none;
     position: fixed;
     transition: opacity 0.2s ease;
-    z-index: 2 !important;
+    z-index: 9999998 !important;
     box-sizing: border-box;
 }
 
@@ -496,6 +496,15 @@ body.single-product .woocommerce .star-rating {
 .superwoo-cart-shell.is-open {
     opacity: 1;
     pointer-events: none;
+}
+
+/* Keep the fixed navigation from covering the drawer or intercepting taps
+ * while the cart is open on mobile. */
+body.superwoo-cart-open .superwoo-mobile-bottom-nav {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transform: translateY(100%) !important;
+    visibility: hidden !important;
 }
 
 .superwoo-cart-backdrop {

@@ -140,7 +140,7 @@
     }
 
     function isCartTriggerLink(element) {
-        return $(element).is('[data-superwoo-cart-trigger]') || resolvedHash(element) === '#superwoo-cart';
+        return $(element).is('[data-superwoo-cart-trigger], [data-superwoo-open-cart]') || resolvedHash(element) === '#superwoo-cart';
     }
 
     function closestCartTrigger(target) {
@@ -149,10 +149,10 @@
         }
 
         if (target.closest) {
-            return target.closest('a[href="#superwoo-cart"], a[href$="#superwoo-cart"], [data-superwoo-cart-trigger]');
+            return target.closest('a[href="#superwoo-cart"], a[href$="#superwoo-cart"], [data-superwoo-cart-trigger], [data-superwoo-open-cart]');
         }
 
-        return $(target).closest('a[href], [data-superwoo-cart-trigger]').get(0);
+        return $(target).closest('a[href], [data-superwoo-cart-trigger], [data-superwoo-open-cart]').get(0);
     }
 
     function currentCartCount() {
