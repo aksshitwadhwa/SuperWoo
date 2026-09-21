@@ -4,7 +4,7 @@ Tags: woocommerce, cart drawer, product benefits, faq, bundle discounts
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.0.234
+Stable tag: 1.0.235
 License: GPLv2 or later
 
 SuperWoo adds WooCommerce product benefit icons, how-to content, product FAQs, shoppable videos, bundle offer rules, cart notices, and an AJAX cart drawer.
@@ -51,6 +51,9 @@ Elementor:
 5. Configure offer rules under WooCommerce > Offers.
 
 == Changelog ==
+
+= 1.0.235 =
+Restore SuperWoo feature loading by removing an incomplete Cart Recovery bootstrap from the plugin runtime.
 
 = 1.0.234 =
 Ensure regular MRP prices are crossed out beside sale prices in Elementor product carousels.
