@@ -412,3 +412,85 @@
     fill: transparent !important;
     stroke: var(--review-muted) !important;
 }
+
+/* Some themes globally hide inline SVGs and labels inside dialogs. Use a
+ * text-star fallback here so the rating picker always remains visible, while
+ * keeping the real radio inputs available to keyboard and screen-reader users. */
+.superwoo-reviews .superwoo-review-form-panel .superwoo-review-rating-stars {
+    display: flex !important;
+    min-height: 32px !important;
+    visibility: visible !important;
+}
+.superwoo-reviews .superwoo-review-form-panel .superwoo-review-rating-star {
+    display: block !important;
+    flex: 0 0 32px !important;
+    height: 32px !important;
+    opacity: 1 !important;
+    overflow: visible !important;
+    visibility: visible !important;
+    width: 32px !important;
+}
+.superwoo-reviews .superwoo-review-form-panel .superwoo-review-rating-star > svg {
+    display: none !important;
+}
+.superwoo-reviews .superwoo-review-form-panel .superwoo-review-rating-star::before {
+    color: var(--review-muted) !important;
+    content: '\2605' !important;
+    display: block !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 32px !important;
+    font-style: normal !important;
+    font-weight: 400 !important;
+    height: 32px !important;
+    line-height: 32px !important;
+    opacity: 1 !important;
+    text-align: center !important;
+    visibility: visible !important;
+    width: 32px !important;
+}
+.superwoo-reviews .superwoo-review-form-panel .superwoo-review-rating-star.is-selected::before,
+.superwoo-reviews .superwoo-review-form-panel .superwoo-review-rating-stars:has(.superwoo-review-rating-star:hover) .superwoo-review-rating-star:hover::before,
+.superwoo-reviews .superwoo-review-form-panel .superwoo-review-rating-stars:has(.superwoo-review-rating-star:hover) .superwoo-review-rating-star:has(~ .superwoo-review-rating-star:hover)::before {
+    color: var(--review-star) !important;
+}
+.superwoo-reviews .superwoo-review-form-panel .superwoo-review-rating-stars:has(.superwoo-review-rating-star:hover) .superwoo-review-rating-star::before {
+    color: var(--review-muted) !important;
+}
+
+/* Preserve the visible upload action when a theme applies generic dialog or
+ * form-label rules. The transparent file input remains over the button. */
+.superwoo-reviews .superwoo-review-form-panel .superwoo-review-upload-inner {
+    display: grid !important;
+    visibility: visible !important;
+}
+.superwoo-reviews .superwoo-review-form-panel .superwoo-review-upload-title {
+    color: var(--review-heading) !important;
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+.superwoo-reviews .superwoo-review-form-panel .superwoo-review-file-button {
+    align-items: center !important;
+    background: var(--review-surface) !important;
+    border: 1px solid var(--review-border) !important;
+    color: var(--review-heading) !important;
+    display: inline-flex !important;
+    opacity: 1 !important;
+    position: relative !important;
+    visibility: visible !important;
+}
+.superwoo-reviews .superwoo-review-form-panel .superwoo-review-file-button > span,
+.superwoo-reviews .superwoo-review-form-panel .superwoo-review-file-button > svg {
+    display: inline-block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+.superwoo-reviews .superwoo-review-form-panel .superwoo-review-file-button > input[type='file'] {
+    display: block !important;
+    height: 100% !important;
+    inset: 0 !important;
+    opacity: 0 !important;
+    position: absolute !important;
+    width: 100% !important;
+    z-index: 2 !important;
+}
