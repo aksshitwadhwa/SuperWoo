@@ -116,7 +116,49 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'
         </div>
 
         <div id="superwoo-appearance-settings" class="superwoo-settings-panel <?php echo 'appearance' === $active_tab ? 'is-active' : ''; ?>" data-superwoo-settings-panel="appearance">
+            <?php
+            $color_themes = [
+                'ocean' => [
+                    'label' => __('Ocean', 'superwoo'),
+                    'description' => __('Blue and fresh green', 'superwoo'),
+                    'colors' => ['color_primary' => '#005b7f', 'color_secondary' => '#74bf2e', 'color_button' => '#005b7f', 'color_button_text' => '#ffffff', 'color_button_hover' => '#004866', 'color_cart_icon' => '#0b3d4d', 'color_cart_badge' => '#ef5b4f', 'color_body_text' => '#17212b', 'color_star' => '#ffb400', 'review_color_accent' => '#2d8619', 'review_color_highlight' => '#5d9f80', 'review_color_button' => '#28830f', 'review_color_button_end' => '#104c1e', 'review_color_button_hover' => '#1b6313', 'review_color_button_text' => '#ffffff', 'review_color_heading' => '#111827', 'review_color_text' => '#293244', 'review_color_muted' => '#717c92', 'review_color_background' => '#f7faf8', 'review_color_surface' => '#ffffff', 'review_color_soft' => '#f0f7ef', 'review_color_border' => '#e3e8e9'],
+                ],
+                'forest' => [
+                    'label' => __('Forest', 'superwoo'),
+                    'description' => __('Deep green and lime', 'superwoo'),
+                    'colors' => ['color_primary' => '#14532d', 'color_secondary' => '#84cc16', 'color_button' => '#166534', 'color_button_text' => '#ffffff', 'color_button_hover' => '#14532d', 'color_cart_icon' => '#14532d', 'color_cart_badge' => '#dc2626', 'color_body_text' => '#1f2937', 'color_star' => '#eab308', 'review_color_accent' => '#3f7d20', 'review_color_highlight' => '#5b9b70', 'review_color_button' => '#3f7d20', 'review_color_button_end' => '#14532d', 'review_color_button_hover' => '#286313', 'review_color_button_text' => '#ffffff', 'review_color_heading' => '#163020', 'review_color_text' => '#334155', 'review_color_muted' => '#64748b', 'review_color_background' => '#f6faf5', 'review_color_surface' => '#ffffff', 'review_color_soft' => '#edf6ea', 'review_color_border' => '#d8e5d5'],
+                ],
+                'violet' => [
+                    'label' => __('Violet', 'superwoo'),
+                    'description' => __('Purple and lilac', 'superwoo'),
+                    'colors' => ['color_primary' => '#5b21b6', 'color_secondary' => '#c084fc', 'color_button' => '#6d28d9', 'color_button_text' => '#ffffff', 'color_button_hover' => '#4c1d95', 'color_cart_icon' => '#4c1d95', 'color_cart_badge' => '#ec4899', 'color_body_text' => '#1f2937', 'color_star' => '#f59e0b', 'review_color_accent' => '#7c3aed', 'review_color_highlight' => '#9d77cc', 'review_color_button' => '#7c3aed', 'review_color_button_end' => '#4c1d95', 'review_color_button_hover' => '#5b21b6', 'review_color_button_text' => '#ffffff', 'review_color_heading' => '#27134d', 'review_color_text' => '#374151', 'review_color_muted' => '#7c7194', 'review_color_background' => '#faf8ff', 'review_color_surface' => '#ffffff', 'review_color_soft' => '#f3efff', 'review_color_border' => '#e4dcf2'],
+                ],
+                'sunset' => [
+                    'label' => __('Sunset', 'superwoo'),
+                    'description' => __('Coral and warm gold', 'superwoo'),
+                    'colors' => ['color_primary' => '#9a3412', 'color_secondary' => '#fb7185', 'color_button' => '#ea580c', 'color_button_text' => '#ffffff', 'color_button_hover' => '#c2410c', 'color_cart_icon' => '#9a3412', 'color_cart_badge' => '#dc2626', 'color_body_text' => '#292524', 'color_star' => '#f59e0b', 'review_color_accent' => '#d65a23', 'review_color_highlight' => '#ce7f57', 'review_color_button' => '#ea580c', 'review_color_button_end' => '#9a3412', 'review_color_button_hover' => '#c2410c', 'review_color_button_text' => '#ffffff', 'review_color_heading' => '#3b2219', 'review_color_text' => '#44403c', 'review_color_muted' => '#83716a', 'review_color_background' => '#fffaf7', 'review_color_surface' => '#ffffff', 'review_color_soft' => '#fff0e7', 'review_color_border' => '#f0ddd3'],
+                ],
+                'midnight' => [
+                    'label' => __('Midnight', 'superwoo'),
+                    'description' => __('Navy and electric teal', 'superwoo'),
+                    'colors' => ['color_primary' => '#0f172a', 'color_secondary' => '#22d3ee', 'color_button' => '#0f766e', 'color_button_text' => '#ffffff', 'color_button_hover' => '#115e59', 'color_cart_icon' => '#0f172a', 'color_cart_badge' => '#f43f5e', 'color_body_text' => '#111827', 'color_star' => '#fbbf24', 'review_color_accent' => '#0f766e', 'review_color_highlight' => '#3c9c9b', 'review_color_button' => '#0f766e', 'review_color_button_end' => '#164e63', 'review_color_button_hover' => '#115e59', 'review_color_button_text' => '#ffffff', 'review_color_heading' => '#102338', 'review_color_text' => '#334155', 'review_color_muted' => '#718096', 'review_color_background' => '#f7fafc', 'review_color_surface' => '#ffffff', 'review_color_soft' => '#e8f7f6', 'review_color_border' => '#d9e3e8'],
+                ],
+            ];
+            ?>
             <div class="superwoo-appearance-card">
+                <h2><?php esc_html_e('Color Themes', 'superwoo'); ?></h2>
+                <p><?php esc_html_e('Choose a starting palette. It updates all storefront and review colors; you can still adjust individual colors below before saving.', 'superwoo'); ?></p>
+                <div class="superwoo-color-themes" role="group" aria-label="<?php esc_attr_e('Predefined color themes', 'superwoo'); ?>">
+                    <?php foreach ($color_themes as $theme_key => $theme) : ?>
+                        <button type="button" class="superwoo-color-theme" data-superwoo-color-theme data-superwoo-theme-colors="<?php echo esc_attr(wp_json_encode($theme['colors'])); ?>" aria-pressed="false">
+                            <span class="superwoo-color-theme__preview" aria-hidden="true">
+                                <i style="background-color: <?php echo esc_attr($theme['colors']['color_primary']); ?>;"></i><i style="background-color: <?php echo esc_attr($theme['colors']['color_button']); ?>;"></i><i style="background-color: <?php echo esc_attr($theme['colors']['color_secondary']); ?>;"></i>
+                            </span>
+                            <strong><?php echo esc_html($theme['label']); ?></strong>
+                            <small><?php echo esc_html($theme['description']); ?></small>
+                        </button>
+                    <?php endforeach; ?>
+                </div>
                 <h2><?php esc_html_e('Storefront Colors', 'superwoo'); ?></h2>
                 <p><?php esc_html_e('These colors are shared by SuperWoo product controls, reviews, cart drawer, cart icons, badges, and buttons.', 'superwoo'); ?></p>
                 <div class="superwoo-color-grid">
@@ -348,6 +390,25 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'
         text.addEventListener('blur', function () {
             var picker = document.querySelector('[data-superwoo-color-picker="' + text.getAttribute('data-superwoo-color-value') + '"]');
             syncColor(text.getAttribute('data-superwoo-color-value'), picker ? picker.value : text.value);
+        });
+    });
+
+    document.querySelectorAll('[data-superwoo-color-theme]').forEach(function (theme) {
+        theme.addEventListener('click', function () {
+            var colors;
+            try {
+                colors = JSON.parse(theme.getAttribute('data-superwoo-theme-colors') || '{}');
+            } catch (error) {
+                return;
+            }
+            Object.keys(colors).forEach(function (fieldName) {
+                syncColor(fieldName, colors[fieldName]);
+            });
+            document.querySelectorAll('[data-superwoo-color-theme]').forEach(function (item) {
+                var selected = item === theme;
+                item.classList.toggle('is-selected', selected);
+                item.setAttribute('aria-pressed', selected ? 'true' : 'false');
+            });
         });
     });
 })();

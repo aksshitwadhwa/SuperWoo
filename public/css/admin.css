@@ -569,6 +569,14 @@
 .superwoo-cart-icon-choice__preview--basket:before { border-radius: 0 0 4px 4px; transform: skew(-8deg); }
 .superwoo-appearance-card { background: #fff; border: 1px solid #dcdcde; border-radius: 8px; margin-top: 18px; max-width: 900px; padding: 20px; }
 .superwoo-appearance-card h2 { margin-top: 0; }
+.superwoo-color-themes { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); margin: 18px 0 28px; }
+.superwoo-color-theme { align-items: flex-start; background: #fff; border: 1px solid #dcdcde; border-radius: 8px; cursor: pointer; display: flex; flex-direction: column; gap: 5px; padding: 14px; text-align: left; }
+.superwoo-color-theme:hover, .superwoo-color-theme.is-selected { border-color: #2271b1; box-shadow: 0 0 0 1px #2271b1; }
+.superwoo-color-theme:focus-visible { outline: 2px solid #2271b1; outline-offset: 2px; }
+.superwoo-color-theme__preview { display: flex; gap: 5px; margin-bottom: 4px; }
+.superwoo-color-theme__preview i { border: 1px solid rgba(0, 0, 0, .13); border-radius: 50%; display: block; height: 22px; width: 22px; }
+.superwoo-color-theme strong { font-size: 14px; }
+.superwoo-color-theme small { color: #50575e; line-height: 1.35; }
 .superwoo-color-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin: 22px 0; }
 .superwoo-color-field { align-items: center; display: flex; justify-content: space-between; gap: 12px; }
 .superwoo-color-field > span { font-weight: 600; }
