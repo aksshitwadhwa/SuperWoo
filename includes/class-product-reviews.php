@@ -179,7 +179,7 @@ class SuperWoo_Product_Reviews {
             'average'      => $average ? number_format((float) $average, 1) : '0.0',
             'count'        => $count,
             'breakdown'    => $breakdown,
-            'image_thumbs' => array_slice($image_reviews, 0, 8),
+            'image_thumbs' => $image_reviews,
         ];
     }
 
@@ -200,6 +200,8 @@ class SuperWoo_Product_Reviews {
         $meta = get_comment_meta($comment_id);
         $image_keys = [
             'superwoo_review_images',
+            'superwoo_review_media',
+            'superwoo_review_media_ids',
             'reviews-images',
             'reviews_images',
             'review_images',
@@ -224,6 +226,12 @@ class SuperWoo_Product_Reviews {
             foreach ((array) $meta[$key] as $raw_value) {
                 $images = array_merge($images, $this->normalize_image_value($raw_value));
             }
+        }
+
+        // New uploads retain a direct attachment-to-review relationship. This
+        // recovers the images if a third party changes review comment meta.
+        foreach ($this->get_review_attachment_ids($comment_id, 'image/') as $attachment_id) {
+            $images = array_merge($images, $this->normalize_image_value($attachment_id));
         }
 
         $unique = [];
@@ -260,6 +268,10 @@ class SuperWoo_Product_Reviews {
             }
         }
 
+        foreach ($this->get_review_attachment_ids($comment_id, 'video/') as $attachment_id) {
+            $videos = array_merge($videos, $this->normalize_video_value($attachment_id));
+        }
+
         $unique = [];
         foreach ($videos as $video) {
             if (empty($video['src']) || isset($unique[$video['src']])) {
@@ -269,6 +281,21 @@ class SuperWoo_Product_Reviews {
         }
 
         return array_values($unique);
+    }
+
+    private function get_review_attachment_ids($comment_id, $mime_prefix) {
+        $attachments = get_posts([
+            'post_type'      => 'attachment',
+            'post_status'    => 'inherit',
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+            'meta_key'       => '_superwoo_review_comment_id',
+            'meta_value'     => (string) absint($comment_id),
+        ]);
+
+        return array_values(array_filter(array_map('absint', $attachments), static function ($attachment_id) use ($mime_prefix) {
+            return 0 === strpos((string) get_post_mime_type($attachment_id), $mime_prefix);
+        }));
     }
 
     private function normalize_image_value($value) {
@@ -456,6 +483,10 @@ class SuperWoo_Product_Reviews {
 
         if (!empty($video_ids)) {
             update_comment_meta($comment_id, 'superwoo_review_videos', $video_ids);
+        }
+
+        foreach (array_merge($image_ids, $video_ids) as $attachment_id) {
+            update_post_meta($attachment_id, '_superwoo_review_comment_id', $comment_id);
         }
     }
 

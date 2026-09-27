@@ -76,6 +76,19 @@ $icon = static function ($name) {
         </div>
     </div>
 
+    <?php if (!empty($summary['image_thumbs'])) : ?>
+        <section class="superwoo-reviews__media-gallery" aria-label="<?php esc_attr_e('Customer photos', 'superwoo'); ?>">
+            <h3><?php esc_html_e('Customer photos', 'superwoo'); ?></h3>
+            <div>
+                <?php foreach ($summary['image_thumbs'] as $image) : ?>
+                    <a href="<?php echo esc_url($image['full']); ?>" target="_blank" rel="noopener">
+                        <img src="<?php echo esc_url($image['src']); ?>" alt="<?php echo esc_attr($image['alt'] ? $image['alt'] : __('Customer review photo', 'superwoo')); ?>" loading="lazy">
+                    </a>
+                <?php endforeach; ?>
+            </div>
+        </section>
+    <?php endif; ?>
+
     <div class="superwoo-reviews__tools">
         <label class="superwoo-review-search">
             <?php echo $icon('search'); ?>
@@ -153,6 +166,25 @@ $icon = static function ($name) {
                     data-search="<?php echo esc_attr($search_text); ?>"
                     <?php echo $index >= 3 ? 'hidden' : ''; ?>
                 >
+                    <?php if ($has_images) : ?>
+                        <div class="superwoo-review-card__images">
+                            <?php foreach ($review['images'] as $image) : ?>
+                                <a href="<?php echo esc_url($image['full']); ?>" target="_blank" rel="noopener">
+                                    <img src="<?php echo esc_url($image['src']); ?>" alt="<?php echo esc_attr($image['alt'] ? $image['alt'] : __('Review picture', 'superwoo')); ?>" loading="lazy">
+                                </a>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                    <?php if ($has_videos) : ?>
+                        <div class="superwoo-review-card__videos">
+                            <?php foreach ($review['videos'] as $video) : ?>
+                                <video controls preload="metadata" playsinline>
+                                    <source src="<?php echo esc_url($video['src']); ?>" <?php echo !empty($video['type']) ? 'type="' . esc_attr($video['type']) . '"' : ''; ?>>
+                                    <?php esc_html_e('Your browser does not support this review video.', 'superwoo'); ?>
+                                </video>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
                     <div class="superwoo-review-card__header">
                         <img class="superwoo-review-card__avatar" src="<?php echo esc_url($review['avatar']); ?>" alt="" width="70" height="70" loading="lazy">
                         <div class="superwoo-review-card__meta">
@@ -171,25 +203,6 @@ $icon = static function ($name) {
                     <?php if (!empty($review['title']) && 0 !== strcasecmp(trim($review['title']), trim($review['content']))) : ?><h3><?php echo esc_html($review['title']); ?></h3><?php endif; ?>
                     <?php if (!empty($review['content'])) : ?>
                         <p><?php echo esc_html($review['content']); ?></p>
-                    <?php endif; ?>
-                    <?php if ($has_images) : ?>
-                        <div class="superwoo-review-card__images">
-                            <?php foreach (array_slice($review['images'], 0, 4) as $image) : ?>
-                                <a href="<?php echo esc_url($image['full']); ?>" target="_blank" rel="noopener">
-                                    <img src="<?php echo esc_url($image['src']); ?>" alt="<?php echo esc_attr($image['alt'] ? $image['alt'] : __('Review picture', 'superwoo')); ?>">
-                                </a>
-                            <?php endforeach; ?>
-                        </div>
-                    <?php endif; ?>
-                    <?php if ($has_videos) : ?>
-                        <div class="superwoo-review-card__videos">
-                            <?php foreach (array_slice($review['videos'], 0, 2) as $video) : ?>
-                                <video controls preload="metadata" playsinline>
-                                    <source src="<?php echo esc_url($video['src']); ?>" <?php echo !empty($video['type']) ? 'type="' . esc_attr($video['type']) . '"' : ''; ?>>
-                                    <?php esc_html_e('Your browser does not support this review video.', 'superwoo'); ?>
-                                </video>
-                            <?php endforeach; ?>
-                        </div>
                     <?php endif; ?>
                 </article>
             <?php endforeach; ?>
