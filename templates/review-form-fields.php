@@ -7,10 +7,10 @@ $media_id = wp_unique_id('superwoo-media-');
     <fieldset class="superwoo-review-rating-field">
         <legend><?php esc_html_e('Your rating', 'superwoo'); ?> <?php if (wc_review_ratings_required()) : ?><span class="required">*</span><?php endif; ?></legend>
         <div class="superwoo-review-rating-controls">
-            <div class="superwoo-review-rating-stars" data-superwoo-rating-stars>
+            <div class="superwoo-review-rating-stars" data-superwoo-rating-stars style="display:flex !important; gap:7px !important; min-height:32px !important; visibility:visible !important;">
                 <?php for ($star = 1; $star <= 5; $star++) : ?>
                     <input class="superwoo-review-rating-input" type="radio" name="rating" id="<?php echo esc_attr($rating_id . $star); ?>" value="<?php echo esc_attr($star); ?>" <?php echo wc_review_ratings_required() ? 'required' : ''; ?> aria-label="<?php echo esc_attr(sprintf(_n('%d star', '%d stars', $star, 'superwoo'), $star)); ?>">
-                    <button type="button" class="superwoo-review-rating-star" data-superwoo-rating-star data-rating-value="<?php echo esc_attr($star); ?>" aria-label="<?php echo esc_attr(sprintf(_n('%d star', '%d stars', $star, 'superwoo'), $star)); ?>">★</button>
+                    <button type="button" class="superwoo-review-rating-star" data-superwoo-rating-star data-rating-value="<?php echo esc_attr($star); ?>" aria-label="<?php echo esc_attr(sprintf(_n('%d star', '%d stars', $star, 'superwoo'), $star)); ?>" style="appearance:none !important; background:transparent !important; border:0 !important; color:var(--review-muted) !important; cursor:pointer !important; display:block !important; flex:0 0 32px !important; font-family:Arial,sans-serif !important; font-size:32px !important; font-style:normal !important; font-weight:400 !important; height:32px !important; line-height:32px !important; margin:0 !important; min-height:32px !important; opacity:1 !important; padding:0 !important; text-align:center !important; visibility:visible !important; width:32px !important;">★</button>
                 <?php endfor; ?>
             </div>
             <span class="superwoo-review-rating-hint" data-superwoo-rating-hint aria-live="polite"><?php esc_html_e('Click on a star to rate', 'superwoo'); ?></span>
@@ -26,9 +26,9 @@ $media_id = wp_unique_id('superwoo-media-');
 <div class="superwoo-review-upload-panel">
     <div class="superwoo-review-upload-inner">
         <svg class="superwoo-review-upload-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><rect x="8" y="6" width="42" height="42" rx="7"/><circle cx="20" cy="18" r="3"/><path d="m9 40 13-13 10 9 9-11 9 9"/><circle cx="48" cy="47" r="14" class="superwoo-review-upload-plus"/><path d="M48 39v16m-8-8h16" stroke="white"/></svg>
-        <strong class="superwoo-review-upload-title"><?php esc_html_e('Upload product photos or videos', 'superwoo'); ?></strong>
+        <strong class="superwoo-review-upload-title" style="color:var(--review-heading) !important; display:block !important; font-size:15px !important; font-weight:600 !important; margin:0 !important; opacity:1 !important; visibility:visible !important;"><?php esc_html_e('Upload product photos or videos', 'superwoo'); ?></strong>
         <p><?php esc_html_e('Show us your product in action! Add photos or videos to make your review more helpful.', 'superwoo'); ?></p>
-        <button type="button" class="superwoo-review-file-button" data-superwoo-review-file-trigger>
+        <button type="button" class="superwoo-review-file-button" data-superwoo-review-file-trigger style="align-items:center !important; background:var(--review-surface) !important; border:1px solid var(--review-border) !important; border-radius:999px !important; color:var(--review-heading) !important; cursor:pointer !important; display:inline-flex !important; font-family:inherit !important; font-size:14px !important; font-weight:600 !important; gap:8px !important; grid-column:2 !important; grid-row:1 / 3 !important; justify-content:center !important; min-height:42px !important; min-width:140px !important; opacity:1 !important; padding:8px 16px !important; position:relative !important; visibility:visible !important; width:auto !important;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 16V3m-5 5 5-5 5 5M4 14v7h16v-7"/></svg>
             <span><?php esc_html_e('Choose files', 'superwoo'); ?></span>
         </button>
