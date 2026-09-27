@@ -236,6 +236,7 @@
             var reviewText = formPanel.querySelector('[data-superwoo-review-text]');
             var reviewCount = formPanel.querySelector('[data-superwoo-review-count]');
             var ratingInputs = toArray(formPanel.querySelectorAll('input[name="rating"]'));
+            var ratingButtons = toArray(formPanel.querySelectorAll('[data-superwoo-rating-star]'));
             var ratingHint = formPanel.querySelector('[data-superwoo-rating-hint]');
             var form = formPanel.querySelector('form');
             var uploadPanel = formPanel.querySelector('.superwoo-review-upload-panel');
@@ -283,23 +284,21 @@
 
             function updateRating() {
                 var selected = ratingInputs.filter(function (input) { return input.checked; })[0];
-                ratingInputs.forEach(function (input) {
-                    input.parentNode.classList.toggle('is-selected', !!selected && Number(input.value) <= Number(selected.value));
+                ratingButtons.forEach(function (button) {
+                    button.classList.toggle('is-selected', !!selected && Number(button.getAttribute('data-rating-value')) <= Number(selected.value));
                 });
                 if (selected && ratingHint) {
                     ratingHint.textContent = selected.getAttribute('aria-label');
                 }
             }
             ratingInputs.forEach(function (input) { input.addEventListener('change', updateRating); });
-            // Resolve every click from its visible label; native radio inputs
-            // remain available to the form without owning the pointer hit area.
-            toArray(formPanel.querySelectorAll('.superwoo-review-rating-star')).forEach(function (starLabel) {
-                starLabel.addEventListener('click', function (event) {
-                    var input = starLabel.querySelector('input[name="rating"]');
+            ratingButtons.forEach(function (ratingButton) {
+                ratingButton.addEventListener('click', function () {
+                    var value = ratingButton.getAttribute('data-rating-value');
+                    var input = ratingInputs.filter(function (ratingInput) { return ratingInput.value === value; })[0];
                     if (!input) {
                         return;
                     }
-                    event.preventDefault();
                     input.checked = true;
                     input.dispatchEvent(new Event('change', { bubbles: true }));
                 });
@@ -347,6 +346,13 @@
 
                 mediaHelp.textContent = (parts.length ? parts.join(' and ') : files.length + ' file' + (files.length === 1 ? '' : 's')) + ' selected. Up to 4 photos and 2 videos will be uploaded.';
             });
+
+            var fileTrigger = root.querySelector('[data-superwoo-review-file-trigger]');
+            if (fileTrigger) {
+                fileTrigger.addEventListener('click', function () {
+                    mediaInput.click();
+                });
+            }
         }
 
         update();

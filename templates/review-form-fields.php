@@ -9,10 +9,8 @@ $media_id = wp_unique_id('superwoo-media-');
         <div class="superwoo-review-rating-controls">
             <div class="superwoo-review-rating-stars" data-superwoo-rating-stars>
                 <?php for ($star = 1; $star <= 5; $star++) : ?>
-                    <label class="superwoo-review-rating-star" for="<?php echo esc_attr($rating_id . $star); ?>">
-                        <input type="radio" name="rating" id="<?php echo esc_attr($rating_id . $star); ?>" value="<?php echo esc_attr($star); ?>" <?php echo wc_review_ratings_required() ? 'required' : ''; ?> aria-label="<?php echo esc_attr(sprintf(_n('%d star', '%d stars', $star, 'superwoo'), $star)); ?>">
-                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 2 3.1 6.3 6.9 1-5 4.9 1.2 6.8-6.2-3.3L5.8 21 7 14.2 2 9.3l6.9-1Z"/></svg>
-                    </label>
+                    <input class="superwoo-review-rating-input" type="radio" name="rating" id="<?php echo esc_attr($rating_id . $star); ?>" value="<?php echo esc_attr($star); ?>" <?php echo wc_review_ratings_required() ? 'required' : ''; ?> aria-label="<?php echo esc_attr(sprintf(_n('%d star', '%d stars', $star, 'superwoo'), $star)); ?>">
+                    <button type="button" class="superwoo-review-rating-star" data-superwoo-rating-star data-rating-value="<?php echo esc_attr($star); ?>" aria-label="<?php echo esc_attr(sprintf(_n('%d star', '%d stars', $star, 'superwoo'), $star)); ?>">★</button>
                 <?php endfor; ?>
             </div>
             <span class="superwoo-review-rating-hint" data-superwoo-rating-hint aria-live="polite"><?php esc_html_e('Click on a star to rate', 'superwoo'); ?></span>
@@ -28,13 +26,13 @@ $media_id = wp_unique_id('superwoo-media-');
 <div class="superwoo-review-upload-panel">
     <div class="superwoo-review-upload-inner">
         <svg class="superwoo-review-upload-icon" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><rect x="8" y="6" width="42" height="42" rx="7"/><circle cx="20" cy="18" r="3"/><path d="m9 40 13-13 10 9 9-11 9 9"/><circle cx="48" cy="47" r="14" class="superwoo-review-upload-plus"/><path d="M48 39v16m-8-8h16" stroke="white"/></svg>
-        <label class="superwoo-review-upload-title" for="<?php echo esc_attr($media_id); ?>"><?php esc_html_e('Upload product photos or videos', 'superwoo'); ?></label>
+        <strong class="superwoo-review-upload-title"><?php esc_html_e('Upload product photos or videos', 'superwoo'); ?></strong>
         <p><?php esc_html_e('Show us your product in action! Add photos or videos to make your review more helpful.', 'superwoo'); ?></p>
-        <label class="superwoo-review-file-button">
+        <button type="button" class="superwoo-review-file-button" data-superwoo-review-file-trigger>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 16V3m-5 5 5-5 5 5M4 14v7h16v-7"/></svg>
             <span><?php esc_html_e('Choose files', 'superwoo'); ?></span>
-            <input id="<?php echo esc_attr($media_id); ?>" name="superwoo_review_media[]" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime,video/ogg" multiple data-superwoo-review-media>
-        </label>
+        </button>
+        <input id="<?php echo esc_attr($media_id); ?>" class="superwoo-review-file-input" name="superwoo_review_media[]" type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime,video/ogg" multiple data-superwoo-review-media>
         <span class="superwoo-review-upload-help" data-superwoo-review-media-help aria-live="polite"><?php esc_html_e('Optional. Upload up to 4 photos and 2 videos.', 'superwoo'); ?></span>
         <small><?php esc_html_e('Photos: JPG, PNG, WebP, GIF (max 5 MB each). Videos: MP4, WebM, MOV, OGG (max 50 MB each).', 'superwoo'); ?></small>
     </div>

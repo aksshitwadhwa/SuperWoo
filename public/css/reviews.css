@@ -508,3 +508,50 @@
     opacity: 1 !important;
     visibility: visible !important;
 }
+
+/* Theme styles often hide labels and SVGs inside comment forms. These are
+ * buttons and text characters by design, so the visible review controls do
+ * not depend on either of those theme-sensitive elements. */
+.superwoo-reviews .superwoo-review-form-panel .superwoo-review-rating-input {
+    clip: rect(0 0 0 0) !important;
+    clip-path: inset(50%) !important;
+    height: 1px !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    width: 1px !important;
+}
+.superwoo-reviews .superwoo-review-form-panel button.superwoo-review-rating-star {
+    appearance: none !important;
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    color: var(--review-muted) !important;
+    cursor: pointer !important;
+    display: block !important;
+    flex: 0 0 32px !important;
+    font-family: Arial, sans-serif !important;
+    font-size: 32px !important;
+    font-style: normal !important;
+    font-weight: 400 !important;
+    height: 32px !important;
+    line-height: 32px !important;
+    margin: 0 !important;
+    min-height: 32px !important;
+    opacity: 1 !important;
+    padding: 0 !important;
+    text-align: center !important;
+    visibility: visible !important;
+    width: 32px !important;
+}
+.superwoo-reviews .superwoo-review-form-panel button.superwoo-review-rating-star::before { content: none !important; }
+.superwoo-reviews .superwoo-review-form-panel button.superwoo-review-rating-star.is-selected,
+.superwoo-reviews .superwoo-review-form-panel .superwoo-review-rating-stars:has(button.superwoo-review-rating-star:hover) button.superwoo-review-rating-star:hover,
+.superwoo-reviews .superwoo-review-form-panel .superwoo-review-rating-stars:has(button.superwoo-review-rating-star:hover) button.superwoo-review-rating-star:has(~ button.superwoo-review-rating-star:hover) { color: var(--review-star) !important; }
+.superwoo-reviews .superwoo-review-form-panel .superwoo-review-file-input { display: none !important; }
+.superwoo-reviews .superwoo-review-form-panel button.superwoo-review-file-button {
+    appearance: none !important;
+    cursor: pointer !important;
+    font-family: inherit !important;
+    min-width: 140px !important;
+}
