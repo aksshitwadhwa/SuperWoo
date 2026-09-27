@@ -191,10 +191,6 @@ $icon = static function ($name) {
                             <?php endforeach; ?>
                         </div>
                     <?php endif; ?>
-                    <div class="superwoo-review-card__footer"><span class="superwoo-review-card__tag">
-                        <?php echo $icon(!empty($review['verified']) ? 'shield' : 'heart'); ?>
-                        <?php echo esc_html(!empty($review['verified']) ? __('Verified Purchase', 'superwoo') : __('Customer Review', 'superwoo')); ?>
-                    </span></div>
                 </article>
             <?php endforeach; ?>
         </div>
