@@ -572,3 +572,10 @@
 .superwoo-color-grid { display: grid; gap: 18px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin: 22px 0; }
 .superwoo-color-field { align-items: center; display: flex; justify-content: space-between; gap: 12px; }
 .superwoo-color-field > span { font-weight: 600; }
+.superwoo-color-control { align-items: center; display: inline-flex; gap: 8px; }
+.superwoo-color-control input[type="color"] { appearance: none; background: none; border: 0; border-radius: 50%; cursor: pointer; height: 32px; margin: 0; padding: 0; width: 32px; }
+.superwoo-color-control input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.superwoo-color-control input[type="color"]::-webkit-color-swatch { border: 1px solid #8c8f94; border-radius: 50%; }
+.superwoo-color-control input[type="color"]::-moz-color-swatch { border: 1px solid #8c8f94; border-radius: 50%; }
+.superwoo-color-value { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; text-transform: lowercase; width: 112px; }
+.superwoo-color-swatch { background: var(--superwoo-active-color); border: 1px solid rgba(0, 0, 0, .16); border-radius: 5px; display: inline-block; height: 26px; width: 26px; }

@@ -133,10 +133,15 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'
                         'color_star'        => __('Review star color', 'superwoo'),
                     ];
                     foreach ($color_fields as $field_name => $field_label) :
+                        $color_value = sanitize_hex_color($settings[$field_name] ?? '') ?: '#000000';
                     ?>
                         <label class="superwoo-color-field" for="<?php echo esc_attr($field_name); ?>">
                             <span><?php echo esc_html($field_label); ?></span>
-                            <input type="text" id="<?php echo esc_attr($field_name); ?>" name="<?php echo esc_attr($field_name); ?>" value="<?php echo esc_attr($settings[$field_name]); ?>" class="superwoo-color-picker" data-default-color="<?php echo esc_attr($settings[$field_name]); ?>">
+                            <span class="superwoo-color-control">
+                                <input type="color" class="superwoo-color-picker" value="<?php echo esc_attr($color_value); ?>" data-superwoo-color-picker="<?php echo esc_attr($field_name); ?>" aria-label="<?php echo esc_attr(sprintf(__('%s color picker', 'superwoo'), $field_label)); ?>">
+                                <input type="text" id="<?php echo esc_attr($field_name); ?>" name="<?php echo esc_attr($field_name); ?>" value="<?php echo esc_attr($color_value); ?>" class="superwoo-color-value" data-superwoo-color-value="<?php echo esc_attr($field_name); ?>" maxlength="7" spellcheck="false">
+                                <span class="superwoo-color-swatch" data-superwoo-color-swatch="<?php echo esc_attr($field_name); ?>" style="--superwoo-active-color: <?php echo esc_attr($color_value); ?>;" aria-label="<?php echo esc_attr(sprintf(__('Current active color: %s', 'superwoo'), $color_value)); ?>"></span>
+                            </span>
                         </label>
                     <?php endforeach; ?>
                 </div>
@@ -144,9 +149,14 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'
                 <p><?php esc_html_e('Customize the review section independently. Review stars use the Review star color above.', 'superwoo'); ?></p>
                 <div class="superwoo-color-grid">
                     <?php foreach (superwoo_review_color_fields() as $field_name => $field) : ?>
+                        <?php $color_value = sanitize_hex_color($settings[$field_name] ?? '') ?: $field['default']; ?>
                         <label class="superwoo-color-field" for="<?php echo esc_attr($field_name); ?>">
                             <span><?php echo esc_html($field['label']); ?></span>
-                            <input type="text" id="<?php echo esc_attr($field_name); ?>" name="<?php echo esc_attr($field_name); ?>" value="<?php echo esc_attr($settings[$field_name]); ?>" class="superwoo-color-picker" data-default-color="<?php echo esc_attr($field['default']); ?>">
+                            <span class="superwoo-color-control">
+                                <input type="color" class="superwoo-color-picker" value="<?php echo esc_attr($color_value); ?>" data-superwoo-color-picker="<?php echo esc_attr($field_name); ?>" aria-label="<?php echo esc_attr(sprintf(__('%s color picker', 'superwoo'), $field['label'])); ?>">
+                                <input type="text" id="<?php echo esc_attr($field_name); ?>" name="<?php echo esc_attr($field_name); ?>" value="<?php echo esc_attr($color_value); ?>" class="superwoo-color-value" data-superwoo-color-value="<?php echo esc_attr($field_name); ?>" maxlength="7" spellcheck="false">
+                                <span class="superwoo-color-swatch" data-superwoo-color-swatch="<?php echo esc_attr($field_name); ?>" style="--superwoo-active-color: <?php echo esc_attr($color_value); ?>;" aria-label="<?php echo esc_attr(sprintf(__('Current active color: %s', 'superwoo'), $color_value)); ?>"></span>
+                            </span>
                         </label>
                     <?php endforeach; ?>
                 </div>
@@ -301,8 +311,44 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'
         });
     });
 
-    if (window.jQuery && window.jQuery.fn.wpColorPicker) {
-        window.jQuery('.superwoo-color-picker').wpColorPicker();
+    function validHex(value) {
+        return /^#[0-9a-f]{6}$/i.test(value || '');
     }
+
+    function syncColor(fieldName, value) {
+        var picker = document.querySelector('[data-superwoo-color-picker="' + fieldName + '"]');
+        var text = document.querySelector('[data-superwoo-color-value="' + fieldName + '"]');
+        var swatch = document.querySelector('[data-superwoo-color-swatch="' + fieldName + '"]');
+
+        if (!validHex(value)) {
+            return;
+        }
+
+        value = value.toLowerCase();
+        if (picker) { picker.value = value; }
+        if (text) { text.value = value; }
+        if (swatch) {
+            swatch.style.setProperty('--superwoo-active-color', value);
+            swatch.setAttribute('aria-label', '<?php echo esc_js(__('Current active color:', 'superwoo')); ?> ' + value);
+        }
+    }
+
+    document.querySelectorAll('[data-superwoo-color-picker]').forEach(function (picker) {
+        picker.addEventListener('input', function () {
+            syncColor(picker.getAttribute('data-superwoo-color-picker'), picker.value);
+        });
+    });
+
+    document.querySelectorAll('[data-superwoo-color-value]').forEach(function (text) {
+        text.addEventListener('input', function () {
+            if (validHex(text.value)) {
+                syncColor(text.getAttribute('data-superwoo-color-value'), text.value);
+            }
+        });
+        text.addEventListener('blur', function () {
+            var picker = document.querySelector('[data-superwoo-color-picker="' + text.getAttribute('data-superwoo-color-value') + '"]');
+            syncColor(text.getAttribute('data-superwoo-color-value'), picker ? picker.value : text.value);
+        });
+    });
 })();
 </script>
