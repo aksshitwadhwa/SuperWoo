@@ -437,7 +437,11 @@ class SuperWoo_Product_Reviews {
 
         comment_form(apply_filters('woocommerce_product_review_comment_form_args', $comment_form), $product->get_id());
 
-        return ob_get_clean();
+        // Files are submitted only when the native comment form is multipart.
+        // Set this in rendered markup as well as the frontend enhancement so
+        // uploads work even if a cache delays or removes the review script.
+        $form_html = ob_get_clean();
+        return preg_replace('/<form\\b(?![^>]*\\benctype=)/i', '<form enctype="multipart/form-data"', $form_html, 1);
     }
 
     public function save_review_images($comment_id, $comment_approved, $commentdata) {
