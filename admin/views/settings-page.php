@@ -143,6 +143,11 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'
                     'description' => __('Navy and electric teal', 'superwoo'),
                     'colors' => ['color_primary' => '#0f172a', 'color_secondary' => '#22d3ee', 'color_button' => '#0f766e', 'color_button_text' => '#ffffff', 'color_button_hover' => '#115e59', 'color_cart_icon' => '#0f172a', 'color_cart_badge' => '#f43f5e', 'color_body_text' => '#111827', 'color_star' => '#fbbf24', 'review_color_accent' => '#0f766e', 'review_color_highlight' => '#3c9c9b', 'review_color_button' => '#0f766e', 'review_color_button_end' => '#164e63', 'review_color_button_hover' => '#115e59', 'review_color_button_text' => '#ffffff', 'review_color_heading' => '#102338', 'review_color_text' => '#334155', 'review_color_muted' => '#718096', 'review_color_background' => '#f7fafc', 'review_color_surface' => '#ffffff', 'review_color_soft' => '#e8f7f6', 'review_color_border' => '#d9e3e8'],
                 ],
+                'monochrome' => [
+                    'label' => __('Black & White', 'superwoo'),
+                    'description' => __('Crisp monochrome contrast', 'superwoo'),
+                    'colors' => ['color_primary' => '#111111', 'color_secondary' => '#ffffff', 'color_button' => '#111111', 'color_button_text' => '#ffffff', 'color_button_hover' => '#333333', 'color_cart_icon' => '#111111', 'color_cart_badge' => '#111111', 'color_body_text' => '#111111', 'color_star' => '#111111', 'review_color_accent' => '#111111', 'review_color_highlight' => '#666666', 'review_color_button' => '#111111', 'review_color_button_end' => '#111111', 'review_color_button_hover' => '#333333', 'review_color_button_text' => '#ffffff', 'review_color_heading' => '#111111', 'review_color_text' => '#2d2d2d', 'review_color_muted' => '#666666', 'review_color_background' => '#f7f7f7', 'review_color_surface' => '#ffffff', 'review_color_soft' => '#eeeeee', 'review_color_border' => '#d6d6d6'],
+                ],
             ];
             ?>
             <div class="superwoo-appearance-card">
@@ -182,7 +187,6 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'
                             <span class="superwoo-color-control">
                                 <input type="color" class="superwoo-color-picker" value="<?php echo esc_attr($color_value); ?>" data-superwoo-color-picker="<?php echo esc_attr($field_name); ?>" aria-label="<?php echo esc_attr(sprintf(__('%s color picker', 'superwoo'), $field_label)); ?>">
                                 <input type="text" id="<?php echo esc_attr($field_name); ?>" name="<?php echo esc_attr($field_name); ?>" value="<?php echo esc_attr($color_value); ?>" class="superwoo-color-value" data-superwoo-color-value="<?php echo esc_attr($field_name); ?>" maxlength="7" spellcheck="false">
-                                <span class="superwoo-color-swatch" data-superwoo-color-swatch="<?php echo esc_attr($field_name); ?>" style="--superwoo-active-color: <?php echo esc_attr($color_value); ?>;" aria-label="<?php echo esc_attr(sprintf(__('Current active color: %s', 'superwoo'), $color_value)); ?>"></span>
                             </span>
                         </label>
                     <?php endforeach; ?>
@@ -197,7 +201,6 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'
                             <span class="superwoo-color-control">
                                 <input type="color" class="superwoo-color-picker" value="<?php echo esc_attr($color_value); ?>" data-superwoo-color-picker="<?php echo esc_attr($field_name); ?>" aria-label="<?php echo esc_attr(sprintf(__('%s color picker', 'superwoo'), $field['label'])); ?>">
                                 <input type="text" id="<?php echo esc_attr($field_name); ?>" name="<?php echo esc_attr($field_name); ?>" value="<?php echo esc_attr($color_value); ?>" class="superwoo-color-value" data-superwoo-color-value="<?php echo esc_attr($field_name); ?>" maxlength="7" spellcheck="false">
-                                <span class="superwoo-color-swatch" data-superwoo-color-swatch="<?php echo esc_attr($field_name); ?>" style="--superwoo-active-color: <?php echo esc_attr($color_value); ?>;" aria-label="<?php echo esc_attr(sprintf(__('Current active color: %s', 'superwoo'), $color_value)); ?>"></span>
                             </span>
                         </label>
                     <?php endforeach; ?>
@@ -360,7 +363,6 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'
     function syncColor(fieldName, value) {
         var picker = document.querySelector('[data-superwoo-color-picker="' + fieldName + '"]');
         var text = document.querySelector('[data-superwoo-color-value="' + fieldName + '"]');
-        var swatch = document.querySelector('[data-superwoo-color-swatch="' + fieldName + '"]');
 
         if (!validHex(value)) {
             return;
@@ -369,10 +371,6 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'
         value = value.toLowerCase();
         if (picker) { picker.value = value; }
         if (text) { text.value = value; }
-        if (swatch) {
-            swatch.style.setProperty('--superwoo-active-color', value);
-            swatch.setAttribute('aria-label', '<?php echo esc_js(__('Current active color:', 'superwoo')); ?> ' + value);
-        }
     }
 
     document.querySelectorAll('[data-superwoo-color-picker]').forEach(function (picker) {
