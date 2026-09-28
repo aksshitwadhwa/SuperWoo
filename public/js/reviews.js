@@ -287,7 +287,6 @@
                 ratingButtons.forEach(function (button) {
                     var isSelected = !!selected && Number(button.getAttribute('data-rating-value')) <= Number(selected.value);
                     button.classList.toggle('is-selected', isSelected);
-                    button.style.setProperty('color', isSelected ? 'var(--review-star)' : 'var(--review-muted)', 'important');
                 });
                 if (selected && ratingHint) {
                     ratingHint.textContent = selected.getAttribute('aria-label');
