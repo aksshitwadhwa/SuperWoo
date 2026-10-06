@@ -30,6 +30,11 @@ class SuperWoo_GitHub_Updater {
         $update = $this->get_update($this->latest_release(), $plugin_file);
         if ($update) {
             $transient->response[$plugin_file] = (object) $update;
+        } else {
+            // WordPress can retain an older update object in its site
+            // transient after the installed version catches up. Remove that
+            // stale entry so it does not keep offering the same release.
+            unset($transient->response[$plugin_file]);
         }
 
         return $transient;
