@@ -1016,7 +1016,10 @@ class SuperWoo_Bundle_Offers {
             $max = (float) ($rule['max_amount'] ?? 0);
             $subtotal = $this->get_cart_subtotal_excluding_gifts($cart, $rule);
 
-            if ($subtotal <= 0 && $min > 0) {
+            // A zero eligible subtotal means none of the products covered by
+            // this offer are in the cart. Do not present a zero-minimum offer
+            // as unlocked for an unrelated product.
+            if ($subtotal <= 0) {
                 continue;
             }
 
@@ -1291,7 +1294,7 @@ class SuperWoo_Bundle_Offers {
         $min = (float) ($rule['min_amount'] ?? 0);
         $max = (float) ($rule['max_amount'] ?? 0);
 
-        return $subtotal >= $min && (0.0 === $max || $subtotal <= $max);
+        return $subtotal > 0 && $subtotal >= $min && (0.0 === $max || $subtotal <= $max);
     }
 
     public function rule_applies_to_product($rule, $product_id, $variation_id = 0) {
