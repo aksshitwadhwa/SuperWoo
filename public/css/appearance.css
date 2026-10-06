@@ -70,3 +70,38 @@ body.single-product form.cart #btn-1cc-pdp {
     border-color: var(--superwoo-secondary);
     color: var(--superwoo-secondary);
 }
+
+/* Restore readable editor formatting in themes that collapse tab content. */
+body.single-product .woocommerce-Tabs-panel--description p {
+    display: block !important;
+    line-height: 1.7;
+    margin: 0 0 1em !important;
+}
+
+body.single-product .woocommerce-Tabs-panel--description p:last-child {
+    margin-bottom: 0 !important;
+}
+
+body.single-product .woocommerce-Tabs-panel--description h1,
+body.single-product .woocommerce-Tabs-panel--description h2,
+body.single-product .woocommerce-Tabs-panel--description h3,
+body.single-product .woocommerce-Tabs-panel--description h4,
+body.single-product .woocommerce-Tabs-panel--description h5,
+body.single-product .woocommerce-Tabs-panel--description h6 {
+    display: block !important;
+    line-height: 1.3;
+    margin: 1.25em 0 0.55em !important;
+}
+
+body.single-product .woocommerce-Tabs-panel--description ul,
+body.single-product .woocommerce-Tabs-panel--description ol {
+    display: block !important;
+    margin: 0 0 1em !important;
+    padding-inline-start: 1.5em !important;
+}
+
+body.single-product .woocommerce-Tabs-panel--description li {
+    display: list-item !important;
+    line-height: 1.6;
+    margin: 0 0 0.35em !important;
+}
