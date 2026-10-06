@@ -125,7 +125,7 @@
 .superwoo-review-verified .superwoo-review-icon { height: 20px; width: 20px; }
 .superwoo-review-card__quote { color: var(--review-soft); font-family: Georgia, serif; font-size: 86px; font-weight: 700; line-height: 1; position: absolute; right: 0; top: 0; }
 .superwoo-review-card__rating { margin-bottom: 13px; }
-.superwoo-review-card__stars { color: var(--review-star); display: inline-flex; font-family: Arial, sans-serif; font-size: 30px; gap: 2px; line-height: 1; white-space: nowrap; }
+.superwoo-review-card__stars { color: var(--review-star); display: inline-flex; font-family: Arial, sans-serif; font-size: 20px; gap: 2px; line-height: 1; white-space: nowrap; }
 .superwoo-review-card__stars .is-empty { color: var(--review-border); }
 .superwoo-review-card h3 { color: var(--review-heading); font-size: 21px; line-height: 1.4; margin: 0 0 8px; }
 .superwoo-review-card p { color: var(--review-text); font-size: 16px; line-height: 1.6; margin: 0; overflow-wrap: anywhere; }
