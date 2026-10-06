@@ -20,6 +20,7 @@ class SuperWoo_Bundle_Offers {
         // Apply qualifying offer rules while WooCommerce calculates the cart.
         // This keeps free-gift notices and the actual cart contents aligned.
         add_action('woocommerce_before_calculate_totals', [$this, 'apply_discounts'], 20);
+        add_action('woocommerce_cart_item_removed', [$this, 'sync_gifts_after_item_removed'], 20, 2);
         add_filter('woocommerce_cart_item_name', [$this, 'gift_cart_item_name'], 10, 3);
         add_action('woocommerce_before_cart_table', [$this, 'render_notices']);
         add_shortcode('bundle_offers_notice', [$this, 'notice_shortcode']);
@@ -623,12 +624,17 @@ class SuperWoo_Bundle_Offers {
             return;
         }
 
-        if (!$cart || $cart->is_empty()) {
+        if (!$cart) {
             return;
         }
 
         $rules = $this->get_rules();
         if (empty($rules)) {
+            $this->sync_free_gifts($cart, []);
+            return;
+        }
+
+        if ($cart->is_empty()) {
             return;
         }
 
@@ -712,6 +718,29 @@ class SuperWoo_Bundle_Offers {
         }
 
         $this->restore_customer_cart_quantities($cart, $customer_quantities);
+    }
+
+    /**
+     * Reconcile free gifts as soon as a cart item is removed. This covers
+     * drawer removals whose totals/fragments may be calculated more than once.
+     */
+    public function sync_gifts_after_item_removed($removed_cart_item_key, $cart) {
+        if (!$cart || !is_object($cart) || !method_exists($cart, 'get_cart')) {
+            return;
+        }
+
+        $gift_matches = [];
+        foreach ($this->get_rules() as $rule) {
+            if (empty($rule['enabled']) || 'price_gift' !== ($rule['offer_type'] ?? '')) {
+                continue;
+            }
+
+            if ($this->cart_subtotal_in_price_range($cart, $rule)) {
+                $gift_matches[] = $rule;
+            }
+        }
+
+        $this->sync_free_gifts($cart, $gift_matches);
     }
 
     private function is_payment_request() {

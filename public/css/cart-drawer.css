@@ -1150,11 +1150,7 @@ button.superwoo-cross-sell__add {
 }
 
 .superwoo-cart-shell .superwoo-bundle-notice--success {
-    align-items: center;
-    background: var(--superwoo-drawer-action-soft);
-    border-color: #dcefd9;
-    color: var(--superwoo-drawer-action);
-    font-weight: 800;
+    display: none !important;
 }
 
 .superwoo-cart-shell .superwoo-cart-item__content {
