@@ -72,6 +72,10 @@ body.single-product form.cart #btn-1cc-pdp {
 }
 
 /* Restore readable editor formatting in themes that collapse tab content. */
+body.single-product .elementor-widget-tabs .elementor-tab-content[data-tab="1"] {
+    white-space: pre-line;
+}
+
 body.single-product .woocommerce-Tabs-panel--description p {
     display: block !important;
     line-height: 1.7;
