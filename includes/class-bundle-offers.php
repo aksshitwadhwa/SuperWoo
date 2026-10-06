@@ -634,7 +634,10 @@ class SuperWoo_Bundle_Offers {
             return;
         }
 
-        if ($cart->is_empty()) {
+        // A zero-minimum gift rule must not keep its gift in the cart after
+        // every customer-added item has been removed.
+        if (!$this->cart_has_customer_items($cart)) {
+            $this->sync_free_gifts($cart, []);
             return;
         }
 
@@ -740,7 +743,21 @@ class SuperWoo_Bundle_Offers {
             }
         }
 
+        if (!$this->cart_has_customer_items($cart)) {
+            $gift_matches = [];
+        }
+
         $this->sync_free_gifts($cart, $gift_matches);
+    }
+
+    private function cart_has_customer_items($cart) {
+        foreach ($cart->get_cart() as $cart_item) {
+            if (empty($cart_item['superwoo_free_gift']) && absint($cart_item['quantity'] ?? 0) > 0) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function is_payment_request() {
