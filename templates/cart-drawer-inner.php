@@ -61,10 +61,13 @@
                         <div class="superwoo-cart-item__meta">
                             <?php echo wc_get_formatted_cart_item_data($cart_item); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                         </div>
-                        <div class="superwoo-cart-item__price"><?php echo wp_kses_post($cart->get_product_price($product)); ?></div>
-                        <?php if ($is_free_gift) : ?>
-                            <div class="superwoo-free-gift-badge"><strong><?php esc_html_e('Free', 'superwoo'); ?></strong> <?php esc_html_e('Gift', 'superwoo'); ?></div>
-                        <?php endif; ?>
+                        <div class="superwoo-cart-item__price">
+                            <?php if ($is_free_gift) : ?>
+                                <span class="superwoo-free-gift-badge"><strong><?php esc_html_e('Free', 'superwoo'); ?></strong></span>
+                            <?php else : ?>
+                                <?php echo wp_kses_post($cart->get_product_price($product)); ?>
+                            <?php endif; ?>
+                        </div>
                     </div>
                     <div class="superwoo-cart-item__actions">
                         <?php if ($is_free_gift) : ?>
