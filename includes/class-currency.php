@@ -637,8 +637,8 @@ class SuperWoo_Currency {
     }
 
     /**
-     * Razorpay 1CC calculates the payment amount from the WooCommerce cart.
-     * Do not mutate cart prices while its order endpoint is running.
+     * Razorpay 1CC builds the order and calculates shipping from the
+     * WooCommerce cart. Keep prices and fees stable across both REST calls.
      */
     private function is_payment_request() {
         $request_uri = isset($_SERVER['REQUEST_URI']) ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI'])) : '';
@@ -646,7 +646,8 @@ class SuperWoo_Currency {
             ? sanitize_text_field(wp_unslash($_REQUEST['rest_route']))
             : '';
 
-        return false !== strpos($request_uri, '/1cc/v1/order/create') || false !== strpos($rest_route, '/1cc/v1/order/create');
+        return (bool) preg_match('~(?:^|/)1cc/v1/~', $request_uri)
+            || (bool) preg_match('~(?:^|/)1cc/v1/~', $rest_route);
     }
 
     private function sanitize_rates($rates) {

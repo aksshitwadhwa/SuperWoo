@@ -766,7 +766,8 @@ class SuperWoo_Bundle_Offers {
             ? sanitize_text_field(wp_unslash($_REQUEST['rest_route']))
             : '';
 
-        return false !== strpos($request_uri, '/1cc/v1/order/create') || false !== strpos($rest_route, '/1cc/v1/order/create');
+        return (bool) preg_match('~(?:^|/)1cc/v1/~', $request_uri)
+            || (bool) preg_match('~(?:^|/)1cc/v1/~', $rest_route);
     }
 
     public function render_notices() {
