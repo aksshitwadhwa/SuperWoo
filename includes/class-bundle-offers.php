@@ -617,13 +617,6 @@ class SuperWoo_Bundle_Offers {
             return;
         }
 
-        // Razorpay 1CC must receive the product's catalog price. Applying a
-        // cart offer while its order endpoint is building the payment payload
-        // can send a discounted/stale amount instead of the real price.
-        if ($this->is_payment_request()) {
-            return;
-        }
-
         if (!$cart) {
             return;
         }
@@ -758,16 +751,6 @@ class SuperWoo_Bundle_Offers {
         }
 
         return false;
-    }
-
-    private function is_payment_request() {
-        $request_uri = isset($_SERVER['REQUEST_URI']) ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI'])) : '';
-        $rest_route = defined('REST_REQUEST') && REST_REQUEST && isset($_REQUEST['rest_route'])
-            ? sanitize_text_field(wp_unslash($_REQUEST['rest_route']))
-            : '';
-
-        return (bool) preg_match('~(?:^|/)1cc/v1/~', $request_uri)
-            || (bool) preg_match('~(?:^|/)1cc/v1/~', $rest_route);
     }
 
     public function render_notices() {

@@ -23,7 +23,6 @@ class SuperWoo_Cart_Recovery {
         add_action('woocommerce_removed_coupon', [$this, 'capture_cart'], 20);
         add_action('woocommerce_checkout_update_order_review', [$this, 'checkout_started'], 20);
         add_action('woocommerce_checkout_order_processed', [$this, 'mark_order_recovered'], 20, 3);
-        add_action('woocommerce_payment_complete', [$this, 'mark_order_recovered']);
         add_action('wp_ajax_superwoo_recovery_capture', [$this, 'ajax_capture']);
         add_action('wp_ajax_nopriv_superwoo_recovery_capture', [$this, 'ajax_capture']);
         add_action('wp_enqueue_scripts', [$this, 'assets']);

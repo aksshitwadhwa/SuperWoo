@@ -66,11 +66,6 @@ body.single-product .superwoo-mobile-buy-now__button:focus {
     color: var(--superwoo-button-text);
 }
 
-body.single-product form.cart #btn-1cc-pdp {
-    border-color: var(--superwoo-secondary);
-    color: var(--superwoo-secondary);
-}
-
 /* Restore readable editor formatting in themes that collapse tab content. */
 body.single-product .elementor-widget-tabs .elementor-tab-content[data-tab="1"] {
     white-space: pre-line;

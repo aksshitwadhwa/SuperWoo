@@ -27,8 +27,6 @@ class SuperWoo_Plugin {
         add_action('woocommerce_cart_item_removed', [$this, 'log_cart_remove'], 10, 2);
         add_action('woocommerce_after_checkout_validation', [$this, 'log_checkout_validation'], 10, 2);
         add_action('woocommerce_checkout_order_processed', [$this, 'log_checkout_success'], 10, 3);
-        add_action('woocommerce_payment_complete', [$this, 'log_payment_complete']);
-        add_action('woocommerce_order_status_failed', [$this, 'log_failed_order']);
 
         if (!$this->guard->is_available()) {
             $this->guard->hooks();
@@ -326,14 +324,6 @@ class SuperWoo_Plugin {
 
     public function log_checkout_success($order_id, $posted_data, $order) {
         superwoo_log('Checkout order created', ['order_id' => absint($order_id), 'item_count' => $order instanceof WC_Order ? count($order->get_items()) : 0]);
-    }
-
-    public function log_payment_complete($order_id) {
-        superwoo_log('Payment completed', ['order_id' => absint($order_id)]);
-    }
-
-    public function log_failed_order($order_id) {
-        superwoo_log('Order entered failed status', ['order_id' => absint($order_id)], 'error');
     }
 
     private function sanitize_color($key, $fallback) {

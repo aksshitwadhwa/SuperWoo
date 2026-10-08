@@ -4,10 +4,12 @@ Tags: woocommerce, cart drawer, product benefits, faq, bundle discounts
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.1.5
+Stable tag: 1.1.6
 License: GPLv2 or later
 
 SuperWoo adds WooCommerce product benefit icons, how-to content, product FAQs, shoppable videos, bundle offer rules, cart notices, and an AJAX cart drawer.
+
+SuperWoo does not implement payment gateways or change payment/order status. Its cart and currency features can update WooCommerce cart totals according to the configured offers and currency settings; WooCommerce and the active gateway handle checkout and payment.
 
 When Shoppable Videos is enabled, SuperWoo stores pseudonymous, on-site video engagement events (views, product clicks, add-to-cart actions, and completions) for 90 days. It does not send those events to an external service. If Multi-Currency location detection or an exchange-rate provider is enabled, the site administrator is responsible for reviewing that provider's privacy policy and informing visitors as required.
 
@@ -51,6 +53,9 @@ Elementor:
 5. Configure offer rules under WooCommerce > Offers.
 
 == Changelog ==
+
+= 1.1.6 =
+Route SuperWoo checkout controls through WooCommerce, leave Buy Now and payment gateway behavior to their owning plugins, and remove payment-status diagnostics and gateway-specific checkout styling.
 
 = 1.1.5 =
 Keep cart pricing and offer rules stable across all Razorpay Magic Checkout REST requests, including WooCommerce shipping calculations.

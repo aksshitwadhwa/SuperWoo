@@ -16,12 +16,9 @@
     var observedProductCartForm = null;
     var productQuantityObserver = null;
     var productQuantityNormalizeTimer = null;
-    var razorpayOverlayObserver = null;
-    var razorpayOverlayTimer = null;
     var storeApiNonce = '';
     var currentOfferState = window.SuperWooCart && SuperWooCart.offerState ? SuperWooCart.offerState : { discounts: {}, gifts: {} };
     var productAddInFlight = false;
-    var productBuyNowInFlight = false;
     var lastProductAddKey = '';
     var lastProductAddAt = 0;
 
@@ -723,105 +720,6 @@
         return true;
     }
 
-    function handleProductBuyNow(control, event) {
-        var $button = $(control);
-        var $form = $button.closest('body.single-product form.cart');
-        var data;
-        var key;
-        var request;
-
-        if (!$form.length || !canAjaxSubmitProductForm($form) || !isBuyNowControl(control)) {
-            return false;
-        }
-
-        if ($button.is(':disabled, .disabled') || $button.attr('aria-disabled') === 'true') {
-            return true;
-        }
-
-        if (event && event.__superwooBuyNowHandled) {
-            return true;
-        }
-        if (event) {
-            event.__superwooBuyNowHandled = true;
-            event.preventDefault();
-            event.stopPropagation();
-            if (event.stopImmediatePropagation) {
-                event.stopImmediatePropagation();
-            }
-        }
-
-        if (productBuyNowInFlight || productAddInFlight || $form.data('superwoo-submitting')) {
-            return true;
-        }
-
-        data = serializeForm($form, $button);
-        if ($form.hasClass('variations_form') && (!data.variation_id || parseInt(data.variation_id, 10) < 1)) {
-            announce(SuperWooCart.i18n.chooseOptions);
-            return true;
-        }
-
-        // Razorpay's PDP shortcut creates an order directly from product data,
-        // before WooCommerce has persisted its shipping package. Prepare the
-        // normal cart first and then launch Razorpay's cart-based checkout so
-        // the order uses WooCommerce's calculated shipping and grand total.
-        data.quantity = Math.max(1, parseInt(data.quantity, 10) || 1);
-        key = productAddKey(data);
-        data.superwoo_action_id = productAddActionId('buy-now|' + key);
-
-        productBuyNowInFlight = true;
-        $form.data('superwoo-submitting', true);
-        setProductButtonPending($button, true);
-
-        request = post('superwoo_add_product_to_cart', data, null, {
-            openCart: false,
-            refreshWooFragments: false
-        });
-
-        request.done(function (response) {
-            var checkoutButton;
-            var overlayChecks;
-            var overlayOpened;
-
-            if (!response || !response.success || !response.data) {
-                return;
-            }
-
-            syncProductQuantityFromDrawer();
-            checkoutButton = document.getElementById('btn-1cc-mini-cart');
-
-            if (checkoutButton) {
-                watchRazorpayOverlay();
-                checkoutButton.click();
-
-                // A checkout optimizer can defer or remove Razorpay's
-                // delegated mini-cart listener. Never leave Buy Now inert: if
-                // the overlay has not opened after the handoff, continue to
-                // WooCommerce checkout with the same prepared cart.
-                overlayChecks = 0;
-                overlayOpened = window.setInterval(function () {
-                    overlayChecks += 1;
-                    if (syncRazorpayOverlayState()) {
-                        window.clearInterval(overlayOpened);
-                        return;
-                    }
-                    if (overlayChecks >= 40) {
-                        window.clearInterval(overlayOpened);
-                        window.location.href = (window.SuperWooCart && SuperWooCart.checkoutUrl) ? SuperWooCart.checkoutUrl : '/checkout/';
-                    }
-                }, 100);
-                return;
-            }
-
-            window.location.href = (window.SuperWooCart && SuperWooCart.checkoutUrl) ? SuperWooCart.checkoutUrl : '/checkout/';
-        }).always(function () {
-            productBuyNowInFlight = false;
-            $form.removeData('superwoo-submitting');
-            setProductButtonPending($button, false);
-        });
-
-        return true;
-    }
-
     function isMobileProductView() {
         return document.body && document.body.classList.contains('single-product') && window.matchMedia('(max-width: 767px)').matches;
     }
@@ -838,6 +736,7 @@
             '.single-buynow-button',
             '.wd-buy-now-btn',
             '.woodmart-buy-now-btn',
+            '#btn-1cc-pdp',
             '.xoo-wsc-ft-btn-checkout',
             'button[name="buy_now"]',
             'button[name="buy-now"]',
@@ -864,36 +763,6 @@
 
         label = ($(element).is('input') ? $(element).val() : $(element).text()) || '';
         return /^buy\s*now\b/i.test($.trim(label));
-    }
-
-    function syncRazorpayOverlayState() {
-        var container = document.querySelector('.razorpay-container');
-        var isOpen = !!(container && window.getComputedStyle(container).display !== 'none');
-
-        $('body').toggleClass('superwoo-razorpay-open', isOpen);
-
-        if (container && window.MutationObserver && (!razorpayOverlayObserver || razorpayOverlayObserver._superwooTarget !== container)) {
-            if (razorpayOverlayObserver) {
-                razorpayOverlayObserver.disconnect();
-            }
-            razorpayOverlayObserver = new MutationObserver(syncRazorpayOverlayState);
-            razorpayOverlayObserver._superwooTarget = container;
-            razorpayOverlayObserver.observe(container, { attributes: true, attributeFilter: ['class', 'style'] });
-        }
-
-        return isOpen;
-    }
-
-    function watchRazorpayOverlay() {
-        var attempts = 0;
-
-        window.clearInterval(razorpayOverlayTimer);
-        razorpayOverlayTimer = window.setInterval(function () {
-            attempts += 1;
-            if (syncRazorpayOverlayState() || attempts >= 80) {
-                window.clearInterval(razorpayOverlayTimer);
-            }
-        }, 100);
     }
 
     function isNativeAddToCartControl(element) {
@@ -1650,37 +1519,11 @@
         var control = event.target && event.target.closest ? event.target.closest('body.single-product form.cart button, body.single-product form.cart input[type="submit"]') : null;
         if (control) {
             if (isBuyNowControl(control)) {
-                if (isMobileProductView()) {
-                    handleProductBuyNow(control, event);
-                } else {
-                    // Razorpay's native PDP checkout already works correctly
-                    // on desktop. Preserve that integration and only apply the
-                    // cart-backed shipping workaround to the mobile layout.
-                    watchRazorpayOverlay();
-                }
+                // Leave third-party Buy Now / checkout behavior to the owning
+                // WooCommerce or payment extension.
                 return;
             }
             handleSingleProductAdd(control, event);
-        }
-    }, true);
-
-    document.addEventListener('click', function (event) {
-        var button = event.target && event.target.closest ? event.target.closest('#btn-1cc-mini-cart') : null;
-
-        if (!button) {
-            return;
-        }
-
-        watchRazorpayOverlay();
-
-        // Razorpay's delegated listener checks event.target.id rather than
-        // closest(). Normalize taps on the icon/text children back to the
-        // actual mini-cart button so Magic Checkout receives the click.
-        if (event.target !== button) {
-            event.preventDefault();
-            event.stopPropagation();
-            event.stopImmediatePropagation();
-            button.click();
         }
     }, true);
 
@@ -1690,6 +1533,11 @@
         var $button;
 
         if (!form || !form.matches || !form.matches('body.single-product form.cart')) {
+            return;
+        }
+
+        if ((event.submitter && isBuyNowControl(event.submitter))
+            || (document.activeElement && isBuyNowControl(document.activeElement))) {
             return;
         }
 
@@ -1841,7 +1689,6 @@
         fetchCartCount();
         prepareInlineProductActions();
         syncProductQuantityFromDrawer();
-        syncRazorpayOverlayState();
         syncStickyBuyNow();
         // Some product builders finish rendering the form after DOM-ready.
         // A bounded retry keeps the observer lightweight while still finding it.

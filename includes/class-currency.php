@@ -15,7 +15,6 @@ class SuperWoo_Currency {
         add_filter('woocommerce_available_variation', [$this, 'filter_available_variation'], 1000, 3);
         add_action('woocommerce_before_calculate_totals', [$this, 'restore_cart_item_prices'], 1);
         add_action('woocommerce_before_calculate_totals', [$this, 'convert_cart_item_prices'], 1000);
-        add_action('woocommerce_before_calculate_totals', [$this, 'enforce_payment_request_catalog_prices'], PHP_INT_MAX);
         add_action('woocommerce_cart_calculate_fees', [$this, 'convert_cart_fees'], 1000);
         add_filter('woocommerce_get_cart_item_from_session', [$this, 'reset_session_cart_item'], 1000, 2);
         add_action('woocommerce_checkout_create_order', [$this, 'tag_order_currency'], 20, 2);
@@ -24,7 +23,7 @@ class SuperWoo_Currency {
     }
 
     public function filter_woocommerce_currency($currency) {
-        if (!$this->is_enabled() || !$this->is_runtime_context() || $this->is_payment_request()) {
+        if (!$this->is_enabled() || !$this->is_runtime_context()) {
             return $currency;
         }
 
@@ -59,7 +58,7 @@ class SuperWoo_Currency {
     }
 
     public function convert_cart_item_prices($cart) {
-        if (!$this->is_enabled() || !$this->is_runtime_context() || $this->is_payment_request() || $this->cart_converting || !$cart || $cart->is_empty()) {
+        if (!$this->is_enabled() || !$this->is_runtime_context() || $this->cart_converting || !$cart || $cart->is_empty()) {
             return;
         }
 
@@ -87,13 +86,7 @@ class SuperWoo_Currency {
     }
 
     public function restore_cart_item_prices($cart) {
-        $is_payment_request = $this->is_payment_request();
-
-        // Razorpay may leave its temporary ₹1 verification amount on the
-        // mutable cart product. Always restore the catalog price while its
-        // order endpoint is calculating totals, even when multi-currency is
-        // disabled. Currency conversion remains disabled for this request.
-        if ((!$this->is_enabled() && !$is_payment_request) || !$this->is_runtime_context() || !$cart || $cart->is_empty()) {
+        if (!$this->is_enabled() || !$this->is_runtime_context() || !$cart || $cart->is_empty()) {
             return;
         }
 
@@ -104,9 +97,8 @@ class SuperWoo_Currency {
 
             $product = $cart_item['data'];
 
-            // Always restore from the catalog product. Reusing the mutable
-            // cart object's price can preserve a temporary payment/checkout
-            // value (for example ₹1) as the next request's base price.
+            // Restore from the catalog product so repeated cart calculations
+            // always use the same base price before any display conversion.
             $catalog_id = !empty($cart_item['variation_id'])
                 ? absint($cart_item['variation_id'])
                 : (!empty($cart_item['product_id']) ? absint($cart_item['product_id']) : $product->get_id());
@@ -121,20 +113,8 @@ class SuperWoo_Currency {
         }
     }
 
-    /**
-     * Run after other cart-pricing callbacks as a final payment safety check.
-     * This prevents a temporary ₹1 value from becoming Razorpay's order total.
-     */
-    public function enforce_payment_request_catalog_prices($cart) {
-        if (!$this->is_payment_request()) {
-            return;
-        }
-
-        $this->restore_cart_item_prices($cart);
-    }
-
     public function convert_cart_fees($cart) {
-        if (!$this->is_enabled() || !$this->is_runtime_context() || $this->is_payment_request() || !$cart) {
+        if (!$this->is_enabled() || !$this->is_runtime_context() || !$cart) {
             return;
         }
 
@@ -634,20 +614,6 @@ class SuperWoo_Currency {
 
     private function is_runtime_context() {
         return !is_admin() || wp_doing_ajax() || (defined('REST_REQUEST') && REST_REQUEST);
-    }
-
-    /**
-     * Razorpay 1CC builds the order and calculates shipping from the
-     * WooCommerce cart. Keep prices and fees stable across both REST calls.
-     */
-    private function is_payment_request() {
-        $request_uri = isset($_SERVER['REQUEST_URI']) ? sanitize_text_field(wp_unslash($_SERVER['REQUEST_URI'])) : '';
-        $rest_route = defined('REST_REQUEST') && REST_REQUEST && isset($_REQUEST['rest_route'])
-            ? sanitize_text_field(wp_unslash($_REQUEST['rest_route']))
-            : '';
-
-        return (bool) preg_match('~(?:^|/)1cc/v1/~', $request_uri)
-            || (bool) preg_match('~(?:^|/)1cc/v1/~', $rest_route);
     }
 
     private function sanitize_rates($rates) {
