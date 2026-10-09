@@ -588,11 +588,17 @@ class SuperWoo_Bundle_Offers {
 
             if ('product_discount' === $offer_type) {
                 $min_qty  = absint($rule_row['min_qty'] ?? 0);
+                $max_qty  = absint($rule_row['max_qty'] ?? 0);
+                $min_amount = (float) wc_format_decimal($rule_row['min_amount'] ?? 0);
+                $max_amount = (float) wc_format_decimal($rule_row['max_amount'] ?? 0);
                 $discount = (float) wc_format_decimal($rule_row['discount'] ?? 0);
 
-                if ($min_qty > 0 && $discount > 0 && $discount <= 100) {
+                if ($min_qty > 0 && (0 === $max_qty || $max_qty >= $min_qty) && $min_amount >= 0 && (0.0 === $max_amount || $max_amount >= $min_amount) && $discount > 0 && $discount <= 100) {
                     return array_merge($base_rule, [
                         'min_qty'     => $min_qty,
+                        'max_qty'     => $max_qty,
+                        'min_amount'  => $min_amount,
+                        'max_amount'  => $max_amount,
                         'discount'    => $discount,
                     ]);
                 }
@@ -763,7 +769,10 @@ class SuperWoo_Bundle_Offers {
             $type = $rule['offer_type'] ?? 'product_discount';
             if ('product_discount' === $type) {
                 $quantity = $this->get_cart_qty_for_offer_rule($cart, $rule);
-                if ($quantity >= absint($rule['min_qty'] ?? 0) && (float) ($rule['discount'] ?? 0) > 0) {
+                $max_quantity = absint($rule['max_qty'] ?? 0);
+                $quantity_matches = $quantity >= absint($rule['min_qty'] ?? 0) && (0 === $max_quantity || $quantity <= $max_quantity);
+                $amount_matches = $this->cart_subtotal_in_price_range($cart, $rule);
+                if ($quantity_matches && $amount_matches && (float) ($rule['discount'] ?? 0) > 0) {
                     return ['rule' => $rule, 'tier' => ['discount' => (float) $rule['discount']]];
                 }
             } elseif ('price_discount' === $type && (float) ($rule['discount'] ?? 0) > 0 && $this->cart_subtotal_in_price_range($cart, $rule)) {
@@ -825,11 +834,12 @@ class SuperWoo_Bundle_Offers {
         }
 
         $selected = $this->get_selected_offer(WC()->cart);
-        if (!$selected) {
+        $contextual_rules = $this->get_contextual_notice_rules(WC()->cart, $rules);
+        $rule = !empty($contextual_rules) ? $contextual_rules[0] : ($selected['rule'] ?? null);
+        if (!$rule) {
             return '';
         }
 
-        $rule = $selected['rule'];
         if ($this->is_legacy_rule($rule)) {
             $quantity = $this->get_cart_qty_for_rule(WC()->cart, $rule);
             return superwoo_template('bundle-notice.php', [
@@ -849,6 +859,42 @@ class SuperWoo_Bundle_Offers {
     }
 
     public function get_contextual_notice_rules($cart, $rules) {
+        $upcoming = [];
+        $gift_rule = $this->get_contextual_gift_notice_rule($cart, $rules);
+        if ($gift_rule) {
+            $subtotal = $this->get_cart_subtotal_excluding_gifts($cart, $gift_rule);
+            if ($subtotal < (float) ($gift_rule['min_amount'] ?? 0)) {
+                $upcoming[] = $gift_rule;
+            }
+        }
+
+        $discount_rule = $this->get_contextual_discount_notice_rule($cart, $rules);
+        if ($discount_rule) {
+            $quantity = $this->get_cart_qty_for_offer_rule($cart, $discount_rule);
+            if ($quantity < absint($discount_rule['min_qty'] ?? 0)) {
+                $upcoming[] = $discount_rule;
+            }
+        }
+
+        if (!empty($upcoming)) {
+            $saved_order = [];
+            foreach ($rules as $index => $rule) {
+                if (!empty($rule['id'])) {
+                    $saved_order[$rule['id']] = $index;
+                }
+            }
+            usort($upcoming, function ($a, $b) use ($saved_order) {
+                $priority_order = absint($a['priority'] ?? 1) <=> absint($b['priority'] ?? 1);
+                if (0 !== $priority_order) {
+                    return $priority_order;
+                }
+
+                return ($saved_order[$a['id'] ?? ''] ?? PHP_INT_MAX) <=> ($saved_order[$b['id'] ?? ''] ?? PHP_INT_MAX);
+            });
+
+            return [$upcoming[0]];
+        }
+
         $selected = $this->get_selected_offer($cart);
         return $selected ? [$selected['rule']] : [];
     }

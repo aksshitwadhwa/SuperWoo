@@ -484,7 +484,8 @@ body.superwoo-cart-open .superwoo-mobile-bottom-nav {
 
 .superwoo-cart-shell .superwoo-cart-drawer__inner {
     align-items: stretch !important;
-    display: block !important;
+    display: flex !important;
+    flex-direction: column !important;
     height: 100dvh !important;
     max-height: 100dvh !important;
     min-height: 100dvh !important;
@@ -498,6 +499,7 @@ body.superwoo-cart-open .superwoo-mobile-bottom-nav {
     background: #ffffff;
     border-bottom: 1px solid #edf0ed !important;
     display: grid;
+    flex: 0 0 auto;
     grid-template-columns: 1fr auto 1fr;
     min-height: 50px;
     padding: 10px 18px;
@@ -574,7 +576,7 @@ body.superwoo-cart-open .superwoo-mobile-bottom-nav {
     font-size: 12px;
     font-weight: 500;
     line-height: 1.35;
-    padding: 16px 18px;
+    padding: 8px 10px;
     text-align: left;
     width: auto;
     writing-mode: horizontal-tb !important;
@@ -585,20 +587,22 @@ body.superwoo-cart-open .superwoo-mobile-bottom-nav {
     display: flex;
     gap: 10px;
     justify-content: flex-start;
-    margin: 18px 24px 14px;
+    margin: 8px 24px 8px;
 }
 
 .superwoo-cart-shell .superwoo-cart-scroll {
-    bottom: var(--superwoo-footer-offset, 118px) !important;
-    left: 0 !important;
-    min-height: 120px !important;
+    flex: 1 1 auto;
+    height: auto !important;
+    left: auto !important;
+    min-height: 0 !important;
     overflow-x: hidden !important;
-    overflow-y: scroll !important;
+    overflow-y: auto !important;
     overscroll-behavior: contain !important;
-    position: absolute !important;
-    right: 0 !important;
+    position: relative !important;
+    right: auto !important;
     scrollbar-gutter: stable;
-    top: var(--superwoo-header-offset, 60px);
+    top: auto !important;
+    bottom: auto !important;
     -webkit-overflow-scrolling: touch !important;
     width: 100% !important;
     writing-mode: horizontal-tb !important;
@@ -752,14 +756,15 @@ body.superwoo-cart-open .superwoo-mobile-bottom-nav {
 }
 
 .superwoo-cart-shell .superwoo-cart-drawer__footer {
+    flex: 0 0 auto;
     min-width: 0;
     background: var(--superwoo-drawer-bg) !important;
     border-top: 1px solid #edf0ed;
-    bottom: 0 !important;
+    bottom: auto !important;
     left: 0 !important;
-    min-height: 92px;
-    padding: 18px 24px 22px;
-    position: absolute !important;
+    min-height: 80px;
+    padding: 10px 24px 15px;
+    position: relative !important;
     right: 0 !important;
     width: 100% !important;
     z-index: 2;
@@ -810,9 +815,30 @@ body.superwoo-cart-open .superwoo-mobile-bottom-nav {
     gap: 10px;
     grid-auto-columns: 136px;
     grid-auto-flow: column;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-color: #9aa4af #eef1f4;
+    scrollbar-width: thin;
+    scroll-snap-type: x proximity;
+    touch-action: pan-x pan-y;
     overflow-x: auto;
+    overflow-y: hidden;
     padding-bottom: 4px;
     width: 100%;
+}
+
+.superwoo-cart-shell .superwoo-cross-sells__row::-webkit-scrollbar {
+    height: 7px;
+}
+
+.superwoo-cart-shell .superwoo-cross-sells__row::-webkit-scrollbar-thumb {
+    background: #9aa4af;
+    border-radius: 999px;
+}
+
+.superwoo-cart-shell .superwoo-cross-sells__row::-webkit-scrollbar-track {
+    background: #eef1f4;
+    border-radius: 999px;
 }
 
 .superwoo-cart-shell .superwoo-cross-sell {
@@ -822,6 +848,7 @@ body.superwoo-cart-open .superwoo-mobile-bottom-nav {
     flex-direction: column;
     min-height: 100%;
     padding: 7px;
+    scroll-snap-align: start;
 }
 
 .superwoo-cart-shell .superwoo-cross-sell__image img {
@@ -894,7 +921,7 @@ body.superwoo-cart-open .superwoo-mobile-bottom-nav {
 
 .superwoo-cart-shell .superwoo-cart-total {
     display: grid;
-    gap: 7px;
+    gap: 0px;
     margin-bottom: 14px;
     writing-mode: horizontal-tb !important;
 }

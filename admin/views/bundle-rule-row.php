@@ -10,6 +10,7 @@ $applies_to = isset($rule['applies_to']) && in_array($rule['applies_to'], ['glob
 $category_id = absint($rule['category_id'] ?? 0);
 $product_ids = isset($rule['product_ids']) && is_array($rule['product_ids']) ? array_map('absint', $rule['product_ids']) : [];
 $min_qty = isset($rule['min_qty']) ? absint($rule['min_qty']) : '';
+$max_qty = isset($rule['max_qty']) ? absint($rule['max_qty']) : '';
 $discount = isset($rule['discount']) ? $rule['discount'] : '';
 $min_amount = isset($rule['min_amount']) ? $rule['min_amount'] : '';
 $max_amount = isset($rule['max_amount']) ? $rule['max_amount'] : '';
@@ -91,12 +92,27 @@ $show_remove_button = isset($show_remove_button) ? (bool) $show_remove_button : 
 
     <div class="superwoo-offer-panel superwoo-offer-panel--product">
         <h2><?php esc_html_e('Flat Product Discount', 'superwoo'); ?></h2>
-        <p><?php esc_html_e('Set the minimum quantity and percentage discount. The offer applies to the selected scope above.', 'superwoo'); ?></p>
+        <p><?php esc_html_e('Set the eligible quantity and subtotal range, then choose the percentage discount. The offer applies to the selected scope above.', 'superwoo'); ?></p>
 
         <div class="superwoo-field-grid">
             <label class="superwoo-field">
                 <span><?php esc_html_e('Minimum quantity', 'superwoo'); ?></span>
                 <input type="number" min="1" step="1" name="<?php echo esc_attr($field_prefix); ?>[min_qty]" value="<?php echo esc_attr($min_qty); ?>" placeholder="2">
+            </label>
+
+            <label class="superwoo-field">
+                <span><?php esc_html_e('Maximum quantity', 'superwoo'); ?></span>
+                <input type="number" min="1" step="1" name="<?php echo esc_attr($field_prefix); ?>[max_qty]" value="<?php echo esc_attr($max_qty); ?>" placeholder="<?php esc_attr_e('No limit', 'superwoo'); ?>">
+            </label>
+
+            <label class="superwoo-field">
+                <span><?php esc_html_e('Minimum amount', 'superwoo'); ?></span>
+                <input type="number" min="0" step="0.01" name="<?php echo esc_attr($field_prefix); ?>[min_amount]" value="<?php echo esc_attr($min_amount); ?>" placeholder="0">
+            </label>
+
+            <label class="superwoo-field">
+                <span><?php esc_html_e('Maximum amount', 'superwoo'); ?></span>
+                <input type="number" min="0" step="0.01" name="<?php echo esc_attr($field_prefix); ?>[max_amount]" value="<?php echo esc_attr($max_amount); ?>" placeholder="<?php esc_attr_e('No limit', 'superwoo'); ?>">
             </label>
 
             <label class="superwoo-field">

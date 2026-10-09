@@ -318,24 +318,6 @@
         }).promise();
     }
 
-    function syncDrawerLayout() {
-        var $drawer = drawer();
-        var $inner = $drawer.find('.superwoo-cart-drawer__inner').first();
-        var headerHeight = $drawer.find('.superwoo-cart-drawer__header').outerHeight() || 64;
-        var footerHeight = $drawer.find('.superwoo-cart-drawer__footer').outerHeight() || 112;
-
-        if (!$inner.length) {
-            return;
-        }
-
-        $inner.css({
-            '--superwoo-header-offset': headerHeight + 'px',
-            '--superwoo-footer-offset': footerHeight + 'px'
-        });
-    }
-
-
-
     function openCart() {
         var $shell = shell();
         if (!$shell.length) {
@@ -345,9 +327,7 @@
         lastFocus = document.activeElement;
         $shell.addClass('is-open').attr('aria-hidden', 'false');
         $('body').addClass('superwoo-cart-open');
-        syncDrawerLayout();
         window.setTimeout(function () {
-            syncDrawerLayout();
             drawer().trigger('focus');
         }, 20);
     }
@@ -421,7 +401,6 @@
             }
         }
 
-        syncDrawerLayout();
         syncCartTriggerBadges();
         $(document.body).trigger('wc_fragments_refreshed');
     }
@@ -1660,6 +1639,24 @@
         });
     });
 
+    // A vertical mouse wheel cannot move a horizontal recommendations row by
+    // itself. Translate it while the pointer is over the row; touch devices
+    // retain native horizontal swipe scrolling.
+    $(document).on('wheel.superwooCartRecommendations', '.superwoo-cross-sells__row', function (event) {
+        var originalEvent = event.originalEvent;
+        var maxScrollLeft = this.scrollWidth - this.clientWidth;
+
+        if (!originalEvent || maxScrollLeft <= 0 || Math.abs(originalEvent.deltaX) >= Math.abs(originalEvent.deltaY)) {
+            return;
+        }
+
+        var nextScrollLeft = Math.max(0, Math.min(maxScrollLeft, this.scrollLeft + originalEvent.deltaY));
+        if (nextScrollLeft !== this.scrollLeft) {
+            this.scrollLeft = nextScrollLeft;
+            event.preventDefault();
+        }
+    });
+
     $(document.body).on('added_to_cart', function () {
         activateInlineProductQuantity(productCartForm());
         try {
@@ -1733,10 +1730,6 @@
 
     $(window).on('resize.superwooCart orientationchange.superwooCart', function () {
         scheduleStickyBuyNowSync();
-
-        if (shell().hasClass('is-open')) {
-            syncDrawerLayout();
-        }
     });
 
 
