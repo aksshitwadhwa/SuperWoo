@@ -9,7 +9,7 @@ $free_delivery_threshold = $this->get_free_delivery_threshold();
     <button type="button" class="page-title-action" data-superwoo-show-new-offer><?php esc_html_e('Create New Offer', 'superwoo'); ?></button>
     <hr class="wp-header-end">
 
-    <p><?php esc_html_e('Manage product quantity discounts and cart price-range free product offers.', 'superwoo'); ?></p>
+    <p><?php esc_html_e('Manage quantity discounts, price-range discounts, and free-product offers. When multiple offers qualify, the lowest priority number wins.', 'superwoo'); ?></p>
 
     <?php if (!empty($_GET['settings-updated'])) : ?>
         <div class="notice notice-success is-dismissible">
@@ -37,6 +37,7 @@ $free_delivery_threshold = $this->get_free_delivery_threshold();
                         <th><?php esc_html_e('Offer', 'superwoo'); ?></th>
                         <th><?php esc_html_e('Type', 'superwoo'); ?></th>
                         <th><?php esc_html_e('Scope', 'superwoo'); ?></th>
+                        <th><?php esc_html_e('Priority', 'superwoo'); ?></th>
                         <th><?php esc_html_e('Status', 'superwoo'); ?></th>
                         <th><?php esc_html_e('Actions', 'superwoo'); ?></th>
                     </tr>

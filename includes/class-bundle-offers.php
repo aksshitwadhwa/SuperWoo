@@ -89,6 +89,13 @@ class SuperWoo_Bundle_Offers {
                 $changed = true;
             }
 
+            if (!isset($rule['priority'])) {
+                $rules[$index]['priority'] = $index + 1;
+                $changed = true;
+            } else {
+                $rules[$index]['priority'] = max(1, absint($rule['priority']));
+            }
+
             if ('price_gift' === ($rule['offer_type'] ?? '') && empty($rule['free_product_ids']) && !empty($rule['free_product_id'])) {
                 $rules[$index]['free_product_ids'] = [absint($rule['free_product_id'])];
                 $changed = true;
@@ -116,10 +123,16 @@ class SuperWoo_Bundle_Offers {
     }
 
     public function get_default_rule() {
+        $priority = 1;
+        foreach ($this->get_rules() as $existing_rule) {
+            $priority = max($priority, absint($existing_rule['priority'] ?? 0) + 1);
+        }
+
         return [
             'id'               => '',
             'title'            => '',
             'enabled'          => true,
+            'priority'         => $priority,
             'offer_type'       => 'product_discount',
             'applies_to'       => 'products',
             'category_id'      => 0,
@@ -167,6 +180,10 @@ class SuperWoo_Bundle_Offers {
 
         if ('price_gift' === ($rule['offer_type'] ?? '')) {
             return __('Price range free products', 'superwoo');
+        }
+
+        if ('price_discount' === ($rule['offer_type'] ?? '')) {
+            return __('Price range discount', 'superwoo');
         }
 
         return __('Flat product discount', 'superwoo');
@@ -540,7 +557,9 @@ class SuperWoo_Bundle_Offers {
             return null;
         }
 
-            $offer_type = !empty($rule_row['offer_type']) && 'price_gift' === $rule_row['offer_type'] ? 'price_gift' : 'product_discount';
+            $offer_type = !empty($rule_row['offer_type']) && in_array($rule_row['offer_type'], ['price_gift', 'price_discount'], true)
+                ? sanitize_key($rule_row['offer_type'])
+                : 'product_discount';
             $applies_to = $this->sanitize_applies_to($rule_row['applies_to'] ?? 'products');
             $category_id = 'category' === $applies_to ? absint($rule_row['category_id'] ?? 0) : 0;
             $product_ids = [];
@@ -560,6 +579,7 @@ class SuperWoo_Bundle_Offers {
                 'id'          => $offer_id ? sanitize_key($offer_id) : $this->new_rule_id(),
                 'title'       => !empty($rule_row['title']) ? sanitize_text_field($rule_row['title']) : '',
                 'enabled'     => !empty($rule_row['enabled']),
+                'priority'    => max(1, absint($rule_row['priority'] ?? 1)),
                 'offer_type'  => $offer_type,
                 'applies_to'  => $applies_to,
                 'category_id' => $category_id,
@@ -568,12 +588,34 @@ class SuperWoo_Bundle_Offers {
 
             if ('product_discount' === $offer_type) {
                 $min_qty  = absint($rule_row['min_qty'] ?? 0);
+                $max_qty  = absint($rule_row['max_qty'] ?? 0);
+                $min_amount = (float) wc_format_decimal($rule_row['min_amount'] ?? 0);
+                $max_amount = (float) wc_format_decimal($rule_row['max_amount'] ?? 0);
                 $discount = (float) wc_format_decimal($rule_row['discount'] ?? 0);
 
-                if ($min_qty > 0 && $discount > 0 && $discount <= 100) {
+                if ($min_qty > 0 && (0 === $max_qty || $max_qty >= $min_qty) && $min_amount >= 0 && (0.0 === $max_amount || $max_amount >= $min_amount) && $discount > 0 && $discount <= 100) {
                     return array_merge($base_rule, [
                         'min_qty'     => $min_qty,
+                        'max_qty'     => $max_qty,
+                        'min_amount'  => $min_amount,
+                        'max_amount'  => $max_amount,
                         'discount'    => $discount,
+                    ]);
+                }
+
+                return null;
+            }
+
+            if ('price_discount' === $offer_type) {
+                $min_amount = (float) wc_format_decimal($rule_row['min_amount'] ?? 0);
+                $max_amount = (float) wc_format_decimal($rule_row['max_amount'] ?? 0);
+                $discount = (float) wc_format_decimal($rule_row['discount'] ?? 0);
+
+                if ($min_amount >= 0 && (0.0 === $max_amount || $max_amount >= $min_amount) && $discount > 0 && $discount <= 100) {
+                    return array_merge($base_rule, [
+                        'min_amount' => $min_amount,
+                        'max_amount' => $max_amount,
+                        'discount'   => $discount,
                     ]);
                 }
 
@@ -621,61 +663,19 @@ class SuperWoo_Bundle_Offers {
             return;
         }
 
-        $rules = $this->get_rules();
-        if (empty($rules)) {
-            $this->sync_free_gifts($cart, []);
-            return;
-        }
-
-        // A zero-minimum gift rule must not keep its gift in the cart after
-        // every customer-added item has been removed.
-        if (!$this->cart_has_customer_items($cart)) {
-            $this->sync_free_gifts($cart, []);
-            return;
-        }
-
+        $this->restore_offer_base_prices($cart);
         $customer_quantities = $this->get_customer_cart_quantities($cart);
-        $discount_matches = [];
-        $gift_matches = [];
+        $selected = $this->get_selected_offer($cart);
+        $selected_rule = $selected['rule'] ?? null;
+        $gift_rules = $selected_rule && 'price_gift' === ($selected_rule['offer_type'] ?? '') ? [$selected_rule] : [];
+        $this->sync_free_gifts($cart, $gift_rules);
 
-        foreach ($rules as $rule) {
-            if (empty($rule['enabled'])) {
-                continue;
-            }
-
-            if ($this->is_legacy_rule($rule)) {
-                $qty  = $this->get_cart_qty_for_rule($cart, $rule);
-                $tier = $this->get_matched_tier($rule['tiers'], $qty);
-                if ($tier) {
-                    $discount_matches[] = [
-                        'rule' => $rule,
-                        'tier' => $tier,
-                    ];
-                }
-                continue;
-            }
-
-            if ('price_gift' === ($rule['offer_type'] ?? '')) {
-                if ($this->cart_subtotal_in_price_range($cart, $rule)) {
-                    $gift_matches[] = $rule;
-                }
-                continue;
-            }
-
-            if ('product_discount' === ($rule['offer_type'] ?? 'product_discount')) {
-                $qty = $this->get_cart_qty_for_offer_rule($cart, $rule);
-                if ($qty >= (int) ($rule['min_qty'] ?? 0)) {
-                    $discount_matches[] = [
-                        'rule' => $rule,
-                        'tier' => [
-                            'discount' => (float) ($rule['discount'] ?? 0),
-                        ],
-                    ];
-                }
-            }
+        if (!$selected || empty($selected['tier']['discount'])) {
+            $this->restore_customer_cart_quantities($cart, $customer_quantities);
+            return;
         }
 
-        $this->sync_free_gifts($cart, $gift_matches);
+        $discount = (float) $selected['tier']['discount'];
 
         foreach ($cart->get_cart() as $cart_item_key => $cart_item) {
             if (empty($cart_item['data']) || !($cart_item['data'] instanceof WC_Product)) {
@@ -694,9 +694,7 @@ class SuperWoo_Bundle_Offers {
 
             $product_id = !empty($cart_item['product_id']) ? absint($cart_item['product_id']) : $product->get_id();
             $variation_id = !empty($cart_item['variation_id']) ? absint($cart_item['variation_id']) : 0;
-            $best_discount = $this->get_best_discount_for_product($product_id, $discount_matches, $variation_id);
-
-            if ($best_discount <= 0) {
+            if (!$this->rule_applies_to_product($selected_rule, $product_id, $variation_id)) {
                 continue;
             }
 
@@ -707,13 +705,84 @@ class SuperWoo_Bundle_Offers {
                 continue;
             }
 
-            $bundle_price = round($regular_price * (1 - $best_discount / 100), wc_get_price_decimals());
+            $bundle_price = round($regular_price * (1 - $discount / 100), wc_get_price_decimals());
             if ($bundle_price < $current_price) {
                 $product->set_price($bundle_price);
             }
         }
 
         $this->restore_customer_cart_quantities($cart, $customer_quantities);
+    }
+
+    /** Restore pre-offer line prices so repeated totals passes cannot compound discounts. */
+    private function restore_offer_base_prices($cart) {
+        foreach ($cart->get_cart() as $cart_item_key => $cart_item) {
+            if (!empty($cart_item['superwoo_free_gift']) || empty($cart_item['data']) || !($cart_item['data'] instanceof WC_Product)) {
+                continue;
+            }
+
+            if (isset($cart_item['_superwoo_base_inr_price'])) {
+                $base_price = (float) $cart_item['_superwoo_base_inr_price'];
+            } elseif (isset($cart_item['_superwoo_offer_base_price'])) {
+                $base_price = (float) $cart_item['_superwoo_offer_base_price'];
+            } elseif (isset($cart_item['_superwoo_current_inr_price'])) {
+                $base_price = (float) $cart_item['_superwoo_current_inr_price'];
+                $cart->cart_contents[$cart_item_key]['_superwoo_offer_base_price'] = $base_price;
+            } else {
+                $base_price = (float) $cart_item['data']->get_price('edit');
+                $cart->cart_contents[$cart_item_key]['_superwoo_offer_base_price'] = $base_price;
+            }
+
+            $cart_item['data']->set_price($base_price);
+        }
+    }
+
+    /** Return the first qualifying enabled offer by priority, then saved order. */
+    public function get_selected_offer($cart) {
+        if (!$cart || !$this->cart_has_customer_items($cart)) {
+            return null;
+        }
+
+        $rules = $this->get_rules();
+        foreach ($rules as $index => $rule) {
+            $rule['_saved_order'] = $index;
+        }
+        usort($rules, function ($a, $b) {
+            $priority_order = absint($a['priority'] ?? 1) <=> absint($b['priority'] ?? 1);
+            return 0 !== $priority_order ? $priority_order : absint($a['_saved_order'] ?? 0) <=> absint($b['_saved_order'] ?? 0);
+        });
+
+        foreach ($rules as $rule) {
+            if (empty($rule['enabled'])) {
+                continue;
+            }
+
+            if ($this->is_legacy_rule($rule)) {
+                $quantity = $this->get_cart_qty_for_rule($cart, $rule);
+                $tier = $this->get_matched_tier($rule['tiers'], $quantity);
+                if ($tier && !empty($tier['discount'])) {
+                    return ['rule' => $rule, 'tier' => $tier];
+                }
+                continue;
+            }
+
+            $type = $rule['offer_type'] ?? 'product_discount';
+            if ('product_discount' === $type) {
+                $quantity = $this->get_cart_qty_for_offer_rule($cart, $rule);
+                $max_quantity = absint($rule['max_qty'] ?? 0);
+                $quantity_matches = $quantity >= absint($rule['min_qty'] ?? 0) && (0 === $max_quantity || $quantity <= $max_quantity);
+                $amount_matches = $this->cart_subtotal_in_price_range($cart, $rule);
+                if ($quantity_matches && $amount_matches && (float) ($rule['discount'] ?? 0) > 0) {
+                    return ['rule' => $rule, 'tier' => ['discount' => (float) $rule['discount']]];
+                }
+            } elseif ('price_discount' === $type && (float) ($rule['discount'] ?? 0) > 0 && $this->cart_subtotal_in_price_range($cart, $rule)) {
+                return ['rule' => $rule, 'tier' => ['discount' => (float) ($rule['discount'] ?? 0)]];
+            } elseif ('price_gift' === $type && $this->cart_subtotal_in_price_range($cart, $rule) && $this->get_free_product_ids($rule)) {
+                return ['rule' => $rule, 'tier' => []];
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -725,21 +794,8 @@ class SuperWoo_Bundle_Offers {
             return;
         }
 
-        $gift_matches = [];
-        foreach ($this->get_rules() as $rule) {
-            if (empty($rule['enabled']) || 'price_gift' !== ($rule['offer_type'] ?? '')) {
-                continue;
-            }
-
-            if ($this->cart_subtotal_in_price_range($cart, $rule)) {
-                $gift_matches[] = $rule;
-            }
-        }
-
-        if (!$this->cart_has_customer_items($cart)) {
-            $gift_matches = [];
-        }
-
+        $selected = $this->get_selected_offer($cart);
+        $gift_matches = $selected && 'price_gift' === ($selected['rule']['offer_type'] ?? '') ? [$selected['rule']] : [];
         $this->sync_free_gifts($cart, $gift_matches);
     }
 
@@ -777,71 +833,70 @@ class SuperWoo_Bundle_Offers {
             return '';
         }
 
-        $notices = [];
-        foreach ($this->get_contextual_notice_rules(WC()->cart, $rules) as $rule) {
-            $html = superwoo_template('offer-notice.php', [
-                'rule'     => $rule,
-                'cart'     => WC()->cart,
-                'discount' => $this,
-            ]);
-
-            if ($html) {
-                $notices[] = $html;
-            }
+        $selected = $this->get_selected_offer(WC()->cart);
+        $contextual_rules = $this->get_contextual_notice_rules(WC()->cart, $rules);
+        $rule = !empty($contextual_rules) ? $contextual_rules[0] : ($selected['rule'] ?? null);
+        if (!$rule) {
+            return '';
         }
 
-        if (!empty($notices)) {
-            return implode('', $notices);
-        }
-
-        foreach ($rules as $rule) {
-            if (empty($rule['enabled']) || !$this->is_legacy_rule($rule)) {
-                continue;
-            }
-
-            $qty = $this->get_cart_qty_for_rule(WC()->cart, $rule);
-            if ($qty <= 0) {
-                continue;
-            }
-
-            $current_tier = $this->get_matched_tier($rule['tiers'], $qty);
-            $next_tier = null;
-            foreach ($rule['tiers'] as $tier) {
-                $min_qty = (int) ($tier['min_qty'] ?? $tier['qty']);
-                if ($qty < $min_qty) {
-                    $next_tier = $tier;
-                    break;
-                }
-            }
-
-            $notices[] = superwoo_template('bundle-notice.php', [
+        if ($this->is_legacy_rule($rule)) {
+            $quantity = $this->get_cart_qty_for_rule(WC()->cart, $rule);
+            return superwoo_template('bundle-notice.php', [
                 'rule'         => $rule,
-                'qty'          => $qty,
-                'current_tier' => $current_tier,
-                'next_tier'    => $next_tier,
+                'qty'          => $quantity,
+                'current_tier' => $selected['tier'],
+                'next_tier'    => null,
                 'scope_label'  => $this->get_scope_label($rule),
             ]);
-
-            break;
         }
 
-        return implode('', $notices);
+        return superwoo_template('offer-notice.php', [
+            'rule'     => $rule,
+            'cart'     => WC()->cart,
+            'discount' => $this,
+        ]);
     }
 
     public function get_contextual_notice_rules($cart, $rules) {
-        $selected = [];
-        $discount_rule = $this->get_contextual_discount_notice_rule($cart, $rules);
+        $upcoming = [];
         $gift_rule = $this->get_contextual_gift_notice_rule($cart, $rules);
-
-        if ($discount_rule) {
-            $selected[] = $discount_rule;
-        }
-
         if ($gift_rule) {
-            $selected[] = $gift_rule;
+            $subtotal = $this->get_cart_subtotal_excluding_gifts($cart, $gift_rule);
+            if ($subtotal < (float) ($gift_rule['min_amount'] ?? 0)) {
+                $upcoming[] = $gift_rule;
+            }
         }
 
-        return $selected;
+        $discount_rule = $this->get_contextual_discount_notice_rule($cart, $rules);
+        if ($discount_rule) {
+            $quantity = $this->get_cart_qty_for_offer_rule($cart, $discount_rule);
+            if ($quantity < absint($discount_rule['min_qty'] ?? 0)) {
+                $upcoming[] = $discount_rule;
+            }
+        }
+
+        if (!empty($upcoming)) {
+            $saved_order = [];
+            foreach ($rules as $index => $rule) {
+                if (!empty($rule['id'])) {
+                    $saved_order[$rule['id']] = $index;
+                }
+            }
+            usort($upcoming, function ($a, $b) use ($saved_order) {
+                $priority_order = absint($a['priority'] ?? 1) <=> absint($b['priority'] ?? 1);
+                if (0 !== $priority_order) {
+                    return $priority_order;
+                }
+
+                return ($saved_order[$a['id'] ?? ''] ?? PHP_INT_MAX) <=> ($saved_order[$b['id'] ?? ''] ?? PHP_INT_MAX);
+            });
+
+            return [$upcoming[0]];
+        }
+
+        $selected = $this->get_selected_offer($cart);
+        return $selected ? [$selected['rule']] : [];
     }
 
     public function get_cart_offer_state($cart) {
@@ -854,30 +909,21 @@ class SuperWoo_Bundle_Offers {
             return $state;
         }
 
-        foreach ($this->get_rules() as $rule) {
-            if (empty($rule['enabled']) || $this->is_legacy_rule($rule)) {
-                continue;
-            }
-
-            if ('product_discount' === ($rule['offer_type'] ?? '')) {
-                $qty = $this->get_cart_qty_for_offer_rule($cart, $rule);
-                $min_qty = absint($rule['min_qty'] ?? 0);
-                $discount = (float) ($rule['discount'] ?? 0);
-
-                if ($min_qty > 0 && $discount > 0 && $qty >= $min_qty) {
-                    $key = !empty($rule['id']) ? $rule['id'] : 'discount_' . $min_qty . '_' . $discount;
-                    $state['discounts'][$key] = [
-                        /* translators: %s: discount percentage. */
-                        'message' => sprintf(__('Cart updated: offer applied. You got %1$s%% off eligible products.', 'superwoo'), wc_format_decimal($discount)),
-                    ];
-                }
-
-                continue;
-            }
-
+        $selected = $this->get_selected_offer($cart);
+        if ($selected && 'price_gift' !== ($selected['rule']['offer_type'] ?? '') && !empty($selected['tier']['discount'])) {
+            $rule = $selected['rule'];
+            $discount = (float) $selected['tier']['discount'];
+            $key = !empty($rule['id']) ? $rule['id'] : 'discount_' . $discount;
+            $state['discounts'][$key] = [
+                /* translators: %s: discount percentage. */
+                'message' => sprintf(__('Cart updated: offer applied. You got %1$s%% off eligible products.', 'superwoo'), wc_format_decimal($discount)),
+            ];
         }
 
         foreach ($cart->get_cart() as $cart_item) {
+            if (!$selected || 'price_gift' !== ($selected['rule']['offer_type'] ?? '')) {
+                break;
+            }
             if (empty($cart_item['superwoo_free_gift']) || empty($cart_item['data']) || !($cart_item['data'] instanceof WC_Product)) {
                 continue;
             }
@@ -1259,10 +1305,12 @@ class SuperWoo_Bundle_Offers {
                 }
             }
 
-            if (isset($item['_superwoo_current_inr_price'])) {
-                $price = (float) $item['_superwoo_current_inr_price'];
-            } elseif (isset($item['_superwoo_base_inr_price'])) {
+            if (isset($item['_superwoo_base_inr_price'])) {
                 $price = (float) $item['_superwoo_base_inr_price'];
+            } elseif (isset($item['_superwoo_offer_base_price'])) {
+                $price = (float) $item['_superwoo_offer_base_price'];
+            } elseif (isset($item['_superwoo_current_inr_price'])) {
+                $price = (float) $item['_superwoo_current_inr_price'];
             } else {
                 $price = (float) $item['data']->get_price();
             }

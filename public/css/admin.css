@@ -230,7 +230,11 @@
 }
 
 .superwoo-offer-card[data-offer-type="product_discount"] .superwoo-offer-panel--gift,
-.superwoo-offer-card[data-offer-type="price_gift"] .superwoo-offer-panel--product {
+.superwoo-offer-card[data-offer-type="product_discount"] .superwoo-offer-panel--price-discount,
+.superwoo-offer-card[data-offer-type="price_gift"] .superwoo-offer-panel--product,
+.superwoo-offer-card[data-offer-type="price_gift"] .superwoo-offer-panel--price-discount,
+.superwoo-offer-card[data-offer-type="price_discount"] .superwoo-offer-panel--product,
+.superwoo-offer-card[data-offer-type="price_discount"] .superwoo-offer-panel--gift {
     display: none;
 }
 

@@ -58,6 +58,27 @@ if ('product_discount' === $rule['offer_type']) {
     return;
 }
 
+if ('price_discount' === $rule['offer_type']) {
+    $subtotal = $discount->get_cart_subtotal_excluding_gifts($cart, $rule);
+    $min = (float) ($rule['min_amount'] ?? 0);
+    $max = (float) ($rule['max_amount'] ?? 0);
+    $percentage = (float) ($rule['discount'] ?? 0);
+    if ($subtotal < $min || ($max > 0 && $subtotal > $max) || $percentage <= 0) {
+        return;
+    }
+    ?>
+    <div class="superwoo-bundle-notice superwoo-bundle-notice--success">
+        <?php
+        printf(
+            esc_html__('You unlocked %s%% off eligible products.', 'superwoo'),
+            esc_html(wc_format_decimal($percentage))
+        );
+        ?>
+    </div>
+    <?php
+    return;
+}
+
 if ('price_gift' === $rule['offer_type']) {
     $subtotal = $discount->get_cart_subtotal_excluding_gifts($cart, $rule);
     $min = (float) ($rule['min_amount'] ?? 0);

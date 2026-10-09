@@ -20,6 +20,10 @@ class SuperWoo_Cart_Drawer {
         add_action('wp_ajax_nopriv_superwoo_remove_cart_item', [$this, 'ajax_remove_cart_item']);
         add_action('wp_ajax_superwoo_refresh_cart_drawer', [$this, 'ajax_refresh_cart_drawer']);
         add_action('wp_ajax_nopriv_superwoo_refresh_cart_drawer', [$this, 'ajax_refresh_cart_drawer']);
+        add_action('wp_ajax_superwoo_set_whatsapp_order_updates_consent', [$this, 'ajax_set_whatsapp_order_updates_consent']);
+        add_action('wp_ajax_nopriv_superwoo_set_whatsapp_order_updates_consent', [$this, 'ajax_set_whatsapp_order_updates_consent']);
+        add_action('woocommerce_checkout_create_order', [$this, 'save_whatsapp_order_updates_consent'], 20, 2);
+        add_action('woocommerce_store_api_checkout_order_processed', [$this, 'save_store_api_whatsapp_order_updates_consent'], 20, 1);
         add_action('wc_ajax_superwoo_update_cart_item', [$this, 'ajax_update_cart_item']);
         add_action('wc_ajax_superwoo_remove_cart_item', [$this, 'ajax_remove_cart_item']);
         add_action('wp_ajax_superwoo_add_cross_sell', [$this, 'ajax_add_cross_sell']);
@@ -133,6 +137,50 @@ class SuperWoo_Cart_Drawer {
             'settings'  => superwoo_get_settings(),
             'crosssell' => $this->get_cross_sell_products(),
         ]);
+    }
+
+    public function has_whatsapp_order_updates_consent() {
+        return WC()->session && 'yes' === WC()->session->get('superwoo_whatsapp_order_updates_consent', 'no');
+    }
+
+    public function ajax_set_whatsapp_order_updates_consent() {
+        $this->verify_ajax();
+        if (!WC()->session) {
+            wp_send_json_error(['message' => __('Cart session is unavailable.', 'superwoo')], 400);
+        }
+
+        $consent = !empty($_POST['consent']) && '1' === sanitize_text_field(wp_unslash($_POST['consent']));
+        WC()->session->set('superwoo_whatsapp_order_updates_consent', $consent ? 'yes' : 'no');
+        WC()->session->set('superwoo_whatsapp_order_updates_consent_at', $consent ? current_time('mysql', true) : '');
+
+        if (is_callable([WC()->session, 'set_customer_session_cookie'])) {
+            WC()->session->set_customer_session_cookie(true);
+        }
+
+        wp_send_json_success(['consent' => $consent ? 'yes' : 'no']);
+    }
+
+    public function save_whatsapp_order_updates_consent($order, $data) {
+        $this->add_whatsapp_order_updates_consent_meta($order);
+    }
+
+    public function save_store_api_whatsapp_order_updates_consent($order) {
+        if ($this->add_whatsapp_order_updates_consent_meta($order)) {
+            $order->save();
+        }
+    }
+
+    private function add_whatsapp_order_updates_consent_meta($order) {
+        if (!$order || !is_a($order, 'WC_Order') || !WC()->session) {
+            return false;
+        }
+
+        $consent = 'yes' === WC()->session->get('superwoo_whatsapp_order_updates_consent', 'no');
+        $order->update_meta_data('superwoo_whatsapp_order_updates_consent', $consent ? 'yes' : 'no');
+        $consent_at = WC()->session->get('superwoo_whatsapp_order_updates_consent_at', '');
+        $order->update_meta_data('superwoo_whatsapp_order_updates_consent_at', $consent ? $consent_at : '');
+        $order->update_meta_data('superwoo_whatsapp_order_updates_consent_source', 'mini_cart');
+        return true;
     }
 
     public function ajax_update_cart_item() {
