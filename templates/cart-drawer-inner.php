@@ -120,6 +120,10 @@
 
     <div class="superwoo-cart-drawer__footer">
         <?php echo superwoo_cart_total_html(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+        <label class="superwoo-whatsapp-consent">
+            <input type="checkbox" data-superwoo-whatsapp-consent <?php checked($drawer->has_whatsapp_order_updates_consent()); ?>>
+            <span><?php esc_html_e('Get order updates on WhatsApp', 'superwoo'); ?></span>
+        </label>
         <?php echo superwoo_cart_primary_button_html(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
     </div>
 <?php endif; ?>

@@ -1475,6 +1475,24 @@
         updateItem($item, $(this).val());
     });
 
+    $(document).on('change', '[data-superwoo-whatsapp-consent]', function () {
+        var $checkbox = $(this);
+        var requestedConsent = $checkbox.is(':checked');
+
+        $checkbox.prop('disabled', true);
+        post('superwoo_set_whatsapp_order_updates_consent', {
+            consent: requestedConsent ? '1' : '0'
+        }, $checkbox).done(function (response) {
+            if (!response || !response.success) {
+                $checkbox.prop('checked', !requestedConsent);
+            }
+        }).fail(function () {
+            $checkbox.prop('checked', !requestedConsent);
+        }).always(function () {
+            $checkbox.prop('disabled', false);
+        });
+    });
+
     $(document).on('click', '[data-superwoo-remove-item]', function (event) {
         event.preventDefault();
         event.stopPropagation();

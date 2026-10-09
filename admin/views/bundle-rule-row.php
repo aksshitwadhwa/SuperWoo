@@ -1,8 +1,11 @@
 <?php
 defined('ABSPATH') || exit;
 
-$offer_type = isset($rule['offer_type']) && 'price_gift' === $rule['offer_type'] ? 'price_gift' : 'product_discount';
+$offer_type = isset($rule['offer_type']) && in_array($rule['offer_type'], ['price_gift', 'price_discount'], true)
+    ? $rule['offer_type']
+    : 'product_discount';
 $enabled = !empty($rule['enabled']);
+$priority = max(1, absint($rule['priority'] ?? 1));
 $applies_to = isset($rule['applies_to']) && in_array($rule['applies_to'], ['global', 'category', 'products'], true) ? $rule['applies_to'] : 'products';
 $category_id = absint($rule['category_id'] ?? 0);
 $product_ids = isset($rule['product_ids']) && is_array($rule['product_ids']) ? array_map('absint', $rule['product_ids']) : [];
@@ -29,6 +32,7 @@ $show_remove_button = isset($show_remove_button) ? (bool) $show_remove_button : 
             <span><?php esc_html_e('Offer type', 'superwoo'); ?></span>
             <select class="superwoo-offer-type-select" name="<?php echo esc_attr($field_prefix); ?>[offer_type]">
                 <option value="product_discount" <?php selected($offer_type, 'product_discount'); ?>><?php esc_html_e('Flat product discount', 'superwoo'); ?></option>
+                <option value="price_discount" <?php selected($offer_type, 'price_discount'); ?>><?php esc_html_e('Price range discount', 'superwoo'); ?></option>
                 <option value="price_gift" <?php selected($offer_type, 'price_gift'); ?>><?php esc_html_e('Price range free product', 'superwoo'); ?></option>
             </select>
         </label>
@@ -43,6 +47,12 @@ $show_remove_button = isset($show_remove_button) ? (bool) $show_remove_button : 
             <label class="superwoo-field superwoo-field--wide">
                 <span><?php esc_html_e('Offer title', 'superwoo'); ?></span>
                 <input type="text" name="<?php echo esc_attr($field_prefix); ?>[title]" value="<?php echo esc_attr($rule['title'] ?? ''); ?>" placeholder="<?php esc_attr_e('Summer free gift, Buy 2 save 10%, etc.', 'superwoo'); ?>">
+            </label>
+
+            <label class="superwoo-field">
+                <span><?php esc_html_e('Priority', 'superwoo'); ?></span>
+                <input type="number" min="1" step="1" name="<?php echo esc_attr($field_prefix); ?>[priority]" value="<?php echo esc_attr($priority); ?>">
+                <small><?php esc_html_e('Lower number wins when more than one offer qualifies. Ties use saved offer order.', 'superwoo'); ?></small>
             </label>
 
             <label class="superwoo-field">
@@ -122,6 +132,28 @@ $show_remove_button = isset($show_remove_button) ? (bool) $show_remove_button : 
                     <?php endforeach; ?>
                 </select>
                 <small><?php esc_html_e('Choose one or more products to add free when this offer is unlocked.', 'superwoo'); ?></small>
+            </label>
+        </div>
+    </div>
+
+    <div class="superwoo-offer-panel superwoo-offer-panel--price-discount">
+        <h2><?php esc_html_e('Price Range Discount', 'superwoo'); ?></h2>
+        <p><?php esc_html_e('When the eligible cart subtotal is in this range, apply the percentage discount to eligible products in the selected scope.', 'superwoo'); ?></p>
+
+        <div class="superwoo-field-grid">
+            <label class="superwoo-field">
+                <span><?php esc_html_e('Subtotal from', 'superwoo'); ?></span>
+                <input type="number" min="0" step="0.01" name="<?php echo esc_attr($field_prefix); ?>[min_amount]" value="<?php echo esc_attr($min_amount); ?>" placeholder="500">
+            </label>
+
+            <label class="superwoo-field">
+                <span><?php esc_html_e('Subtotal to', 'superwoo'); ?></span>
+                <input type="number" min="0" step="0.01" name="<?php echo esc_attr($field_prefix); ?>[max_amount]" value="<?php echo esc_attr($max_amount); ?>" placeholder="<?php esc_attr_e('No limit', 'superwoo'); ?>">
+            </label>
+
+            <label class="superwoo-field">
+                <span><?php esc_html_e('Discount (%)', 'superwoo'); ?></span>
+                <input type="number" min="0.01" max="100" step="0.01" name="<?php echo esc_attr($field_prefix); ?>[discount]" value="<?php echo esc_attr($discount); ?>" placeholder="10">
             </label>
         </div>
     </div>

@@ -4,6 +4,9 @@ defined('ABSPATH') || exit;
 $offer_id = $rule['id'] ?? '';
 $edit_url = admin_url('admin.php?page=superwoo-bundle-offers&action=edit&offer=' . rawurlencode($offer_id));
 $type_label = 'price_gift' === ($rule['offer_type'] ?? '') ? __('Price range free products', 'superwoo') : __('Flat product discount', 'superwoo');
+if ('price_discount' === ($rule['offer_type'] ?? '')) {
+    $type_label = __('Price range discount', 'superwoo');
+}
 $scope_label = __('Specific products', 'superwoo');
 
 if ('global' === ($rule['applies_to'] ?? '')) {
@@ -20,8 +23,16 @@ if ('global' === ($rule['applies_to'] ?? '')) {
             <span class="edit"><a href="<?php echo esc_url($edit_url); ?>" data-superwoo-edit-offer><?php esc_html_e('Edit', 'superwoo'); ?></a></span>
         </div>
     </td>
-    <td><?php echo esc_html($type_label); ?></td>
+    <td>
+        <?php echo esc_html($type_label); ?>
+        <?php if ('price_discount' === ($rule['offer_type'] ?? '')) : ?>
+            <small><?php echo esc_html(sprintf('%1$s–%2$s · %3$s%%', $rule['min_amount'] ?? 0, !empty($rule['max_amount']) ? $rule['max_amount'] : __('No limit', 'superwoo'), $rule['discount'] ?? 0)); ?></small>
+        <?php elseif ('price_gift' === ($rule['offer_type'] ?? '')) : ?>
+            <small><?php echo esc_html(sprintf('%1$s–%2$s', $rule['min_amount'] ?? 0, !empty($rule['max_amount']) ? $rule['max_amount'] : __('No limit', 'superwoo'))); ?></small>
+        <?php endif; ?>
+    </td>
     <td><?php echo esc_html($scope_label); ?></td>
+    <td><?php echo esc_html(absint($rule['priority'] ?? 1)); ?></td>
     <td>
         <label class="superwoo-list-toggle">
             <input type="checkbox" data-superwoo-toggle-offer <?php checked(!empty($rule['enabled'])); ?>>
