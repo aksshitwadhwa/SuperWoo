@@ -63,7 +63,40 @@ if ('price_discount' === $rule['offer_type']) {
     $min = (float) ($rule['min_amount'] ?? 0);
     $max = (float) ($rule['max_amount'] ?? 0);
     $percentage = (float) ($rule['discount'] ?? 0);
-    if ($subtotal < $min || ($max > 0 && $subtotal > $max) || $percentage <= 0) {
+    if ($percentage <= 0 || ($max > 0 && $subtotal > $max)) {
+        return;
+    }
+
+    if ($subtotal < $min) {
+        $remaining = $min - $subtotal;
+        $progress = $min > 0 ? max(0, min(100, ($subtotal / $min) * 100)) : 0;
+        ?>
+        <div class="superwoo-bundle-notice superwoo-bundle-notice--discount">
+            <div class="superwoo-bundle-notice__top">
+                <span class="superwoo-bundle-notice__icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" focusable="false"><path d="M20.6 13.1 12.1 21.6a2 2 0 0 1-2.8 0l-6.9-6.9a2 2 0 0 1-.6-1.4V4a2 2 0 0 1 2-2h9.3a2 2 0 0 1 1.4.6l6.1 6.1a3.1 3.1 0 0 1 0 4.4ZM7 8.5A1.5 1.5 0 1 0 7 5a1.5 1.5 0 0 0 0 3Z"/></svg>
+                </span>
+                <div>
+                    <?php
+                    printf(
+                        wp_kses_post(__('Add <strong>%1$s</strong> more to unlock <strong>%2$s%% off</strong> eligible products.', 'superwoo')),
+                        wp_kses_post(superwoo_format_selected_currency_amount($remaining)),
+                        esc_html(wc_format_decimal($percentage))
+                    );
+                    ?>
+                </div>
+                <strong><?php echo wp_kses_post(superwoo_format_selected_currency_amount($min)); ?>+</strong>
+            </div>
+            <div class="superwoo-bundle-progress">
+                <span class="superwoo-bundle-progress__fill" style="width:<?php echo esc_attr($progress); ?>%;"></span>
+                <div class="superwoo-bundle-progress__labels">
+                    <span class="superwoo-bundle-progress__current"><?php echo wp_kses_post(superwoo_format_selected_currency_amount($subtotal)); ?></span>
+                    <span class="superwoo-bundle-progress__separator">/</span>
+                    <span class="superwoo-bundle-progress__target"><?php echo wp_kses_post(superwoo_format_selected_currency_amount($min)); ?></span>
+                </div>
+            </div>
+        </div>
+        <?php
         return;
     }
     ?>

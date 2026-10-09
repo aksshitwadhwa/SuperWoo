@@ -860,11 +860,14 @@ class SuperWoo_Bundle_Offers {
 
     public function get_contextual_notice_rules($cart, $rules) {
         $upcoming = [];
+        $amount_distance = [];
         $gift_rule = $this->get_contextual_gift_notice_rule($cart, $rules);
         if ($gift_rule) {
             $subtotal = $this->get_cart_subtotal_excluding_gifts($cart, $gift_rule);
             if ($subtotal < (float) ($gift_rule['min_amount'] ?? 0)) {
                 $upcoming[] = $gift_rule;
+                $distance_key = !empty($gift_rule['id']) ? (string) $gift_rule['id'] : md5(wp_json_encode($gift_rule));
+                $amount_distance[$distance_key] = max(0, (float) ($gift_rule['min_amount'] ?? 0) - $subtotal);
             }
         }
 
@@ -876,6 +879,18 @@ class SuperWoo_Bundle_Offers {
             }
         }
 
+        // Keep amount-based percentage offers in the progress selection so a
+        // customer can see the next reward after an earlier offer is unlocked.
+        $price_discount_rule = $this->get_contextual_price_discount_notice_rule($cart, $rules);
+        if ($price_discount_rule) {
+            $subtotal = $this->get_cart_subtotal_excluding_gifts($cart, $price_discount_rule);
+            if ($subtotal < (float) ($price_discount_rule['min_amount'] ?? 0)) {
+                $upcoming[] = $price_discount_rule;
+                $distance_key = !empty($price_discount_rule['id']) ? (string) $price_discount_rule['id'] : md5(wp_json_encode($price_discount_rule));
+                $amount_distance[$distance_key] = max(0, (float) ($price_discount_rule['min_amount'] ?? 0) - $subtotal);
+            }
+        }
+
         if (!empty($upcoming)) {
             $saved_order = [];
             foreach ($rules as $index => $rule) {
@@ -883,13 +898,25 @@ class SuperWoo_Bundle_Offers {
                     $saved_order[$rule['id']] = $index;
                 }
             }
-            usort($upcoming, function ($a, $b) use ($saved_order) {
+            usort($upcoming, function ($a, $b) use ($saved_order, $amount_distance) {
+                $a_id = !empty($a['id']) ? (string) $a['id'] : md5(wp_json_encode($a));
+                $b_id = !empty($b['id']) ? (string) $b['id'] : md5(wp_json_encode($b));
+                $a_distance = $amount_distance[$a_id] ?? null;
+                $b_distance = $amount_distance[$b_id] ?? null;
+
+                // Amount-based offers share a comparable cart-subtotal unit.
+                // Show the closest threshold first; priority chooses which
+                // offer applies, not which future milestone is advertised.
+                if (null !== $a_distance && null !== $b_distance && abs($a_distance - $b_distance) > 0.00001) {
+                    return $a_distance <=> $b_distance;
+                }
+
                 $priority_order = absint($a['priority'] ?? 1) <=> absint($b['priority'] ?? 1);
                 if (0 !== $priority_order) {
                     return $priority_order;
                 }
 
-                return ($saved_order[$a['id'] ?? ''] ?? PHP_INT_MAX) <=> ($saved_order[$b['id'] ?? ''] ?? PHP_INT_MAX);
+                return ($saved_order[$a_id] ?? PHP_INT_MAX) <=> ($saved_order[$b_id] ?? PHP_INT_MAX);
             });
 
             return [$upcoming[0]];
@@ -1027,6 +1054,49 @@ class SuperWoo_Bundle_Offers {
         }
 
         return null;
+    }
+
+    /** Return the closest eligible future price-range percentage offer. */
+    private function get_contextual_price_discount_notice_rule($cart, $rules) {
+        $upcoming = [];
+
+        foreach ($rules as $index => $rule) {
+            if (empty($rule['enabled']) || $this->is_legacy_rule($rule) || 'price_discount' !== ($rule['offer_type'] ?? '')) {
+                continue;
+            }
+
+            $min = (float) ($rule['min_amount'] ?? 0);
+            $max = (float) ($rule['max_amount'] ?? 0);
+            $discount = (float) ($rule['discount'] ?? 0);
+            $subtotal = $this->get_cart_subtotal_excluding_gifts($cart, $rule);
+
+            if ($min <= 0 || $discount <= 0 || ($max > 0 && $max < $min) || $subtotal <= 0 || $subtotal >= $min) {
+                continue;
+            }
+
+            $upcoming[] = [
+                'rule'      => $rule,
+                'remaining' => $min - $subtotal,
+                'priority'  => absint($rule['priority'] ?? 1),
+                'order'     => (int) $index,
+            ];
+        }
+
+        if (!$upcoming) {
+            return null;
+        }
+
+        usort($upcoming, static function ($a, $b) {
+            if (abs($a['remaining'] - $b['remaining']) > 0.00001) {
+                return $a['remaining'] <=> $b['remaining'];
+            }
+            if ($a['priority'] !== $b['priority']) {
+                return $a['priority'] <=> $b['priority'];
+            }
+            return $a['order'] <=> $b['order'];
+        });
+
+        return $upcoming[0]['rule'];
     }
 
     private function get_contextual_gift_notice_rule($cart, $rules) {
