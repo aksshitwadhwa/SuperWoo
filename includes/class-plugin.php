@@ -27,6 +27,11 @@ class SuperWoo_Plugin {
         add_action('woocommerce_cart_item_removed', [$this, 'log_cart_remove'], 10, 2);
         add_action('woocommerce_after_checkout_validation', [$this, 'log_checkout_validation'], 10, 2);
         add_action('woocommerce_checkout_order_processed', [$this, 'log_checkout_success'], 10, 3);
+        add_action('woocommerce_order_status_changed', [$this, 'log_order_status_change'], 10, 4);
+        // Observation only: these hooks record WooCommerce's result and never
+        // call a gateway, alter an order, or participate in checkout handling.
+        add_action('woocommerce_payment_complete', [$this, 'log_payment_complete'], 10, 1);
+        add_action('woocommerce_order_status_failed', [$this, 'log_payment_failure'], 10, 1);
 
         if (!$this->guard->is_available()) {
             $this->guard->hooks();
@@ -116,7 +121,33 @@ class SuperWoo_Plugin {
 
         $path = superwoo_log_file_path();
         $contents = $path && file_exists($path) ? file_get_contents($path) : '';
-        $lines = $contents ? array_slice(array_filter(explode("\n", $contents)), -300) : [];
+        $raw_lines = $contents ? array_slice(array_filter(explode("\n", $contents)), -500) : [];
+        $entries = [];
+        foreach ($raw_lines as $line) {
+            $entry = ['line' => $line, 'category' => 'diagnostics'];
+            if (preg_match('/^\[[^]]+\] \[([A-Z]+)\] .* (\{.*\})$/', $line, $matches)) {
+                $context = json_decode($matches[2], true);
+                if (is_array($context) && !empty($context['log_category'])) {
+                    $entry['category'] = sanitize_key($context['log_category']);
+                } elseif (in_array(strtolower($matches[1]), ['emergency', 'alert', 'critical', 'error', 'warning'], true)) {
+                    $entry['category'] = 'errors';
+                }
+            }
+            $entries[] = $entry;
+        }
+        $lines_by_category = [
+            'orders' => [],
+            'payments' => [],
+            'errors' => [],
+            'diagnostics' => [],
+        ];
+        foreach ($entries as $entry) {
+            $category = isset($lines_by_category[$entry['category']]) ? $entry['category'] : 'diagnostics';
+            $lines_by_category[$category][] = $entry['line'];
+        }
+        foreach ($lines_by_category as $category => $category_lines) {
+            $lines_by_category[$category] = array_slice($category_lines, -150);
+        }
         $fatal_path = superwoo_fatal_log_file_path();
         $fatal_contents = $fatal_path && file_exists($fatal_path) ? file_get_contents($fatal_path) : '';
         $fatal_lines = $fatal_contents ? array_slice(array_filter(explode("\n", $fatal_contents)), -100) : [];
@@ -124,15 +155,21 @@ class SuperWoo_Plugin {
         ?>
         <div class="wrap superwoo-admin-page">
             <h1><?php esc_html_e('SuperWoo Logs', 'superwoo'); ?></h1>
-            <p><?php esc_html_e('Recent diagnostic events from SuperWoo. Logs omit customer, payment, authentication, and secret values.', 'superwoo'); ?></p>
+            <p><?php esc_html_e('Recent WooCommerce order and payment status events plus SuperWoo diagnostics. Payment entries only record WooCommerce status signals; they never include gateway, transaction, amount, or customer details.', 'superwoo'); ?></p>
             <?php if (!$logging_enabled) : ?><div class="notice notice-warning inline"><p><?php esc_html_e('Diagnostic logging is currently disabled. Enable it from SuperWoo → Settings → Cart to record new events.', 'superwoo'); ?></p></div><?php endif; ?>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                 <input type="hidden" name="action" value="superwoo_clear_logs">
                 <?php wp_nonce_field('superwoo_clear_logs'); ?>
                 <?php submit_button(__('Clear Logs', 'superwoo'), 'delete', 'submit', false); ?>
             </form>
-            <h2><?php esc_html_e('Diagnostic log', 'superwoo'); ?></h2>
-            <pre style="background:#111827;color:#e5e7eb;max-height:500px;overflow:auto;padding:18px;white-space:pre-wrap;"><?php echo esc_html(implode("\n", $lines) ?: __('No diagnostic logs available.', 'superwoo')); ?></pre>
+            <h2><?php esc_html_e('Order & checkout log', 'superwoo'); ?></h2>
+            <pre style="background:#111827;color:#e5e7eb;max-height:360px;overflow:auto;padding:18px;white-space:pre-wrap;"><?php echo esc_html(implode("\n", $lines_by_category['orders']) ?: __('No order or checkout events recorded.', 'superwoo')); ?></pre>
+            <h2><?php esc_html_e('Payment status log', 'superwoo'); ?></h2>
+            <pre style="background:#111827;color:#e5e7eb;max-height:300px;overflow:auto;padding:18px;white-space:pre-wrap;"><?php echo esc_html(implode("\n", $lines_by_category['payments']) ?: __('No payment status events recorded.', 'superwoo')); ?></pre>
+            <h2><?php esc_html_e('Errors', 'superwoo'); ?></h2>
+            <pre style="background:#3b0d0d;color:#fee2e2;max-height:300px;overflow:auto;padding:18px;white-space:pre-wrap;"><?php echo esc_html(implode("\n", $lines_by_category['errors']) ?: __('No SuperWoo errors recorded.', 'superwoo')); ?></pre>
+            <h2><?php esc_html_e('Other diagnostics', 'superwoo'); ?></h2>
+            <pre style="background:#111827;color:#e5e7eb;max-height:360px;overflow:auto;padding:18px;white-space:pre-wrap;"><?php echo esc_html(implode("\n", $lines_by_category['diagnostics']) ?: __('No other diagnostic logs available.', 'superwoo')); ?></pre>
             <h2><?php esc_html_e('Fatal error log', 'superwoo'); ?></h2>
             <pre style="background:#3b0d0d;color:#fee2e2;max-height:300px;overflow:auto;padding:18px;white-space:pre-wrap;"><?php echo esc_html(implode("\n", $fatal_lines) ?: __('No fatal errors recorded.', 'superwoo')); ?></pre>
         </div>
@@ -318,12 +355,35 @@ class SuperWoo_Plugin {
 
     public function log_checkout_validation($data, $errors) {
         if ($errors instanceof WP_Error && $errors->has_errors()) {
-            superwoo_log('Checkout validation failed', ['error_codes' => $errors->get_error_codes(), 'error_count' => count($errors->get_error_codes())], 'warning');
+            superwoo_log('Checkout validation failed', ['error_codes' => $errors->get_error_codes(), 'error_count' => count($errors->get_error_codes())], 'warning', 'orders');
         }
     }
 
     public function log_checkout_success($order_id, $posted_data, $order) {
-        superwoo_log('Checkout order created', ['order_id' => absint($order_id), 'item_count' => $order instanceof WC_Order ? count($order->get_items()) : 0]);
+        superwoo_log('Checkout order created', ['order_id' => absint($order_id), 'item_count' => $order instanceof WC_Order ? count($order->get_items()) : 0], 'info', 'orders');
+    }
+
+    public function log_order_status_change($order_id, $from_status, $to_status, $order = null) {
+        superwoo_log('WooCommerce order status changed', [
+            'order_id' => absint($order_id),
+            'from_status' => sanitize_key((string) $from_status),
+            'to_status' => sanitize_key((string) $to_status),
+        ], 'info', 'orders');
+    }
+
+    public function log_payment_complete($order_id) {
+        $order = function_exists('wc_get_order') ? wc_get_order($order_id) : false;
+        superwoo_log('WooCommerce reported payment complete', [
+            'order_id' => absint($order_id),
+            'order_status' => $order instanceof WC_Order ? sanitize_key($order->get_status()) : '',
+        ], 'info', 'payments');
+    }
+
+    public function log_payment_failure($order_id) {
+        superwoo_log('WooCommerce order entered failed status', [
+            'order_id' => absint($order_id),
+            'order_status' => 'failed',
+        ], 'warning', 'payments');
     }
 
     private function sanitize_color($key, $fallback) {
