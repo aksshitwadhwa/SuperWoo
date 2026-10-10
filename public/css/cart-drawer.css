@@ -136,6 +136,12 @@ body.single-product form.cart .single_add_to_cart_button.superwoo-product-adding
     width: 100%;
 }
 
+/* Razorpay Magic Checkout delegates mini-cart clicks by the button's ID.
+   Keep nested icon/text spans from becoming the click target. */
+#btn-1cc-mini-cart * {
+    pointer-events: none !important;
+}
+
 .superwoo-cart-primary__icon svg {
     display: block;
     fill: currentColor;
