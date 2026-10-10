@@ -1354,10 +1354,9 @@
     // Razorpay Magic Checkout binds its mini-cart handler on WooCommerce's
     // `wc_fragments_refreshed` event. SuperWoo renders the drawer through its
     // own AJAX fragments, so that event can fire before Razorpay's script has
-    // attached its listener. Re-emit the public WooCommerce event during the
-    // checkout button's capture phase: Razorpay can bind the target before
-    // this same click reaches the button, allowing the first click to work.
-    document.addEventListener('click', function (event) {
+    // attached its listener. Refresh Razorpay's binding on pointer/focus/key
+    // input, before the button's click event is dispatched.
+    function refreshRazorpayMiniCartBinding(event) {
         var target = event.target;
         var checkoutButton = target && target.closest ? target.closest('#btn-1cc-mini-cart') : null;
 
@@ -1365,8 +1364,23 @@
             return;
         }
 
+        if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') {
+            return;
+        }
+
         $(document.body).trigger('wc_fragments_refreshed');
-    }, true);
+    }
+
+    document.addEventListener('pointerdown', refreshRazorpayMiniCartBinding, true);
+    document.addEventListener('focusin', refreshRazorpayMiniCartBinding, true);
+    document.addEventListener('keydown', refreshRazorpayMiniCartBinding, true);
+    // Keep a click fallback for assistive and synthetic activation paths;
+    // pointer and keyboard activation have already prepared the handler first.
+    document.addEventListener('click', refreshRazorpayMiniCartBinding, true);
+    if (!window.PointerEvent) {
+        document.addEventListener('mousedown', refreshRazorpayMiniCartBinding, true);
+        document.addEventListener('touchstart', refreshRazorpayMiniCartBinding, true);
+    }
 
     $(document).on('click', '[data-superwoo-close-cart]', function (event) {
         event.preventDefault();
