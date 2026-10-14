@@ -156,17 +156,13 @@ function superwoo_log($message, $context = [], $level = 'info', $category = 'dia
     $context['request_type'] = wp_doing_ajax() ? 'ajax' : (is_admin() ? 'admin' : 'frontend');
     $line = '[' . current_time('mysql') . '] [' . strtoupper($level) . '] ' . (string) $message . ' ' . wp_json_encode($context) . "\n";
 
-    $uploads = wp_upload_dir();
-    if (empty($uploads['error']) && !empty($uploads['basedir'])) {
-        $log_dir = trailingslashit($uploads['basedir']) . 'superwoo-logs';
-        if (wp_mkdir_p($log_dir)) {
-            $log_file = trailingslashit($log_dir) . 'superwoo.log';
-            if (file_exists($log_file) && filesize($log_file) > 2 * MB_IN_BYTES) {
-                $recent = file_get_contents($log_file, false, null, max(0, filesize($log_file) - MB_IN_BYTES));
-                file_put_contents($log_file, $recent ?: ''); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
-            }
-            file_put_contents($log_file, $line, FILE_APPEND | LOCK_EX); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+    $log_file = superwoo_log_file_path();
+    if ($log_file && superwoo_protect_log_directory(dirname($log_file))) {
+        if (file_exists($log_file) && filesize($log_file) > 2 * MB_IN_BYTES) {
+            $recent = file_get_contents($log_file, false, null, max(0, filesize($log_file) - MB_IN_BYTES));
+            file_put_contents($log_file, $recent ?: ''); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
         }
+        file_put_contents($log_file, $line, FILE_APPEND | LOCK_EX); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
     }
 
     if (function_exists('wc_get_logger')) {
@@ -208,7 +204,64 @@ function superwoo_log_file_path() {
 }
 
 function superwoo_fatal_log_file_path() {
-    return defined('WP_CONTENT_DIR') ? trailingslashit(WP_CONTENT_DIR) . 'superwoo-fatal.log' : '';
+    $log_file = superwoo_log_file_path();
+    if (!$log_file) {
+        return '';
+    }
+
+    $fatal_file = trailingslashit(dirname($log_file)) . 'superwoo-fatal.log';
+    $legacy_file = defined('WP_CONTENT_DIR') ? trailingslashit(WP_CONTENT_DIR) . 'superwoo-fatal.log' : '';
+    if ($legacy_file && $legacy_file !== $fatal_file && file_exists($legacy_file) && superwoo_protect_log_directory(dirname($fatal_file)) && !file_exists($fatal_file)) {
+        // Relocate the old web-root diagnostic file into the protected log directory.
+        if (!@rename($legacy_file, $fatal_file) && @copy($legacy_file, $fatal_file)) {
+            @unlink($legacy_file);
+        }
+    }
+
+    return $fatal_file;
+}
+
+/** Best-effort per-client throttling for public, non-commerce tracking endpoints. */
+function superwoo_rate_limit($bucket, $limit, $window = MINUTE_IN_SECONDS) {
+    $remote_addr = isset($_SERVER['REMOTE_ADDR']) && is_string($_SERVER['REMOTE_ADDR'])
+        ? trim($_SERVER['REMOTE_ADDR'])
+        : '';
+    $fingerprint = hash_hmac('sha256', $remote_addr ?: 'unknown', wp_salt('auth'));
+    $transient_key = 'superwoo_rl_' . sanitize_key($bucket) . '_' . substr($fingerprint, 0, 32);
+    $count = (int) get_transient($transient_key);
+
+    if ($count >= max(1, absint($limit))) {
+        return false;
+    }
+
+    set_transient($transient_key, $count + 1, max(1, absint($window)));
+    return true;
+}
+
+/**
+ * Create common web-server access blocks beside diagnostic files.
+ * Nginx sites must also deny this directory in server configuration because
+ * Nginx does not read .htaccess files.
+ */
+function superwoo_protect_log_directory($directory) {
+    if (!$directory || !wp_mkdir_p($directory)) {
+        return false;
+    }
+
+    $protections = [
+        'index.php' => "<?php\n// Silence is golden.\n",
+        '.htaccess' => "<IfModule mod_authz_core.c>\nRequire all denied\n</IfModule>\n<IfModule !mod_authz_core.c>\nOrder allow,deny\nDeny from all\n</IfModule>\n",
+        'web.config' => "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<configuration><system.webServer><authorization><deny users=\"*\" /></authorization></system.webServer></configuration>\n",
+    ];
+
+    foreach ($protections as $filename => $contents) {
+        $path = trailingslashit($directory) . $filename;
+        if (!file_exists($path)) {
+            file_put_contents($path, $contents, LOCK_EX); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+        }
+    }
+
+    return true;
 }
 
 function superwoo_health_report() {

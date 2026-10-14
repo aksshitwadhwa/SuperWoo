@@ -407,7 +407,7 @@ class SuperWoo_Currency {
 
     private function get_api_rates($settings, $enabled) {
         $api_url = isset($settings['exchange_rate_api_url']) ? trim((string) $settings['exchange_rate_api_url']) : '';
-        if ('' === $api_url || !function_exists('wp_remote_get')) {
+        if ('' === $api_url || !function_exists('wp_safe_remote_get')) {
             return [];
         }
 
@@ -421,7 +421,14 @@ class SuperWoo_Currency {
         }
 
         $url = $this->build_exchange_rate_url($api_url, $key, $enabled);
-        $response = wp_remote_get($url, ['timeout' => 8]);
+        $url_parts = wp_parse_url($url);
+        // The API key may be sent in the query string. Require HTTPS and
+        // WordPress's safe HTTP API so private/local destinations are rejected.
+        if (!is_array($url_parts) || empty($url_parts['host']) || 'https' !== strtolower($url_parts['scheme'] ?? '') || !empty($url_parts['user']) || !empty($url_parts['pass'])) {
+            return [];
+        }
+
+        $response = wp_safe_remote_get($url, ['timeout' => 8, 'redirection' => 3]);
         if (is_wp_error($response)) {
             return [];
         }

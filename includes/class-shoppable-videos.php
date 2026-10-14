@@ -192,11 +192,14 @@ class SuperWoo_Shoppable_Videos {
     }
     public function track_event() {
         if (!check_ajax_referer('superwoo_video_frontend', 'nonce', false)) { wp_send_json_error([], 403); }
-        $video = absint($_POST['video_id'] ?? 0); $type = sanitize_key($_POST['event_type'] ?? '');
+        if (!superwoo_rate_limit('video_event', 120, MINUTE_IN_SECONDS)) { wp_send_json_error(['message' => __('Too many requests.', 'superwoo')], 429); }
+        $video = isset($_POST['video_id']) && is_scalar($_POST['video_id']) ? absint(wp_unslash($_POST['video_id'])) : 0;
+        $product_id = isset($_POST['product_id']) && is_scalar($_POST['product_id']) ? absint(wp_unslash($_POST['product_id'])) : 0;
+        $type = isset($_POST['event_type']) && is_scalar($_POST['event_type']) ? sanitize_key(wp_unslash($_POST['event_type'])) : '';
         $allowed = ['impression','start','watch_25','watch_50','watch_75','complete','product_view','product_click','cart_add','viewer_open','viewer_close'];
         if (!$video || self::POST_TYPE !== get_post_type($video) || !in_array($type, $allowed, true)) { wp_send_json_error([], 400); }
         global $wpdb; $session = function_exists('WC') && WC()->session ? WC()->session->get_customer_id() : wp_get_session_token();
-        $wpdb->insert($wpdb->prefix . self::EVENT_TABLE, ['video_id' => $video, 'product_id' => absint($_POST['product_id'] ?? 0), 'event_type' => $type, 'session_hash' => hash_hmac('sha256', (string) $session, wp_salt('nonce')), 'created_at' => current_time('mysql', true)], ['%d','%d','%s','%s','%s']);
+        $wpdb->insert($wpdb->prefix . self::EVENT_TABLE, ['video_id' => $video, 'product_id' => $product_id, 'event_type' => $type, 'session_hash' => hash_hmac('sha256', (string) $session, wp_salt('nonce')), 'created_at' => current_time('mysql', true)], ['%d','%d','%s','%s','%s']);
         wp_send_json_success();
     }
     public function cart_attribution($data, $product_id, $variation_id) { $video_id = absint($_REQUEST['superwoo_video_id'] ?? 0); if ($video_id && self::POST_TYPE === get_post_type($video_id)) { $data['superwoo_video_id'] = $video_id; } return $data; }

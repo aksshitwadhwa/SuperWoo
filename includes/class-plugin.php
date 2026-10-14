@@ -15,7 +15,13 @@ class SuperWoo_Plugin {
 
     private function __construct() {
         $this->guard = new SuperWoo_WooCommerce_Guard();
+        // Move any legacy fatal log out of the public wp-content root.
+        superwoo_fatal_log_file_path();
         superwoo_log('Plugin loaded');
+
+        // Receive-only endpoint for Razorpay's abandoned-cart notification.
+        // It records a redacted receipt summary and has no order/payment hooks.
+        (new SuperWoo_Razorpay_Abandoned_Webhook())->hooks();
 
         add_action('admin_menu', [$this, 'register_settings_page']);
         add_action('admin_post_superwoo_clear_logs', [$this, 'clear_logs']);
@@ -155,11 +161,31 @@ class SuperWoo_Plugin {
         $fatal_path = superwoo_fatal_log_file_path();
         $fatal_contents = $fatal_path && file_exists($fatal_path) ? file_get_contents($fatal_path) : '';
         $fatal_lines = $fatal_contents ? array_slice(array_filter(explode("\n", $fatal_contents)), -100) : [];
+        $razorpay_receipts = SuperWoo_Razorpay_Abandoned_Webhook::recent_receipts(100);
+        $razorpay_callback_url = SuperWoo_Razorpay_Abandoned_Webhook::callback_url();
+        $razorpay_https_ready = SuperWoo_Razorpay_Abandoned_Webhook::uses_https();
         $logging_enabled = !empty(superwoo_get_settings()['enable_logging']);
         ?>
         <div class="wrap superwoo-admin-page">
             <h1><?php esc_html_e('SuperWoo Logs', 'superwoo'); ?></h1>
             <p><?php esc_html_e('Recent WooCommerce order and payment status events plus SuperWoo diagnostics. Payment entries only record WooCommerce status signals; they never include gateway, transaction, amount, or customer details.', 'superwoo'); ?></p>
+            <p class="description"><?php esc_html_e('Log files are protected with Apache and IIS rules. If this site uses Nginx, ask your host to deny web access to the uploads/superwoo-logs/ directory; Nginx does not apply .htaccess rules.', 'superwoo'); ?></p>
+            <h2><?php esc_html_e('Razorpay Magic Checkout abandoned-cart webhook', 'superwoo'); ?></h2>
+            <p><?php esc_html_e('Paste this callback URL into Razorpay Magic Checkout → Setup & Settings → Platform Settings → Checkout Setup. The URL contains a private bearer token. Keep it private and rotate it if exposed.', 'superwoo'); ?></p>
+            <?php if (!$razorpay_https_ready) : ?><div class="notice notice-error inline"><p><?php esc_html_e('This site does not resolve to HTTPS. Configure HTTPS before adding the callback URL in Razorpay.', 'superwoo'); ?></p></div><?php endif; ?>
+            <p><input type="url" class="large-text code" readonly value="<?php echo esc_attr($razorpay_callback_url); ?>" aria-label="<?php esc_attr_e('Razorpay abandoned-cart webhook callback URL', 'superwoo'); ?>"></p>
+            <p class="description"><?php esc_html_e('This listener accepts JSON POST requests, returns HTTP 202, and stores only a redacted receipt summary and payload fingerprint. It does not save raw payloads or customer contact/address/cart-token values, create orders, change payment state, or send data to Meta. Razorpay’s documentation does not specify a signature for this webhook, so the URL token is its authentication secret.', 'superwoo'); ?></p>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                <input type="hidden" name="action" value="superwoo_rotate_razorpay_webhook_token">
+                <?php wp_nonce_field('superwoo_rotate_razorpay_webhook_token'); ?>
+                <?php submit_button(__('Rotate webhook URL token', 'superwoo'), 'secondary', 'submit', false); ?>
+            </form>
+            <h3><?php esc_html_e('Abandoned-cart webhook receipts', 'superwoo'); ?></h3>
+            <?php if ($razorpay_receipts) : ?>
+                <pre style="background:#111827;color:#e5e7eb;max-height:300px;overflow:auto;padding:18px;white-space:pre-wrap;"><?php echo esc_html(implode("\n", array_map('wp_json_encode', $razorpay_receipts))); ?></pre>
+            <?php else : ?>
+                <p><?php esc_html_e('No Razorpay abandoned-cart webhook payloads received yet.', 'superwoo'); ?></p>
+            <?php endif; ?>
             <?php if (!$logging_enabled) : ?><div class="notice notice-warning inline"><p><?php esc_html_e('Diagnostic logging is currently disabled. Enable it from SuperWoo → Settings → Cart to record new events.', 'superwoo'); ?></p></div><?php endif; ?>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                 <input type="hidden" name="action" value="superwoo_clear_logs">
@@ -191,6 +217,10 @@ class SuperWoo_Plugin {
         $fatal_path = superwoo_fatal_log_file_path();
         if ($fatal_path && file_exists($fatal_path)) {
             file_put_contents($fatal_path, ''); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
+        }
+        $razorpay_path = SuperWoo_Razorpay_Abandoned_Webhook::log_file_path();
+        if ($razorpay_path && file_exists($razorpay_path)) {
+            file_put_contents($razorpay_path, ''); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_operations_file_put_contents
         }
         wp_safe_redirect(admin_url('admin.php?page=superwoo-logs&cleared=1'));
         exit;

@@ -41,9 +41,13 @@ class SuperWoo_Cart_Recovery {
     public function checkout_started() { $this->tracker->capture('checkout_started'); }
     public function ajax_capture() {
         if (!check_ajax_referer('superwoo_recovery_capture', 'nonce', false)) { wp_send_json_error(['message' => __('Invalid request.', 'superwoo')], 403); }
-        $limit = 'superwoo_recovery_capture_' . md5((string) ($_SERVER['REMOTE_ADDR'] ?? '')); if ((int) get_transient($limit) > 30) { wp_send_json_error(['message' => __('Too many requests.', 'superwoo')], 429); }
-        set_transient($limit, (int) get_transient($limit) + 1, MINUTE_IN_SECONDS);
-        $identity = ['first_name' => sanitize_text_field(wp_unslash($_POST['first_name'] ?? '')), 'last_name' => sanitize_text_field(wp_unslash($_POST['last_name'] ?? '')), 'email' => sanitize_email(wp_unslash($_POST['email'] ?? '')), 'phone' => sanitize_text_field(wp_unslash($_POST['phone'] ?? ''))];
+        if (!superwoo_rate_limit('recovery_capture', 30, MINUTE_IN_SECONDS)) { wp_send_json_error(['message' => __('Too many requests.', 'superwoo')], 429); }
+        $identity = [
+            'first_name' => isset($_POST['first_name']) && is_scalar($_POST['first_name']) ? sanitize_text_field(wp_unslash($_POST['first_name'])) : '',
+            'last_name' => isset($_POST['last_name']) && is_scalar($_POST['last_name']) ? sanitize_text_field(wp_unslash($_POST['last_name'])) : '',
+            'email' => isset($_POST['email']) && is_scalar($_POST['email']) ? sanitize_email(wp_unslash($_POST['email'])) : '',
+            'phone' => isset($_POST['phone']) && is_scalar($_POST['phone']) ? sanitize_text_field(wp_unslash($_POST['phone'])) : '',
+        ];
         $cart = $this->tracker->capture('checkout_identity_captured', $identity);
         wp_send_json_success(['tracked' => (bool) $cart]);
     }
