@@ -14,7 +14,9 @@ class SuperWoo_Razorpay_Abandoned_Webhook {
 
     public function register_route() {
         register_rest_route('superwoo/v1', '/razorpay-abandoned-cart/(?P<token>[A-Za-z0-9]{48,128})', [
-            'methods' => 'POST',
+            // Razorpay's dashboard may probe a callback URL before saving it.
+            // Read-only probes must succeed without creating a receipt.
+            'methods' => ['GET', 'HEAD', 'POST'],
             'callback' => [$this, 'receive'],
             'permission_callback' => [$this, 'authorize'],
             'args' => [
@@ -39,12 +41,20 @@ class SuperWoo_Razorpay_Abandoned_Webhook {
     }
 
     public function receive($request) {
+        $method = is_object($request) && method_exists($request, 'get_method')
+            ? strtoupper((string) $request->get_method())
+            : 'POST';
+        $body = (string) $request->get_body();
+
         if (!superwoo_rate_limit('razorpay_abandoned_cart', 60, MINUTE_IN_SECONDS)) {
             return new WP_Error('superwoo_webhook_rate_limited', __('Please retry later.', 'superwoo'), ['status' => 429]);
         }
 
-        $body = (string) $request->get_body();
-        if ('' === $body || strlen($body) > self::MAX_BODY_BYTES) {
+        if ('GET' === $method || 'HEAD' === $method || '' === $body) {
+            return new WP_REST_Response(['ready' => true], 200);
+        }
+
+        if (strlen($body) > self::MAX_BODY_BYTES) {
             return new WP_Error('superwoo_webhook_invalid_size', __('Invalid webhook payload size.', 'superwoo'), ['status' => 413]);
         }
 

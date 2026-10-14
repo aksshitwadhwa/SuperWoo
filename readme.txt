@@ -4,7 +4,7 @@ Tags: woocommerce, cart drawer, product benefits, faq, bundle discounts
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.5.1
+Stable tag: 1.5.2
 License: GPLv2 or later
 
 SuperWoo adds WooCommerce product benefit icons, how-to content, product FAQs, shoppable videos, bundle offer rules, cart notices, and an AJAX cart drawer.
@@ -57,6 +57,9 @@ Elementor:
 5. Configure offer rules under WooCommerce > Offers.
 
 == Changelog ==
+
+= 1.5.2 =
+Allow Razorpay callback URL validation probes without writing receipts, and add a copy control for the complete private webhook URL.
 
 = 1.5.1 =
 Add a token-protected, receive-only Razorpay Magic Checkout abandoned-cart webhook with redacted receipt logs. Harden public endpoints and diagnostic log storage.

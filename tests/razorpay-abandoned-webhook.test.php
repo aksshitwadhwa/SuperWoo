@@ -43,9 +43,11 @@ class WP_REST_Response {
 class Webhook_Test_Request {
     private $params;
     private $body;
-    public function __construct($params, $body) { $this->params = $params; $this->body = $body; }
+    private $method;
+    public function __construct($params, $body, $method = 'POST') { $this->params = $params; $this->body = $body; $this->method = $method; }
     public function get_param($key) { return $this->params[$key] ?? null; }
     public function get_body() { return $this->body; }
+    public function get_method() { return $this->method; }
 }
 
 require dirname(__DIR__) . '/includes/class-razorpay-abandoned-webhook.php';
@@ -60,10 +62,17 @@ function expect_webhook($condition, $message) {
 $webhook = new SuperWoo_Razorpay_Abandoned_Webhook();
 $webhook->register_route();
 expect_webhook(1 === count($registered_routes), 'REST receiver route should be registered');
-expect_webhook('POST' === $registered_routes[0][2]['methods'], 'route should accept POST only');
+expect_webhook(['GET', 'HEAD', 'POST'] === $registered_routes[0][2]['methods'], 'route should accept read-only probes and webhook POSTs');
 expect_webhook(false !== strpos(SuperWoo_Razorpay_Abandoned_Webhook::callback_url(), str_repeat('R', 64)), 'callback URL should carry the secret token');
 expect_webhook(true === $webhook->authorize(new Webhook_Test_Request(['token' => str_repeat('R', 64)], '')), 'correct token on HTTPS should authorize');
 expect_webhook($webhook->authorize(new Webhook_Test_Request(['token' => 'incorrect'], '')) instanceof WP_Error, 'incorrect token should be rejected');
+$readiness = $webhook->receive(new Webhook_Test_Request(['token' => str_repeat('R', 64)], '', 'GET'));
+expect_webhook($readiness instanceof WP_REST_Response && 200 === $readiness->status && ['ready' => true] === $readiness->data, 'GET URL validation should receive a simple readiness response');
+$head_readiness = $webhook->receive(new Webhook_Test_Request(['token' => str_repeat('R', 64)], '', 'HEAD'));
+expect_webhook($head_readiness instanceof WP_REST_Response && 200 === $head_readiness->status, 'HEAD URL validation should receive a successful response');
+$empty_post_probe = $webhook->receive(new Webhook_Test_Request(['token' => str_repeat('R', 64)], ''));
+expect_webhook($empty_post_probe instanceof WP_REST_Response && 200 === $empty_post_probe->status, 'empty POST validation probe should not be rejected');
+expect_webhook(!file_exists(SuperWoo_Razorpay_Abandoned_Webhook::log_file_path()), 'readiness probes should not create payload receipts');
 
 $payload = [
     'platform' => 'woocommerce',
@@ -114,4 +123,4 @@ $remove_tree = static function ($path) use (&$remove_tree) {
     }
 };
 $remove_tree(WP_CONTENT_DIR);
-echo "PASS: 22 Razorpay abandoned-webhook assertions\n";
+echo "PASS: 26 Razorpay abandoned-webhook assertions\n";

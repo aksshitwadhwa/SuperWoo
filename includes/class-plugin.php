@@ -173,8 +173,34 @@ class SuperWoo_Plugin {
             <h2><?php esc_html_e('Razorpay Magic Checkout abandoned-cart webhook', 'superwoo'); ?></h2>
             <p><?php esc_html_e('Paste this callback URL into Razorpay Magic Checkout → Setup & Settings → Platform Settings → Checkout Setup. The URL contains a private bearer token. Keep it private and rotate it if exposed.', 'superwoo'); ?></p>
             <?php if (!$razorpay_https_ready) : ?><div class="notice notice-error inline"><p><?php esc_html_e('This site does not resolve to HTTPS. Configure HTTPS before adding the callback URL in Razorpay.', 'superwoo'); ?></p></div><?php endif; ?>
-            <p><input type="url" class="large-text code" readonly value="<?php echo esc_attr($razorpay_callback_url); ?>" aria-label="<?php esc_attr_e('Razorpay abandoned-cart webhook callback URL', 'superwoo'); ?>"></p>
-            <p class="description"><?php esc_html_e('This listener accepts JSON POST requests, returns HTTP 202, and stores only a redacted receipt summary and payload fingerprint. It does not save raw payloads or customer contact/address/cart-token values, create orders, change payment state, or send data to Meta. Razorpay’s documentation does not specify a signature for this webhook, so the URL token is its authentication secret.', 'superwoo'); ?></p>
+            <p>
+                <input id="superwoo-razorpay-callback-url" type="url" class="large-text code" readonly value="<?php echo esc_attr($razorpay_callback_url); ?>" aria-label="<?php esc_attr_e('Razorpay abandoned-cart webhook callback URL', 'superwoo'); ?>">
+                <button type="button" class="button" id="superwoo-copy-razorpay-callback"><?php esc_html_e('Copy webhook URL', 'superwoo'); ?></button>
+                <span id="superwoo-copy-razorpay-status" class="screen-reader-text" aria-live="polite"></span>
+            </p>
+            <script>
+                (function () {
+                    var button = document.getElementById('superwoo-copy-razorpay-callback');
+                    var input = document.getElementById('superwoo-razorpay-callback-url');
+                    var status = document.getElementById('superwoo-copy-razorpay-status');
+                    if (!button || !input) return;
+                    button.addEventListener('click', function () {
+                        var copied = function () {
+                            if (status) status.textContent = <?php echo wp_json_encode(__('Webhook URL copied. Keep it private.', 'superwoo')); ?>;
+                        };
+                        if (navigator.clipboard && window.isSecureContext) {
+                            navigator.clipboard.writeText(input.value).then(copied, function () {
+                                input.focus(); input.select();
+                                if (document.execCommand('copy')) copied();
+                            });
+                        } else {
+                            input.focus(); input.select();
+                            if (document.execCommand('copy')) copied();
+                        }
+                    });
+                }());
+            </script>
+            <p class="description"><?php esc_html_e('Paste the complete copied URL into Razorpay. GET/HEAD checks return a simple readiness response without logging. JSON POST payloads return HTTP 202 and store only a redacted receipt summary and payload fingerprint. The listener does not save raw payloads or customer contact/address/cart-token values, create orders, change payment state, or send data to Meta. Razorpay’s documentation does not specify a signature for this webhook, so the URL token is its authentication secret.', 'superwoo'); ?></p>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                 <input type="hidden" name="action" value="superwoo_rotate_razorpay_webhook_token">
                 <?php wp_nonce_field('superwoo_rotate_razorpay_webhook_token'); ?>
