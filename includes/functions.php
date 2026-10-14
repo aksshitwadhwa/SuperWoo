@@ -98,6 +98,11 @@ function superwoo_get_settings() {
         'cart_drawer_coupon'    => 'checkout_link',
         'enable_add_to_cart_diagnostics' => false,
         'enable_logging'        => false,
+        // Meta tracking is disabled by default and is browser-only when opted in.
+        'enable_meta_tracking' => false,
+        'meta_tracking_kill_switch' => false,
+        'meta_tracking_diagnostics' => false,
+        'meta_primary_pixel_id' => '',
         'show_discount_percentage' => false,
         'header_cart_icon'      => 'outline-bag',
         'color_primary'         => '#005b7f',

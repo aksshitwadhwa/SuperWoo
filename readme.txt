@@ -4,7 +4,7 @@ Tags: woocommerce, cart drawer, product benefits, faq, bundle discounts
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.4.2
+Stable tag: 1.5.0
 License: GPLv2 or later
 
 SuperWoo adds WooCommerce product benefit icons, how-to content, product FAQs, shoppable videos, bundle offer rules, cart notices, and an AJAX cart drawer.
@@ -12,6 +12,8 @@ SuperWoo adds WooCommerce product benefit icons, how-to content, product FAQs, s
 SuperWoo does not implement payment gateways or change payment/order status. Its cart and currency features can update WooCommerce cart totals according to the configured offers and currency settings; WooCommerce and the active gateway handle checkout and payment.
 
 When Shoppable Videos is enabled, SuperWoo stores pseudonymous, on-site video engagement events (views, product clicks, add-to-cart actions, and completions) for 90 days. It does not send those events to an external service. If Multi-Currency location detection or an exchange-rate provider is enabled, the site administrator is responsible for reviewing that provider's privacy policy and informing visitors as required.
+
+Optional Meta Tracking observes genuine payment-method selection changes on standard WooCommerce Classic checkout. It is disabled by default, requires an existing Meta Pixel, an explicitly configured Pixel ID, and granted marketing consent, and does not initialize a Pixel or participate in payment processing. WooCommerce Checkout Blocks and Razorpay Magic Checkout are not supported by this feature.
 
 == Description ==
 
@@ -53,6 +55,9 @@ Elementor:
 5. Configure offer rules under WooCommerce > Offers.
 
 == Changelog ==
+
+= 1.5.0 =
+Add an opt-in, browser-only Meta AddPaymentInfo observer for standard Classic checkout. Tracking is off by default, requires explicit consent and an existing configured Pixel, and does not change WooCommerce payment processing. Blocks and Razorpay Magic Checkout are unsupported.
 
 = 1.4.2 =
 Fix intermittent Razorpay Magic Checkout activation when clicks land on nested mini-cart button content.

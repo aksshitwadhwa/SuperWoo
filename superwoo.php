@@ -2,7 +2,7 @@
 /**
  * Plugin Name: SuperWoo
  * Description: WooCommerce product benefits, how-to content, FAQs, modern reviews, shoppable videos, offers, and AJAX cart drawer.
- * Version: 1.4.2
+ * Version: 1.5.0
  * Author: Aksshit Wadhwa
  * Author URI: https://digtize.com/
  * License: GPLv2 or later
@@ -54,7 +54,7 @@ register_shutdown_function(static function () {
     }
 });
 
-define('SUPERWOO_VERSION', '1.4.2');
+define('SUPERWOO_VERSION', '1.5.0');
 define('SUPERWOO_FILE', __FILE__);
 define('SUPERWOO_PATH', plugin_dir_path(__FILE__));
 define('SUPERWOO_URL', plugin_dir_url(__FILE__));
@@ -72,6 +72,7 @@ require_once SUPERWOO_PATH . 'includes/class-shoppable-videos.php';
 require_once SUPERWOO_PATH . 'includes/class-shortcodes.php';
 require_once SUPERWOO_PATH . 'includes/class-bundle-offers.php';
 require_once SUPERWOO_PATH . 'includes/class-cart-drawer.php';
+require_once SUPERWOO_PATH . 'includes/class-meta-tracking.php';
 require_once SUPERWOO_PATH . 'includes/class-elementor-dynamic-tags.php';
 // The carousel module is optional; never let a missing optional file prevent
 // the core plugin (admin menu, cart drawer, and product hooks) from loading.

@@ -38,6 +38,10 @@ class SuperWoo_Plugin {
             return;
         }
 
+        // This module only observes checkout UI when explicitly enabled. It
+        // does not register WooCommerce payment or order-processing hooks.
+        (new SuperWoo_Meta_Tracking())->hooks();
+
         // Ordinary wp-admin screens only need SuperWoo's administration
         // modules. Loading cart, pricing, shortcode and display integrations
         // here creates unnecessary conflicts on Plugins and Updates pages.
@@ -197,6 +201,75 @@ class SuperWoo_Plugin {
         include SUPERWOO_PATH . 'admin/views/settings-page.php';
     }
 
+    /**
+     * Persist only sanitized settings represented by this request, preserving
+     * other modules' values in the shared option. The current admin screen is
+     * one complete multi-tab form, so its explicit marker also makes omitted
+     * checkboxes mean "unchecked". Partial/future module forms preserve
+     * checkboxes they did not submit.
+     */
+    private function persist_settings_submission($sanitized_settings, $posted_settings) {
+        $existing_settings = get_option('superwoo_settings', []);
+        $existing_settings = is_array($existing_settings) ? $existing_settings : [];
+        $posted_settings = is_array($posted_settings) ? $posted_settings : [];
+        $is_full_form = isset($posted_settings['superwoo_settings_full_form'])
+            && '1' === (string) $posted_settings['superwoo_settings_full_form'];
+
+        // These are the checkbox controls in the current all-tabs settings form.
+        // An absent checkbox in that form is intentionally saved as false.
+        $checkbox_settings = [
+            'enable_benefits', 'enable_how_to_use', 'enable_faqs', 'enable_reviews',
+            'enable_variation_cards', 'enable_shop_filters', 'enable_shoppable_videos',
+            'shoppable_videos_fullscreen', 'shoppable_videos_autoplay', 'shoppable_videos_muted',
+            'shoppable_videos_quick_buy', 'shoppable_videos_product_page',
+            'shop_filter_show_search', 'shop_filter_show_categories', 'shop_filter_show_price',
+            'shop_filter_show_attributes', 'shop_filter_show_stock', 'shop_filter_show_sale',
+            'shop_filter_show_rating', 'shop_filter_show_sort', 'enable_bundle_offers',
+            'enable_cart_drawer', 'enable_elementor_products_carousel', 'cart_auto_open',
+            'cart_drawer_crosssell', 'enable_add_to_cart_diagnostics', 'enable_logging',
+            'enable_meta_tracking', 'meta_tracking_kill_switch', 'meta_tracking_diagnostics',
+            'show_discount_percentage', 'enable_multi_currency', 'currency_auto_detect',
+        ];
+        $request_key_map = [
+            'exchange_rate_cache_minutes' => 'exchange_rate_cache_hours',
+        ];
+
+        foreach ($sanitized_settings as $key => $value) {
+            $request_key = $request_key_map[$key] ?? $key;
+
+            if ('mobile_bottom_nav_hidden_pages' === $key) {
+                // In the full form, no selected pages means an intentional clear.
+                if (!$is_full_form && !array_key_exists($request_key, $posted_settings)) {
+                    unset($sanitized_settings[$key]);
+                }
+                continue;
+            }
+
+            if (in_array($key, $checkbox_settings, true)) {
+                if (!$is_full_form && !array_key_exists($request_key, $posted_settings)) {
+                    unset($sanitized_settings[$key]);
+                    continue;
+                }
+
+                $sanitized_settings[$key] = isset($posted_settings[$request_key])
+                    && !is_array($posted_settings[$request_key])
+                    && '1' === (string) wp_unslash($posted_settings[$request_key]);
+                continue;
+            }
+
+            if (!array_key_exists($request_key, $posted_settings)) {
+                unset($sanitized_settings[$key]);
+            }
+        }
+
+        // Request values enter only through the explicit sanitization map above;
+        // unknown POST keys are never copied into the option.
+        $settings = array_merge($existing_settings, $sanitized_settings);
+        update_option('superwoo_settings', $settings);
+
+        return $settings;
+    }
+
     public function save_settings() {
         if (empty($_POST['superwoo_settings_nonce']) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['superwoo_settings_nonce'])), 'superwoo_save_settings')) {
             return;
@@ -237,6 +310,10 @@ class SuperWoo_Plugin {
             'cart_drawer_coupon'    => isset($_POST['cart_drawer_coupon']) && 'disabled' === $_POST['cart_drawer_coupon'] ? 'disabled' : 'checkout_link',
             'enable_add_to_cart_diagnostics' => !empty($_POST['enable_add_to_cart_diagnostics']),
             'enable_logging'        => !empty($_POST['enable_logging']),
+            'enable_meta_tracking' => !empty($_POST['enable_meta_tracking']),
+            'meta_tracking_kill_switch' => !empty($_POST['meta_tracking_kill_switch']),
+            'meta_tracking_diagnostics' => !empty($_POST['meta_tracking_diagnostics']),
+            'meta_primary_pixel_id' => $this->sanitize_meta_pixel_id(isset($_POST['meta_primary_pixel_id']) ? wp_unslash($_POST['meta_primary_pixel_id']) : ''),
             'show_discount_percentage' => !empty($_POST['show_discount_percentage']),
             'header_cart_icon'      => in_array($_POST['header_cart_icon'] ?? '', ['outline-bag', 'filled-bag', 'basket'], true) ? sanitize_key(wp_unslash($_POST['header_cart_icon'])) : 'outline-bag',
             'color_primary'         => $this->sanitize_color('color_primary', '#005b7f'),
@@ -262,10 +339,10 @@ class SuperWoo_Plugin {
             $settings[$key] = $this->sanitize_color($key, $field['default']);
         }
 
-        update_option('superwoo_settings', $settings);
+        $this->persist_settings_submission($settings, $_POST);
 
         $active_tab = isset($_POST['superwoo_active_tab']) ? sanitize_key(wp_unslash($_POST['superwoo_active_tab'])) : 'general';
-        $active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'], true) ? $active_tab : 'general';
+        $active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency', 'meta_tracking'], true) ? $active_tab : 'general';
 
         wp_safe_redirect(add_query_arg(['page' => 'superwoo-settings', 'updated' => 'true', 'tab' => $active_tab], admin_url('admin.php')));
         exit;
@@ -389,6 +466,12 @@ class SuperWoo_Plugin {
     private function sanitize_color($key, $fallback) {
         $value = isset($_POST[$key]) ? sanitize_text_field(wp_unslash($_POST[$key])) : '';
         return sanitize_hex_color($value) ?: $fallback;
+    }
+
+    /** Accept only a numeric Meta Pixel ID; malformed input disables dispatch. */
+    private function sanitize_meta_pixel_id($value) {
+        $value = is_scalar($value) ? trim((string) $value) : '';
+        return preg_match('/^[0-9]{1,32}$/D', $value) ? $value : '';
     }
 
 

@@ -40,7 +40,7 @@ foreach ($manual_rates as $code => $rate) {
 $exchange_rate_cache_hours = max(1, (int) ceil(absint($settings['exchange_rate_cache_minutes']) / 60));
 $suggested_currency_text = implode(', ', array_values($currency_labels));
 $active_tab = isset($_GET['tab']) ? sanitize_key(wp_unslash($_GET['tab'])) : 'general';
-$active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'], true) ? $active_tab : 'general';
+$active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency', 'meta_tracking'], true) ? $active_tab : 'general';
 ?>
 <div class="wrap superwoo-admin-page">
     <h1><?php esc_html_e('SuperWoo', 'superwoo'); ?></h1>
@@ -51,6 +51,7 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'
 
     <form method="post" action="<?php echo esc_url(admin_url('admin.php?page=superwoo-settings')); ?>">
         <?php wp_nonce_field('superwoo_save_settings', 'superwoo_settings_nonce'); ?>
+        <input type="hidden" name="superwoo_settings_full_form" value="1">
         <input type="hidden" name="superwoo_active_tab" value="<?php echo esc_attr($active_tab); ?>" data-superwoo-active-tab>
 
         <nav class="nav-tab-wrapper superwoo-settings-tabs" aria-label="<?php esc_attr_e('SuperWoo settings tabs', 'superwoo'); ?>">
@@ -58,6 +59,7 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'
             <a href="#superwoo-cart-settings" class="nav-tab <?php echo 'cart' === $active_tab ? 'nav-tab-active' : ''; ?>" data-superwoo-settings-tab="cart"><?php esc_html_e('Cart', 'superwoo'); ?></a>
             <a href="#superwoo-appearance-settings" class="nav-tab <?php echo 'appearance' === $active_tab ? 'nav-tab-active' : ''; ?>" data-superwoo-settings-tab="appearance"><?php esc_html_e('Colors & Style', 'superwoo'); ?></a>
             <a href="#superwoo-currency-settings" class="nav-tab <?php echo 'currency' === $active_tab ? 'nav-tab-active' : ''; ?>" data-superwoo-settings-tab="currency"><?php esc_html_e('Multi-Currency', 'superwoo'); ?></a>
+            <a href="#superwoo-meta-tracking-settings" class="nav-tab <?php echo 'meta_tracking' === $active_tab ? 'nav-tab-active' : ''; ?>" data-superwoo-settings-tab="meta_tracking"><?php esc_html_e('Meta Tracking', 'superwoo'); ?></a>
         </nav>
 
         <div id="superwoo-general-settings" class="superwoo-settings-panel <?php echo 'general' === $active_tab ? 'is-active' : ''; ?>" data-superwoo-settings-panel="general">
@@ -322,6 +324,37 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'
                     </tr>
                 </table>
             </div>
+        </div>
+
+        <div id="superwoo-meta-tracking-settings" class="superwoo-settings-panel <?php echo 'meta_tracking' === $active_tab ? 'is-active' : ''; ?>" data-superwoo-settings-panel="meta_tracking">
+            <table class="form-table" role="presentation">
+                <tr>
+                    <th scope="row"><?php esc_html_e('Meta Tracking', 'superwoo'); ?></th>
+                    <td>
+                        <fieldset>
+                            <label><input type="checkbox" name="enable_meta_tracking" value="1" <?php checked(!empty($settings['enable_meta_tracking'])); ?>> <?php esc_html_e('Enable Meta Tracking', 'superwoo'); ?></label>
+                            <p class="description"><?php esc_html_e('Status:', 'superwoo'); ?> <strong><?php echo !empty($settings['enable_meta_tracking']) && empty($settings['meta_tracking_kill_switch']) ? esc_html__('Enabled', 'superwoo') : esc_html__('Disabled', 'superwoo'); ?></strong></p>
+                            <label><input type="checkbox" name="meta_tracking_kill_switch" value="1" <?php checked(!empty($settings['meta_tracking_kill_switch'])); ?>> <?php esc_html_e('Emergency kill switch (disable this Meta tracking foundation)', 'superwoo'); ?></label>
+                            <p><label for="meta_primary_pixel_id"><strong><?php esc_html_e('Primary Pixel ID', 'superwoo'); ?></strong></label><br>
+                                <input type="text" class="regular-text" id="meta_primary_pixel_id" name="meta_primary_pixel_id" value="<?php echo esc_attr($settings['meta_primary_pixel_id'] ?? ''); ?>" inputmode="numeric" maxlength="32" pattern="[0-9]{1,32}" autocomplete="off">
+                                <span class="description"><?php esc_html_e('Leave empty to disable dispatch. SuperWoo uses only an existing Pixel and targets this ID.', 'superwoo'); ?></span>
+                            </p>
+                            <p class="description"><?php esc_html_e('Only a genuine payment-method selection on standard Classic checkout may be observed. SuperWoo does not control payment processing.', 'superwoo'); ?></p>
+                        </fieldset>
+                    </td>
+                </tr>
+                <tr>
+                            <th scope="row"><?php esc_html_e('Tracking status', 'superwoo'); ?></th>
+                    <td>
+                        <p><strong><?php esc_html_e('AddPaymentInfo:', 'superwoo'); ?></strong> <?php esc_html_e('Classic checkout only; requires granted marketing consent and configured Pixel ID', 'superwoo'); ?></p>
+                        <p><strong><?php esc_html_e('Browser Tracking:', 'superwoo'); ?></strong> <?php esc_html_e('Foundation installed', 'superwoo'); ?></p>
+                        <p><strong><?php esc_html_e('CAPI:', 'superwoo'); ?></strong> <?php esc_html_e('Not implemented', 'superwoo'); ?></p>
+                        <p><strong><?php esc_html_e('Razorpay Magic Checkout:', 'superwoo'); ?></strong> <?php esc_html_e('Unsupported; awaiting a supported selection interface', 'superwoo'); ?></p>
+                        <p class="description"><?php esc_html_e('SuperWoo never initializes Meta Pixel. It may send only the targeted AddPaymentInfo browser event described above; it does not store a CAPI token or participate in WooCommerce payment processing. Consent is blocked unless a supported integration explicitly supplies a valid granted state.', 'superwoo'); ?></p>
+                        <label><input type="checkbox" name="meta_tracking_diagnostics" value="1" <?php checked(!empty($settings['meta_tracking_diagnostics'])); ?>> <?php esc_html_e('Show non-identifying browser diagnostics in the console', 'superwoo'); ?></label>
+                    </td>
+                </tr>
+            </table>
         </div>
 
         <?php submit_button(__('Save SuperWoo Settings', 'superwoo')); ?>
