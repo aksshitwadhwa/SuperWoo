@@ -4,6 +4,7 @@ defined('ABSPATH') || exit;
 /** Receive-only listener for Razorpay Magic Checkout abandoned-cart notices. */
 class SuperWoo_Razorpay_Abandoned_Webhook {
     const TOKEN_OPTION = 'superwoo_razorpay_abandoned_webhook_token';
+    const SHORT_TOKEN_OPTION = 'superwoo_razorpay_abandoned_webhook_short_token';
     const LOG_FILE = 'razorpay-abandoned-cart.log';
     const MAX_BODY_BYTES = 262144;
 
@@ -13,22 +14,40 @@ class SuperWoo_Razorpay_Abandoned_Webhook {
     }
 
     public function register_route() {
-        register_rest_route('superwoo/v1', '/razorpay-abandoned-cart/(?P<token>[A-Za-z0-9]{48,128})', [
+        $route = [
             // Razorpay's dashboard may probe a callback URL before saving it.
             // Read-only probes must succeed without creating a receipt.
             'methods' => ['GET', 'HEAD', 'POST'],
             'callback' => [$this, 'receive'],
-            'permission_callback' => [$this, 'authorize'],
             'args' => [
                 'token' => ['required' => true, 'sanitize_callback' => 'sanitize_text_field'],
             ],
-        ]);
+        ];
+        register_rest_route('superwoo/v1', '/razorpay-abandoned-cart/(?P<token>[A-Za-z0-9]{48,128})', array_merge($route, [
+            'permission_callback' => [$this, 'authorize'],
+        ]));
+        // Keep the original route alive while offering a compact URL for dashboards with restrictive URL fields.
+        register_rest_route('sw/v1', '/r/(?P<token>[A-Za-z0-9]{24})', array_merge($route, [
+            'permission_callback' => [$this, 'authorize_short'],
+        ]));
     }
 
     /** The random URL token is a bearer credential because Razorpay documents no signature for this webhook. */
     public function authorize($request) {
-        $expected = self::get_token();
-        $provided = is_object($request) && method_exists($request, 'get_param') ? (string) $request->get_param('token') : '';
+        return $this->authorize_token($request, self::get_token());
+    }
+
+    public function authorize_short($request) {
+        return $this->authorize_token($request, self::get_short_token());
+    }
+
+    private function authorize_token($request, $expected) {
+        if (is_object($request) && method_exists($request, 'get_url_params')) {
+            $url_params = $request->get_url_params();
+            $provided = is_array($url_params) && isset($url_params['token']) ? (string) $url_params['token'] : '';
+        } else {
+            $provided = is_object($request) && method_exists($request, 'get_param') ? (string) $request->get_param('token') : '';
+        }
         if (!$expected || !$provided || !hash_equals($expected, $provided)) {
             return new WP_Error('rest_not_found', __('Webhook endpoint not found.', 'superwoo'), ['status' => 404]);
         }
@@ -84,8 +103,19 @@ class SuperWoo_Razorpay_Abandoned_Webhook {
         return $token;
     }
 
+    public static function get_short_token() {
+        $token = get_option(self::SHORT_TOKEN_OPTION, '');
+        if (is_string($token) && preg_match('/^[A-Za-z0-9]{24}$/', $token)) {
+            return $token;
+        }
+
+        $token = wp_generate_password(24, false, false);
+        update_option(self::SHORT_TOKEN_OPTION, $token, false);
+        return $token;
+    }
+
     public static function callback_url() {
-        return rest_url('superwoo/v1/razorpay-abandoned-cart/' . rawurlencode(self::get_token()));
+        return rest_url('sw/v1/r/' . rawurlencode(self::get_short_token()));
     }
 
     public static function uses_https() {
@@ -122,6 +152,7 @@ class SuperWoo_Razorpay_Abandoned_Webhook {
             wp_die(esc_html__('You are not allowed to rotate this webhook URL.', 'superwoo'));
         }
         update_option(self::TOKEN_OPTION, wp_generate_password(64, false, false), false);
+        update_option(self::SHORT_TOKEN_OPTION, wp_generate_password(24, false, false), false);
         wp_safe_redirect(admin_url('admin.php?page=superwoo-logs&webhook_token_rotated=1'));
         exit;
     }

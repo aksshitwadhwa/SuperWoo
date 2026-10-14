@@ -1,10 +1,10 @@
 {
   "name": "SuperWoo",
   "slug": "superwoo",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "requires": "6.2",
   "requires_php": "7.4",
-  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.5.2.zip",
+  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.5.3.zip",
   "homepage": "https://digtize.com/plugins/superwoo/",
   "description": "SuperWoo includes optional Classic checkout Meta tracking and a receive-only, token-protected Razorpay abandoned-cart webhook with redacted diagnostics."
 }

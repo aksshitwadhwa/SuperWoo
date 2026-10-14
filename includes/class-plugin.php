@@ -200,7 +200,7 @@ class SuperWoo_Plugin {
                     });
                 }());
             </script>
-            <p class="description"><?php esc_html_e('Paste the complete copied URL into Razorpay. GET/HEAD checks return a simple readiness response without logging. JSON POST payloads return HTTP 202 and store only a redacted receipt summary and payload fingerprint. The listener does not save raw payloads or customer contact/address/cart-token values, create orders, change payment state, or send data to Meta. Razorpay’s documentation does not specify a signature for this webhook, so the URL token is its authentication secret.', 'superwoo'); ?></p>
+            <p class="description"><?php esc_html_e('This compact callback URL uses a private 24-character token. Paste the complete copied URL into Razorpay. GET/HEAD checks return a simple readiness response without logging. JSON POST payloads return HTTP 202 and store only a redacted receipt summary and payload fingerprint. The listener does not save raw payloads or customer contact/address/cart-token values, create orders, change payment state, or send data to Meta. Razorpay’s documentation does not specify a signature for this webhook, so the URL token is its authentication secret.', 'superwoo'); ?></p>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
                 <input type="hidden" name="action" value="superwoo_rotate_razorpay_webhook_token">
                 <?php wp_nonce_field('superwoo_rotate_razorpay_webhook_token'); ?>

@@ -5,7 +5,10 @@ define('ABSPATH', __DIR__ . '/');
 define('MINUTE_IN_SECONDS', 60);
 define('WP_CONTENT_DIR', sys_get_temp_dir() . '/superwoo-razorpay-webhook-' . uniqid('', true));
 
-$superwoo_options = ['superwoo_razorpay_abandoned_webhook_token' => str_repeat('R', 64)];
+$superwoo_options = [
+    'superwoo_razorpay_abandoned_webhook_token' => str_repeat('R', 64),
+    'superwoo_razorpay_abandoned_webhook_short_token' => str_repeat('S', 24),
+];
 $registered_routes = [];
 $superwoo_log_writable = true;
 function add_action(...$args) {}
@@ -14,8 +17,8 @@ function get_option($key, $default = false) { global $superwoo_options; return $
 function update_option($key, $value, $autoload = null) { global $superwoo_options; $superwoo_options[$key] = $value; return true; }
 function wp_generate_password($length = 12, $special = true, $extra = false) { return str_repeat('S', $length); }
 function wp_generate_uuid4() { return 'receipt-test-123'; }
-function rest_url($path = '') { return 'https://shop.example.test/wp-json/' . $path; }
-function home_url($path = '/') { return 'https://shop.example.test' . $path; }
+function rest_url($path = '') { return 'https://modu.co.in/wp-json/' . $path; }
+function home_url($path = '/') { return 'https://modu.co.in' . $path; }
 function wp_parse_url($url, $component = -1) { return parse_url($url, $component); }
 function wp_upload_dir() { return ['basedir' => WP_CONTENT_DIR . '/uploads', 'error' => false]; }
 function trailingslashit($path) { return rtrim($path, '/\\') . DIRECTORY_SEPARATOR; }
@@ -45,7 +48,8 @@ class Webhook_Test_Request {
     private $body;
     private $method;
     public function __construct($params, $body, $method = 'POST') { $this->params = $params; $this->body = $body; $this->method = $method; }
-    public function get_param($key) { return $this->params[$key] ?? null; }
+    public function get_param($key) { $json = json_decode($this->body, true); return is_array($json) && array_key_exists($key, $json) ? $json[$key] : ($this->params[$key] ?? null); }
+    public function get_url_params() { return $this->params; }
     public function get_body() { return $this->body; }
     public function get_method() { return $this->method; }
 }
@@ -61,11 +65,16 @@ function expect_webhook($condition, $message) {
 
 $webhook = new SuperWoo_Razorpay_Abandoned_Webhook();
 $webhook->register_route();
-expect_webhook(1 === count($registered_routes), 'REST receiver route should be registered');
-expect_webhook(['GET', 'HEAD', 'POST'] === $registered_routes[0][2]['methods'], 'route should accept read-only probes and webhook POSTs');
-expect_webhook(false !== strpos(SuperWoo_Razorpay_Abandoned_Webhook::callback_url(), str_repeat('R', 64)), 'callback URL should carry the secret token');
+expect_webhook(2 === count($registered_routes), 'legacy and compact REST receiver routes should be registered');
+expect_webhook(['GET', 'HEAD', 'POST'] === $registered_routes[0][2]['methods'] && ['GET', 'HEAD', 'POST'] === $registered_routes[1][2]['methods'], 'both routes should accept read-only probes and webhook POSTs');
+expect_webhook(false !== strpos(SuperWoo_Razorpay_Abandoned_Webhook::callback_url(), str_repeat('S', 24)), 'callback URL should carry the compact secret token');
+expect_webhook(strlen(SuperWoo_Razorpay_Abandoned_Webhook::callback_url()) <= 60, 'compact callback URL should stay below 60 characters on the expected domain');
 expect_webhook(true === $webhook->authorize(new Webhook_Test_Request(['token' => str_repeat('R', 64)], '')), 'correct token on HTTPS should authorize');
 expect_webhook($webhook->authorize(new Webhook_Test_Request(['token' => 'incorrect'], '')) instanceof WP_Error, 'incorrect token should be rejected');
+expect_webhook(true === $webhook->authorize(new Webhook_Test_Request(['token' => str_repeat('R', 64)], json_encode(['token' => 'razorpay-payload-token']))), 'JSON payload token must not override the authenticated route token');
+expect_webhook(true === $webhook->authorize_short(new Webhook_Test_Request(['token' => str_repeat('S', 24)], '')), 'compact callback token should authorize');
+expect_webhook($webhook->authorize_short(new Webhook_Test_Request(['token' => 'incorrect'], '')) instanceof WP_Error, 'incorrect compact token should be rejected');
+expect_webhook(true === $webhook->authorize_short(new Webhook_Test_Request(['token' => str_repeat('S', 24)], json_encode(['token' => 'razorpay-payload-token']))), 'JSON payload token must not override the compact route token');
 $readiness = $webhook->receive(new Webhook_Test_Request(['token' => str_repeat('R', 64)], '', 'GET'));
 expect_webhook($readiness instanceof WP_REST_Response && 200 === $readiness->status && ['ready' => true] === $readiness->data, 'GET URL validation should receive a simple readiness response');
 $head_readiness = $webhook->receive(new Webhook_Test_Request(['token' => str_repeat('R', 64)], '', 'HEAD'));
@@ -123,4 +132,4 @@ $remove_tree = static function ($path) use (&$remove_tree) {
     }
 };
 $remove_tree(WP_CONTENT_DIR);
-echo "PASS: 26 Razorpay abandoned-webhook assertions\n";
+echo "PASS: 32 Razorpay abandoned-webhook assertions\n";
