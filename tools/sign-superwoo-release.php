@@ -1,6 +1,6 @@
 #!/usr/bin/env php
 <?php
-/** Local Ed25519 release-manifest signer. Never use production keys with this file-based tool. */
+/** Ed25519 release-manifest signer. Production keys may be used only on the approved offline signing workstation. */
 define('SUPERWOO_RELEASE_TOOL', true);
 require_once dirname(__DIR__) . '/includes/class-superwoo-update-manifest.php';
 

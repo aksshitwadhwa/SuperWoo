@@ -24,7 +24,7 @@
 ## Production key custody and release operation
 
 - [ ] Obtain explicit owner approval before generating the production Ed25519 signing key or changing the plugin's pinned public trust-anchor list.
-- [ ] Store the private key only in an approved KMS/HSM or isolated offline signing environment; prohibit web-server storage, source control, ordinary CI variables, shared credentials, and support tickets. Document dual control, audit logs, backup, recovery, and signer access revocation.
+- [ ] Generate/store the private key only on a dedicated offline signing workstation. Encrypt it at rest; prohibit web-server storage, source control, CI variables, shared drives, and support tickets. Name the custodians and document dual control, signing logs, encrypted backup, recovery, and signer access revocation.
 - [ ] Pin only the public key and immutable key ID in a reviewed plugin release. Never fetch the public key from the same metadata host and never publish a hardened release with no production trust anchors.
 - [ ] Maintain a release ledger: source commit, build environment, package filename, SHA-256, byte count, version, sequence, expiry, key ID, approvals, upload result, and post-publication verification.
 - [ ] Build ZIP from reviewed source, verify root folder and `superwoo.php` header version, run PHP lint/full relevant tests, and freeze the final ZIP before hashing/signing.
