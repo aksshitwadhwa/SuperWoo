@@ -669,6 +669,7 @@ class SuperWoo_Bundle_Offers {
         $selected_rule = $selected['rule'] ?? null;
         $gift_rules = $selected_rule && 'price_gift' === ($selected_rule['offer_type'] ?? '') ? [$selected_rule] : [];
         $this->sync_free_gifts($cart, $gift_rules);
+        $this->set_free_gift_prices($cart);
 
         if (!$selected || empty($selected['tier']['discount'])) {
             $this->restore_customer_cart_quantities($cart, $customer_quantities);
@@ -712,6 +713,21 @@ class SuperWoo_Bundle_Offers {
         }
 
         $this->restore_customer_cart_quantities($cart, $customer_quantities);
+    }
+
+    /** Ensure gift lines cost zero even when the selected gift offer has no discount tier. */
+    private function set_free_gift_prices($cart) {
+        foreach ($cart->get_cart() as $cart_item_key => $cart_item) {
+            if (empty($cart_item['superwoo_free_gift']) || empty($cart_item['data']) || !($cart_item['data'] instanceof WC_Product)) {
+                continue;
+            }
+
+            if (1 !== absint($cart_item['quantity'] ?? 1)) {
+                $cart->set_quantity($cart_item_key, 1, false);
+            }
+
+            $cart_item['data']->set_price(0);
+        }
     }
 
     /** Restore pre-offer line prices so repeated totals passes cannot compound discounts. */
