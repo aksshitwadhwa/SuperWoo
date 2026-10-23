@@ -48,7 +48,7 @@ expect_security(false !== strpos(file_get_contents(dirname($log_path) . '/web.co
 $legacy_log = WP_CONTENT_DIR . '/superwoo-fatal.log';
 file_put_contents($legacy_log, "legacy diagnostic\n");
 $fatal_log = superwoo_fatal_log_file_path();
-expect_security($fatal_log === dirname($log_path) . '/superwoo-fatal.log', 'fatal diagnostics should resolve inside the protected log directory');
+expect_security($fatal_log === trailingslashit(dirname($log_path)) . 'superwoo-fatal.log', 'fatal diagnostics should resolve inside the protected log directory');
 expect_security(file_exists($fatal_log) && !file_exists($legacy_log), 'legacy web-root fatal log should be relocated');
 
 $currency = (new ReflectionClass('SuperWoo_Currency'))->newInstanceWithoutConstructor();

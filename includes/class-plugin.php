@@ -22,6 +22,7 @@ class SuperWoo_Plugin {
         // Receive-only endpoint for Razorpay's abandoned-cart notification.
         // It records a redacted receipt summary and has no order/payment hooks.
         (new SuperWoo_Razorpay_Abandoned_Webhook())->hooks();
+        (new SuperWoo_Order_Recovery_Admin())->hooks();
 
         add_action('admin_menu', [$this, 'register_settings_page']);
         add_action('admin_post_superwoo_clear_logs', [$this, 'clear_logs']);
@@ -107,6 +108,7 @@ class SuperWoo_Plugin {
         );
         add_submenu_page('superwoo-settings', __('Health', 'superwoo'), __('Health', 'superwoo'), 'manage_woocommerce', 'superwoo-health', [$this, 'render_health_page']);
         add_submenu_page('superwoo-settings', __('Logs', 'superwoo'), __('Logs', 'superwoo'), 'manage_woocommerce', 'superwoo-logs', [$this, 'render_logs_page']);
+        add_submenu_page('superwoo-settings', __('Order Recovery', 'superwoo'), __('Order Recovery', 'superwoo'), 'manage_woocommerce', 'superwoo-order-recovery', ['SuperWoo_Order_Recovery_Admin', 'render_page']);
     }
 
     public function render_health_page() {

@@ -77,6 +77,13 @@ require_once SUPERWOO_PATH . 'includes/class-bundle-offers.php';
 require_once SUPERWOO_PATH . 'includes/class-cart-drawer.php';
 require_once SUPERWOO_PATH . 'includes/class-meta-tracking.php';
 require_once SUPERWOO_PATH . 'includes/class-razorpay-abandoned-webhook.php';
+require_once SUPERWOO_PATH . 'includes/order-recovery/class-order-recovery-schema.php';
+require_once SUPERWOO_PATH . 'includes/order-recovery/class-order-recovery-repository.php';
+require_once SUPERWOO_PATH . 'includes/order-recovery/class-order-recovery-csv.php';
+require_once SUPERWOO_PATH . 'includes/order-recovery/class-order-recovery-classifier.php';
+require_once SUPERWOO_PATH . 'includes/order-recovery/class-order-recovery-provider.php';
+require_once SUPERWOO_PATH . 'includes/order-recovery/class-order-recovery-preview.php';
+require_once SUPERWOO_PATH . 'includes/order-recovery/class-order-recovery-admin.php';
 require_once SUPERWOO_PATH . 'includes/class-elementor-dynamic-tags.php';
 // The carousel module is optional; never let a missing optional file prevent
 // the core plugin (admin menu, cart drawer, and product hooks) from loading.
