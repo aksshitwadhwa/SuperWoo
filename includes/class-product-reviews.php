@@ -464,17 +464,26 @@ class SuperWoo_Product_Reviews {
             return;
         }
 
+        // Public review forms include a public nonce, so cap both the total
+        // upload size per review and the number of media-bearing submissions
+        // from one client. This runs after WordPress accepts the comment; a
+        // throttled submission keeps its text review but does not store media.
+        if (!superwoo_rate_limit('review_media_upload', 5, HOUR_IN_SECONDS)) {
+            return;
+        }
+
         require_once ABSPATH . 'wp-admin/includes/file.php';
         require_once ABSPATH . 'wp-admin/includes/media.php';
         require_once ABSPATH . 'wp-admin/includes/image.php';
 
-        $image_ids = $this->upload_review_attachments($files_by_type['images'], $post_id, 4, 5 * MB_IN_BYTES, [
+        $remaining_bytes = 20 * MB_IN_BYTES;
+        $image_ids = $this->upload_review_attachments($files_by_type['images'], $post_id, 4, 5 * MB_IN_BYTES, $remaining_bytes, [
             'jpg|jpeg|jpe' => 'image/jpeg',
             'png'          => 'image/png',
             'gif'          => 'image/gif',
             'webp'         => 'image/webp',
         ]);
-        $video_ids = $this->upload_review_attachments($files_by_type['videos'], $post_id, 2, 50 * MB_IN_BYTES, [
+        $video_ids = $this->upload_review_attachments($files_by_type['videos'], $post_id, 2, 20 * MB_IN_BYTES, $remaining_bytes, [
             'mp4|m4v' => 'video/mp4',
             'webm'    => 'video/webm',
             'ogv'     => 'video/ogg',
@@ -521,7 +530,7 @@ class SuperWoo_Product_Reviews {
         return $split;
     }
 
-    private function upload_review_attachments($files, $post_id, $max_files, $max_size, $allowed_mimes) {
+    private function upload_review_attachments($files, $post_id, $max_files, $max_size, &$remaining_bytes, $allowed_mimes) {
         $attachment_ids = [];
 
         foreach (array_slice($files, 0, $max_files) as $file) {
@@ -529,9 +538,14 @@ class SuperWoo_Product_Reviews {
                 continue;
             }
 
-            if (!empty($file['size']) && $file['size'] > $max_size) {
+            $actual_size = is_file($file['tmp_name']) ? filesize($file['tmp_name']) : false;
+            if (false === $actual_size || $actual_size <= 0 || $actual_size > $max_size || $actual_size > $remaining_bytes) {
                 continue;
             }
+
+            // Use the verified temporary-file size when handing the file to
+            // WordPress, rather than trusting the request's size field.
+            $file['size'] = $actual_size;
 
             $upload = wp_handle_upload($file, [
                 'test_form' => false,
@@ -556,6 +570,7 @@ class SuperWoo_Product_Reviews {
 
             wp_update_attachment_metadata($attachment_id, wp_generate_attachment_metadata($attachment_id, $upload['file']));
             $attachment_ids[] = (int) $attachment_id;
+            $remaining_bytes -= $actual_size;
         }
 
         return $attachment_ids;
