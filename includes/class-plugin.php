@@ -25,6 +25,10 @@ class SuperWoo_Plugin {
         add_filter('woocommerce_register_shop_order_post_statuses', ['SuperWoo_Order_Recovery_Payment_Record', 'register_status']);
         add_filter('wc_order_statuses', ['SuperWoo_Order_Recovery_Payment_Record', 'add_status']);
         add_action('woocommerce_admin_order_data_after_order_details', ['SuperWoo_Order_Recovery_Payment_Record', 'render_admin_details']);
+        add_filter('manage_woocommerce_page_wc-orders_columns', ['SuperWoo_Order_Recovery_Payment_Record', 'add_order_list_column']);
+        add_action('manage_woocommerce_page_wc-orders_custom_column', ['SuperWoo_Order_Recovery_Payment_Record', 'render_hpos_order_list_column'], 10, 2);
+        add_filter('manage_shop_order_posts_columns', ['SuperWoo_Order_Recovery_Payment_Record', 'add_order_list_column']);
+        add_action('manage_shop_order_posts_custom_column', ['SuperWoo_Order_Recovery_Payment_Record', 'render_legacy_order_list_column'], 10, 2);
         (new SuperWoo_Order_Recovery_Admin())->hooks();
 
         add_action('admin_menu', [$this, 'register_settings_page']);

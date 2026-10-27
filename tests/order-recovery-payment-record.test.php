@@ -7,6 +7,7 @@ class WP_Error {
 }
 function is_wp_error($value) { return $value instanceof WP_Error; }
 function __($value, $domain = '') { return $value; }
+function esc_html($value) { return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8'); }
 function _n_noop($one, $many, $domain = '') { return [$one, $many]; }
 function absint($value) { return abs((int) $value); }
 function sanitize_key($value) { return strtolower(preg_replace('/[^a-z0-9_\-]/', '', (string) $value)); }
@@ -33,7 +34,12 @@ class SuperWoo_Order_Recovery_Provider {
 }
 class SuperWoo_Order_Recovery_Repository {
     public static $fresh;
-    public function transaction($id) { return self::$fresh; }
+    public static $records = [];
+    public static $verified = [];
+    public static $recovered = [];
+    public function transaction($id) { return self::$records[$id] ?? self::$fresh; }
+    public function save_provider_verification($id, $provider) { self::$verified[$id] = $provider; }
+    public function mark_recovered($id, $order_id) { self::$recovered[$id] = $order_id; return 1; }
 }
 class WC_Order {
     public static $created = [];
@@ -50,10 +56,12 @@ class WC_Order {
     public function set_billing_email($value) { $this->fields['billing_email'] = $value; }
     public function set_billing_phone($value) { $this->fields['billing_phone'] = $value; }
     public function update_meta_data($key, $value) { $this->meta[$key] = $value; }
+    public function get_meta($key, $single = true) { return $this->meta[$key] ?? ''; }
     public function save() { self::$created[] = $this; if (self::$throw_after_save) { throw new Exception('simulated post-save interruption'); } return 9000 + count(self::$created); }
 }
 require dirname(__DIR__) . '/includes/order-recovery/class-order-recovery-classifier.php';
 require dirname(__DIR__) . '/includes/order-recovery/class-order-recovery-payment-record.php';
+require dirname(__DIR__) . '/includes/order-recovery/class-order-recovery-admin.php';
 
 $checks = 0;
 $assert = static function ($ok, $message) use (&$checks) { $checks++; if (!$ok) { fwrite(STDERR, "FAIL: {$message}\n"); exit(1); } };
@@ -70,6 +78,9 @@ $assert($created === 9001 && count(WC_Order::$created) === 1, 'a verified captur
 $order = WC_Order::$created[0];
 $assert($order->fields['status'] === 'superwoo-review' && $order->fields['total'] === '3845.00' && $order->fields['transaction_id'] === $record['payment_id'], 'review order keeps exact provider amount and payment ID');
 $assert($order->meta['_superwoo_recovery_historical_order_id'] === 8051 && $order->meta['_superwoo_recovery_items_missing'] === 'yes' && $order->meta['_superwoo_recovery_payment_only'] === 'yes', 'historical reference and missing items are explicit');
+$assert($order->meta['_superwoo_recovery_razorpay_status'] === 'captured' && $order->meta['_superwoo_recovery_razorpay_refunded_minor'] === 0 && SuperWoo_Order_Recovery_Repository::$recovered[7] === 9001, 'exact verified provider status is stored and the recovered record leaves the missing list');
+ob_start(); SuperWoo_Order_Recovery_Payment_Record::render_hpos_order_list_column('superwoo_razorpay_status', $order); $shown_status = ob_get_clean();
+$assert($shown_status === 'captured', 'WooCommerce order list displays the exact verified Razorpay status');
 $assert(!property_exists($order, 'items') && SuperWoo_Order_Recovery_Payment_Record::claim($record['payment_id'])['order_id'] === 9001, 'no item is fabricated and the claim records the new order ID');
 $same_history = $record; $same_history['payment_id'] = 'pay_samehistory123';
 $blocked = SuperWoo_Order_Recovery_Payment_Record::create($same_history, [], 19);
@@ -97,4 +108,9 @@ WC_Order::$throw_after_save = false;
 $assert(is_wp_error($blocked) && $blocked->get_error_code() === 'payment_record_save_failed' && SuperWoo_Order_Recovery_Payment_Record::claim($interrupted['payment_id'])['state'] === 'claimed', 'post-save interruption leaves a persistent claim');
 $again = SuperWoo_Order_Recovery_Payment_Record::create($interrupted, [], 19);
 $assert(is_wp_error($again) && $again->get_error_code() === 'payment_record_already_claimed', 'interrupted approval cannot blindly create a duplicate');
+$bulk_valid = $record; $bulk_valid['id'] = 20; $bulk_valid['payment_id'] = 'pay_bulkvalid123'; $bulk_valid['wc_order_id'] = 9010;
+$bulk_workshop = $record; $bulk_workshop['id'] = 21; $bulk_workshop['payment_id'] = 'pay_bulkshop123'; $bulk_workshop['wc_order_id'] = 9011; $bulk_workshop['description'] = 'Workshop Purchase';
+SuperWoo_Order_Recovery_Repository::$records = [20 => $bulk_valid, 21 => $bulk_workshop];
+$bulk_results = SuperWoo_Order_Recovery_Admin::recover_selected([20, 21], new SuperWoo_Order_Recovery_Repository(), [], 19);
+$assert(count($bulk_results) === 2 && $bulk_results[0]['order_id'] > 0 && $bulk_results[1]['order_id'] === 0 && $bulk_results[1]['reason'] === 'payment_record_not_missing_store_order', 'bulk recovery creates an eligible order and individually skips a Workshop payment');
 echo "PASS: {$checks} payment-only recovery checks\n";

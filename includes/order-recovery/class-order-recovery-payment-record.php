@@ -29,7 +29,27 @@ class SuperWoo_Order_Recovery_Payment_Record {
         echo '<p><strong>' . esc_html__('Historical WooCommerce reference', 'superwoo') . ':</strong> ' . esc_html((string) $order->get_meta('_superwoo_recovery_historical_order_id', true)) . '</p>';
         $historical_number = (string) $order->get_meta('_superwoo_recovery_historical_order_number', true);
         if ($historical_number !== '') { echo '<p><strong>' . esc_html__('Historical order number', 'superwoo') . ':</strong> ' . esc_html($historical_number) . '</p>'; }
+        echo '<p><strong>' . esc_html__('Verified Razorpay payment status', 'superwoo') . ':</strong> ' . esc_html((string) $order->get_meta('_superwoo_recovery_razorpay_status', true)) . '</p>';
+        echo '<p><strong>' . esc_html__('Razorpay status checked at', 'superwoo') . ':</strong> ' . esc_html((string) $order->get_meta('_superwoo_recovery_razorpay_verified_at_utc', true)) . ' UTC</p>';
         echo '</div>';
+    }
+
+    public static function add_order_list_column($columns) {
+        $columns['superwoo_razorpay_status'] = __('Razorpay status', 'superwoo');
+        return $columns;
+    }
+
+    public static function render_hpos_order_list_column($column, $order) {
+        if ('superwoo_razorpay_status' === $column && $order instanceof WC_Order) { self::print_razorpay_status($order); }
+    }
+
+    public static function render_legacy_order_list_column($column, $post_id) {
+        if ('superwoo_razorpay_status' === $column && function_exists('wc_get_order')) { self::print_razorpay_status(wc_get_order(absint($post_id))); }
+    }
+
+    private static function print_razorpay_status($order) {
+        $status = $order instanceof WC_Order ? (string) $order->get_meta('_superwoo_recovery_razorpay_status', true) : '';
+        echo esc_html($status !== '' ? $status : '—');
     }
 
     private static function claim_key($payment_id) {
@@ -118,6 +138,9 @@ class SuperWoo_Order_Recovery_Payment_Record {
             $order->update_meta_data('_superwoo_recovery_source_row_hash', $record['source_row_hash']);
             $order->update_meta_data('_superwoo_recovery_provider_created_at_utc', (string) ($provider['created_at_utc'] ?? ''));
             $order->update_meta_data('_superwoo_recovery_provider_amount_minor', (int) $provider['amount_minor']);
+            $order->update_meta_data('_superwoo_recovery_razorpay_status', sanitize_key((string) $provider['status']));
+            $order->update_meta_data('_superwoo_recovery_razorpay_verified_at_utc', gmdate('Y-m-d H:i:s'));
+            $order->update_meta_data('_superwoo_recovery_razorpay_refunded_minor', (int) $provider['amount_refunded_minor']);
             $order->update_meta_data('_superwoo_recovery_razorpay_order_id', (string) ($provider['order_id'] ?? $record['razorpay_order_id'] ?? ''));
             $order->update_meta_data('_superwoo_recovery_receipt', (string) ($record['receipt'] ?? ''));
             $order->update_meta_data('_superwoo_recovery_imported_fee_minor', null === ($record['fee_minor'] ?? null) ? '' : (int) $record['fee_minor']);
@@ -129,6 +152,9 @@ class SuperWoo_Order_Recovery_Payment_Record {
                 'state' => 'created', 'record_id' => absint($record['id']), 'source_row_hash' => $record['source_row_hash'],
                 'actor_id' => absint($actor_id), 'claimed_at_utc' => gmdate('Y-m-d H:i:s'), 'order_id' => absint($order_id),
             ], false);
+            $repo = new SuperWoo_Order_Recovery_Repository();
+            $repo->save_provider_verification(absint($record['id']), $provider);
+            $repo->mark_recovered(absint($record['id']), absint($order_id));
             return absint($order_id);
         } catch (Throwable $error) {
             return new WP_Error('payment_record_save_failed', __('WooCommerce did not complete the review order; inspect the claim before retrying.', 'superwoo'));

@@ -68,6 +68,6 @@ $assert($stored['verification_state']==='unverified' && $stored['verified_at_utc
 $assert($stored['provider_status']==='' && $stored['provider_amount_minor']===null && $stored['provider_refunds_complete']===0 && $stored['provider_refunds_json']===null, 'changed import clears every stale provider and refund fact');
 $repo->transactions(['missing_wc_only'=>true, 'classification'=>'missing_order_candidate', 'per_page'=>20]);
 $filtered_query = $GLOBALS['wpdb']->last_count_query;
-$assert(strpos($filtered_query, 'wc_order_id > 0') !== false && strpos($filtered_query, "classification='missing_order_candidate'") !== false, 'missing WooCommerce filter requires an original order ID and missing classification');
+$assert(strpos($filtered_query, 'wc_order_id > 0') !== false && strpos($filtered_query, 'recovered_order_id = 0') !== false && strpos($filtered_query, "classification='missing_order_candidate'") !== false, 'missing WooCommerce filter requires an original order ID, missing classification and no recovered order');
 $assert(strpos($filtered_query, 'workshop') !== false && strpos($filtered_query, 'masterclass') !== false && strpos($filtered_query, 'webinar') !== false, 'missing WooCommerce filter excludes Workshop wording');
 echo "PASS: {$assertions} order-recovery repository assertions\n";

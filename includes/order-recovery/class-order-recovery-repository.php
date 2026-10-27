@@ -109,6 +109,7 @@ class SuperWoo_Order_Recovery_Repository {
             // A provider payment without an explicit WooCommerce ID cannot establish a missing store order.
             $where[] = 'classification=%s'; $values[] = 'missing_order_candidate';
             $where[] = 'wc_order_id > 0';
+            $where[] = 'recovered_order_id = 0';
             // Keep workshop-related text out even when an older import classified it before that rule existed.
             foreach (['workshop', 'masterclass', 'webinar'] as $word) {
                 $where[] = "LOWER(CONCAT(COALESCE(description,''),' ',COALESCE(notes_json,''),' ',receipt)) NOT LIKE %s";
@@ -139,6 +140,9 @@ class SuperWoo_Order_Recovery_Repository {
     }
 
     public function transaction($id) { return $this->wpdb->get_row($this->wpdb->prepare('SELECT * FROM ' . $this->table('transactions') . ' WHERE id=%d', absint($id)), ARRAY_A); }
+    public function mark_recovered($record_id, $order_id) {
+        return $this->wpdb->update($this->table('transactions'), ['recovered_order_id' => absint($order_id)], ['id' => absint($record_id)]);
+    }
     public function save_provider_verification($id, $result) {
         $data = [
             'verification_state' => $result['state'], 'verified_at_utc' => $this->now(),
