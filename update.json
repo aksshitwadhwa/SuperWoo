@@ -1,12 +1,12 @@
 {
   "name": "SuperWoo",
   "slug": "superwoo",
-  "version": "1.5.7",
+  "version": "1.6.0",
   "requires": "6.2",
   "requires_php": "7.4",
-  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.5.7.zip",
-  "sha256": "5b4fb8d1d55cf27ee475941e5a4418bad33cf4bb6b55b3cf634412bf62882c9f",
-  "package_size": 287320,
+  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.6.0.zip",
+  "sha256": "1f177976c17cf6608d0dee52ee1c71b08cf74cb4004da89a3a61d151ecb3bfe0",
+  "package_size": 288191,
   "homepage": "https://digtize.com/plugins/superwoo/",
-  "description": "SuperWoo 1.5.7 improves order recovery and payment-only order reconciliation tools."
+  "description": "SuperWoo 1.6.0 improves order recovery and Razorpay reconciliation workflows."
 }
