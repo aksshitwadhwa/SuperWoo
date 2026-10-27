@@ -45,14 +45,20 @@ class SuperWoo_Order_Recovery_Admin {
         $batch = $repo->create_batch($name, $file_hash, get_current_user_id());
         if (is_wp_error($batch)) { $this->fail($batch->get_error_code()); }
         if (!empty($batch['existing'])) {
+            if (isset($_POST['refresh_existing']) && is_scalar($_POST['refresh_existing']) && '1' === (string) wp_unslash($_POST['refresh_existing'])) {
+                $counts = SuperWoo_Order_Recovery_CSV::import_rows($parsed['rows'], $repo, (int) $batch['id'], self::workshop_rules());
+                superwoo_log('Order recovery existing CSV reparsed', ['batch_id' => (int) $batch['id'], 'rows' => $counts['rows'], 'updated' => $counts['updated'], 'errors' => $counts['errors']], 'orders');
+                wp_safe_redirect(add_query_arg(['page' => 'superwoo-order-recovery', 'recovery_notice' => $counts['errors'] ? 'refresh_error' : 'refreshed', 'batch_id' => (int) $batch['id'], 'missing_wc_only' => '1'], admin_url('admin.php')));
+                exit;
+            }
             superwoo_log('Order recovery import skipped: identical file already imported', ['batch_id' => (int) $batch['id']], 'orders');
-            wp_safe_redirect(add_query_arg(['page' => 'superwoo-order-recovery', 'recovery_notice' => 'already_imported', 'batch_id' => (int) $batch['id'], 'classification' => 'missing_order_candidate'], admin_url('admin.php')));
+            wp_safe_redirect(add_query_arg(['page' => 'superwoo-order-recovery', 'recovery_notice' => 'already_imported', 'batch_id' => (int) $batch['id'], 'missing_wc_only' => '1'], admin_url('admin.php')));
             exit;
         }
         $counts = SuperWoo_Order_Recovery_CSV::import_rows($parsed['rows'], $repo, (int) $batch['id'], self::workshop_rules());
         $repo->finish_batch((int) $batch['id'], $counts);
         superwoo_log('Order recovery CSV import completed', ['batch_id' => (int) $batch['id'], 'rows' => $counts['rows'], 'inserted' => $counts['inserted'], 'updated' => $counts['updated'], 'duplicates' => $counts['duplicates'], 'errors' => $counts['errors']], 'orders');
-        wp_safe_redirect(add_query_arg(['page' => 'superwoo-order-recovery', 'recovery_notice' => 'imported', 'batch_id' => (int) $batch['id'], 'classification' => 'missing_order_candidate'], admin_url('admin.php')));
+        wp_safe_redirect(add_query_arg(['page' => 'superwoo-order-recovery', 'recovery_notice' => 'imported', 'batch_id' => (int) $batch['id'], 'missing_wc_only' => '1'], admin_url('admin.php')));
         exit;
     }
 
@@ -131,8 +137,10 @@ class SuperWoo_Order_Recovery_Admin {
     }
 
     private static function filters_from_request() {
+        $missing_wc_only = '1' === self::query_value('missing_wc_only');
         return [
-            'classification' => sanitize_key(self::query_value('classification')),
+            'missing_wc_only' => $missing_wc_only,
+            'classification' => $missing_wc_only ? 'missing_order_candidate' : sanitize_key(self::query_value('classification')),
             'reported_status' => sanitize_text_field(self::query_value('reported_status')),
             'currency' => sanitize_text_field(self::query_value('currency')),
             'date_from' => self::valid_date(self::query_value('date_from')),
@@ -203,6 +211,8 @@ class SuperWoo_Order_Recovery_Admin {
                 <?php wp_nonce_field('superwoo_order_recovery_import'); ?>
                 <input type="file" name="razorpay_csv" accept=".csv,text/csv" required>
                 <?php submit_button(__('Import for review', 'superwoo'), 'primary', 'submit', false); ?>
+                <p><label><input type="checkbox" name="refresh_existing" value="1"> <?php esc_html_e('Refresh saved records when this exact CSV was imported before', 'superwoo'); ?></label></p>
+                <p class="description"><?php esc_html_e('Reparses the same file to restore newly recognized fields and update Workshop classifications. It creates no WooCommerce orders. Changed payment evidence must be verified again.', 'superwoo'); ?></p>
                 <p class="description"><?php esc_html_e('Maximum 10 MB and 50,000 rows. The temporary upload is parsed in place and is not copied to the media library or retained after the request.', 'superwoo'); ?></p>
                 <p class="description"><?php esc_html_e('Use the Razorpay payment report or captured-payment reconciliation CSV. A mixed transactions ledger with settlement and refund rows is not accepted as an order source.', 'superwoo'); ?></p>
             </form>
@@ -236,6 +246,7 @@ class SuperWoo_Order_Recovery_Admin {
             <p class="description"><?php esc_html_e('No authoritative checkout/session/backup evidence source is currently connected; records without it remain incomplete. Verification is manual and read-only; provider failures do not establish a payment status.', 'superwoo'); ?></p>
             <form method="get">
                 <input type="hidden" name="page" value="superwoo-order-recovery">
+                <label><input type="checkbox" name="missing_wc_only" value="1" <?php checked($filters['missing_wc_only']); ?>> <?php esc_html_e('Missing WooCommerce orders only', 'superwoo'); ?></label>
                 <select name="classification"><option value=""><?php esc_html_e('All classifications', 'superwoo'); ?></option><?php foreach (['existing_order','missing_order_candidate','duplicate_ambiguous','workshop_excluded','manual_review'] as $classification) : ?><option value="<?php echo esc_attr($classification); ?>" <?php selected($filters['classification'], $classification); ?>><?php echo esc_html(ucwords(str_replace('_', ' ', $classification))); ?></option><?php endforeach; ?></select>
                 <select name="verification_state"><option value=""><?php esc_html_e('All verification states', 'superwoo'); ?></option><?php foreach (['unverified','verified','verified_conflict','error'] as $state) : ?><option value="<?php echo esc_attr($state); ?>" <?php selected($filters['verification_state'], $state); ?>><?php echo esc_html(ucwords(str_replace('_', ' ', $state))); ?></option><?php endforeach; ?></select>
                 <input type="text" name="reported_status" placeholder="<?php esc_attr_e('Reported status', 'superwoo'); ?>" value="<?php echo esc_attr($filters['reported_status']); ?>">
@@ -247,11 +258,12 @@ class SuperWoo_Order_Recovery_Admin {
                 <?php submit_button(__('Filter', 'superwoo'), 'secondary', '', false); ?>
                 <a class="button" href="<?php echo esc_url(admin_url('admin.php?page=superwoo-order-recovery')); ?>"><?php esc_html_e('Reset', 'superwoo'); ?></a>
             </form>
+            <?php if ($filters['missing_wc_only']) : ?><p class="description"><?php esc_html_e('Shows captured-like payments with an original WooCommerce order ID that were classified as missing at import. Workshop-related records and payments without that ID are hidden. Open a record to verify its current status before creating a review order.', 'superwoo'); ?></p><?php endif; ?>
             <p><a class="button" href="<?php echo esc_url(wp_nonce_url(add_query_arg(array_merge($_GET, ['page'=>'superwoo-order-recovery','recovery_export'=>'1']), admin_url('admin.php')), 'superwoo_order_recovery_export')); ?>"><?php esc_html_e('Export this filtered page (CSV)', 'superwoo'); ?></a></p>
             <table class="widefat striped"><thead><tr><th><?php esc_html_e('ID / details', 'superwoo'); ?></th><th><?php esc_html_e('Preview outcome', 'superwoo'); ?></th><th><?php esc_html_e('Classification', 'superwoo'); ?></th><th><?php esc_html_e('References', 'superwoo'); ?></th><th><?php esc_html_e('Amounts', 'superwoo'); ?></th><th><?php esc_html_e('Reported status', 'superwoo'); ?></th><th><?php esc_html_e('Timestamp (UTC)', 'superwoo'); ?></th></tr></thead><tbody>
                 <?php if (!$result['items']) : ?><tr><td colspan="7"><?php esc_html_e('No records match these filters.', 'superwoo'); ?></td></tr><?php endif; ?>
                 <?php foreach ($result['items'] as $item) : ?><tr>
-                    <td><a href="<?php echo esc_url(add_query_arg(['page' => 'superwoo-order-recovery', 'transaction' => (int) $item['id'] ], admin_url('admin.php'))); ?>">#<?php echo esc_html((string) $item['id']); ?></a><br><?php echo esc_html(sprintf(__('Batch %d', 'superwoo'), (int) $item['last_batch_id'])); ?></td>
+                    <td><a href="<?php echo esc_url(add_query_arg(['page' => 'superwoo-order-recovery', 'transaction' => (int) $item['id'] ], admin_url('admin.php'))); ?>"><?php echo esc_html($item['wc_order_id'] ? sprintf(__('WooCommerce order ID #%d', 'superwoo'), (int) $item['wc_order_id']) : __('No WooCommerce order ID', 'superwoo')); ?></a><br><?php echo esc_html(sprintf(__('Recovery record #%d · Batch %d', 'superwoo'), (int) $item['id'], (int) $item['last_batch_id'])); ?></td>
                     <td><?php $preview = self::preview($item); ?><strong><?php echo esc_html(ucwords(str_replace('_', ' ', $preview['outcome']))); ?></strong><br><small><?php echo esc_html(implode(', ', $preview['reason_codes'])); ?></small></td>
                     <td><strong><?php echo esc_html(ucwords(str_replace('_', ' ', $preview['current_classification']['classification']))); ?></strong><br><?php echo esc_html($preview['current_classification']['reason']); ?><br><small><?php echo esc_html($item['verification_state']); ?></small></td>
                     <td><?php echo esc_html('Payment: ' . ($item['payment_id'] ?: '—')); ?><br><?php echo esc_html('Razorpay order: ' . ($item['razorpay_order_id'] ?: '—')); ?><br><?php echo esc_html('Woo order: ' . ($item['wc_order_id'] ?: ($item['wc_order_number'] ?: '—'))); ?><br><?php echo esc_html('Receipt: ' . ($item['receipt'] ?: '—')); ?></td>
@@ -367,6 +379,8 @@ class SuperWoo_Order_Recovery_Admin {
         $messages = [
             'imported' => __('CSV import completed. Imported status values remain unverified.', 'superwoo'),
             'already_imported' => __('This exact CSV file was already imported; no duplicate batch was created.', 'superwoo'),
+            'refreshed' => __('Existing CSV records refreshed. Review the missing WooCommerce orders filter and verify payments again before creating review orders.', 'superwoo'),
+            'refresh_error' => __('Some records could not be refreshed. Review the order recovery log before creating review orders.', 'superwoo'),
             'rules_saved' => __('Workshop exclusion rules saved.', 'superwoo'),
             'verified' => __('Provider response recorded. Review any evidence mismatch before drawing conclusions.', 'superwoo'),
             'verify_error' => __('Provider verification did not complete. The payment remains unverified; inspect the record for a safe error code.', 'superwoo'),
@@ -376,7 +390,7 @@ class SuperWoo_Order_Recovery_Admin {
             'payment_record_error' => __('Payment-only order creation stopped. Review the reason and any existing claim before retrying.', 'superwoo'),
             'payment_record_ack_required' => __('Confirm that this is a payment-only record before creating it.', 'superwoo'),
         ];
-        if (isset($messages[$notice])) { echo '<div class="notice notice-' . (in_array($notice, ['import_error','payment_record_error'], true) ? 'error' : 'success') . '"><p>' . esc_html($messages[$notice]) . '</p></div>'; }
+        if (isset($messages[$notice])) { echo '<div class="notice notice-' . (in_array($notice, ['import_error','payment_record_error','refresh_error'], true) ? 'error' : 'success') . '"><p>' . esc_html($messages[$notice]) . '</p></div>'; }
         if ('payment_record_error' === $notice && self::query_value('recovery_reason')) { echo '<p><code>' . esc_html(sanitize_key(self::query_value('recovery_reason'))) . '</code></p>'; }
     }
 
