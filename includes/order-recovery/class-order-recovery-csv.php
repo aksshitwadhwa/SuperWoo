@@ -20,7 +20,7 @@ class SuperWoo_Order_Recovery_CSV {
             'gross_minor' => ['amount in paise','amount (paise)','amount minor','amount in minor units'],
             'fee' => ['fee','fees','gateway fee','razorpay fee','total fee'],
             'fee_minor' => ['fee in paise','fee (paise)','fee minor'],
-            'fee_gst' => ['fee gst','gst on fee','tax on fee','fee tax'],
+            'fee_gst' => ['fee gst','gst on fee','tax on fee','fee tax','tax'],
             'fee_gst_minor' => ['fee gst in paise','fee gst (paise)','fee gst minor'],
             'refund' => ['refund','refund amount','amount refunded','total refund','amount refunded in payment export'],
             'refund_minor' => ['refund in paise','refund (paise)','refund minor'],
@@ -29,6 +29,7 @@ class SuperWoo_Order_Recovery_CSV {
             'refund_at' => ['refund date','refund timestamp','refunded at'],
             'paid_at' => ['created at','created_at','payment date','payment time','paid at','captured at','date','payment created at'],
             'currency' => ['currency','payment currency'],
+            'payment_method' => ['method','payment method','razorpay method'],
             'customer_email' => ['email','customer email','contact email','customer email in payment export'],
             'customer_phone' => ['contact','phone','mobile','customer phone','contact number','customer contact in payment export'],
         ];
@@ -211,6 +212,7 @@ class SuperWoo_Order_Recovery_CSV {
             'wc_order_id' => $order_id, 'wc_order_number' => $order_number, 'receipt' => substr(sanitize_text_field(self::cell($values, $columns, 'receipt')), 0, 190),
             'description' => substr(self::redact_free_text(self::cell($values, $columns, 'description')), 0, 2000), 'notes' => $notes,
             'reported_status' => $status, 'currency' => preg_match('/^[A-Z]{3}$/', $currency) ? $currency : '',
+            'payment_method' => substr(sanitize_key(self::cell($values, $columns, 'payment_method')), 0, 50),
             'gross_minor' => $gross, 'fee_minor' => $fee, 'fee_gst_minor' => $fee_gst, 'refund_minor' => $refund,
             'refund_reference' => substr(sanitize_text_field(self::cell($values, $columns, 'refund_reference')), 0, 500),
             'refund_status' => substr(strtolower(sanitize_text_field(self::cell($values, $columns, 'refund_status'))), 0, 64),
@@ -220,7 +222,7 @@ class SuperWoo_Order_Recovery_CSV {
             'missing_fields' => [], 'data_warnings' => [], 'source_row_number' => (int) $line,
         ];
         $row['source_values'] = [];
-        foreach (['payment_id','razorpay_order_id','wc_order_id','wc_order_number','receipt','reported_status','gross','gross_minor','fee','fee_minor','fee_gst','fee_gst_minor','refund','refund_minor','refund_reference','refund_status','refund_at','paid_at','currency'] as $source_field) {
+        foreach (['payment_id','razorpay_order_id','wc_order_id','wc_order_number','receipt','reported_status','gross','gross_minor','fee','fee_minor','fee_gst','fee_gst_minor','refund','refund_minor','refund_reference','refund_status','refund_at','paid_at','currency','payment_method'] as $source_field) {
             $raw = self::cell($values, $columns, $source_field);
             if ($raw !== '') { $row['source_values'][$source_field] = substr(sanitize_text_field($raw), 0, 500); }
         }

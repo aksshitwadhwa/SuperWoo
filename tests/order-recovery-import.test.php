@@ -130,6 +130,11 @@ file_put_contents($tmp, "id,order_id,amount,currency,status,created_at,descripti
     "pay_raw,rz_raw,794.0,INR,captured,02/10/2026 10:33:40,Order 8002,,8002.0,8002.0\n");
 $raw_missing = SuperWoo_Order_Recovery_CSV::parse($tmp);
 $assert(!is_wp_error($raw_missing) && $raw_missing['rows'][0]['wc_order_id'] === 8002 && $raw_missing['rows'][0]['gross_minor'] === 79400, '47-row raw payment format should retain exact WooCommerce reference and rupee amount');
+file_put_contents($tmp, "id,amount,currency,status,order_id,method,amount_refunded,refund_status,description,email,contact,notes,fee,tax,created_at\n" .
+    "pay_TiuwiqgN5ukuEe,794.00,INR,captured,order_TiuuCfn3JW9lbG,upi,0,,Order 8002,buyer@example.test,+918146431183,\"{\"\"shipping_method_name\"\":\"\"Standard Shipping\"\",\"\"woocommerce_order_id\"\":\"\"8002\"\"}\",18.74,2.86,02/10/2026 10:33:40\n");
+$payment_report = SuperWoo_Order_Recovery_CSV::parse($tmp);
+$assert(!is_wp_error($payment_report) && $payment_report['rows'][0]['wc_order_id'] === 8002 && $payment_report['rows'][0]['payment_method'] === 'upi', 'Razorpay payment report retains the original order ID and payment method');
+$assert($payment_report['rows'][0]['fee_minor'] === 1874 && $payment_report['rows'][0]['fee_gst_minor'] === 286 && $payment_report['rows'][0]['notes']['shipping_method_name'] === 'Standard Shipping', 'Razorpay fee, fee tax and shipping method name remain separate evidence');
 file_put_contents($tmp, "type,debit,credit,settlement_id,payment_id,amount\npayment,0,100,,pay_ledger,100\n");
 $mixed_ledger = SuperWoo_Order_Recovery_CSV::parse($tmp);
 $assert(is_wp_error($mixed_ledger) && $mixed_ledger->get_error_code() === 'recovery_csv_mixed_ledger', 'mixed settlement ledger must not be imported as a payment-only report');

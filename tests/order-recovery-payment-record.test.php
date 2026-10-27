@@ -47,6 +47,7 @@ class WC_Order {
     public static $throw_after_save = false;
     public $fields = [];
     public $meta = [];
+    public $id = 0;
     public function set_status($value) { $this->fields['status'] = $value; }
     public function set_created_via($value) { $this->fields['created_via'] = $value; }
     public function set_currency($value) { $this->fields['currency'] = $value; }
@@ -58,7 +59,13 @@ class WC_Order {
     public function set_billing_phone($value) { $this->fields['billing_phone'] = $value; }
     public function update_meta_data($key, $value) { $this->meta[$key] = $value; }
     public function get_meta($key, $single = true) { return $this->meta[$key] ?? ''; }
-    public function save() { self::$created[] = $this; if (self::$throw_after_save) { throw new Exception('simulated post-save interruption'); } return 9000 + count(self::$created); }
+    public function get_id() { return $this->id; }
+    public function get_transaction_id() { return $this->fields['transaction_id'] ?? ''; }
+    public function get_currency() { return $this->fields['currency'] ?? ''; }
+    public function get_total() { return $this->fields['total'] ?? 0; }
+    public function get_billing_email() { return $this->fields['billing_email'] ?? ''; }
+    public function get_billing_phone() { return $this->fields['billing_phone'] ?? ''; }
+    public function save() { if (!$this->id) { self::$created[] = $this; $this->id = 9000 + count(self::$created); } if (self::$throw_after_save) { throw new Exception('simulated post-save interruption'); } return $this->id; }
 }
 require dirname(__DIR__) . '/includes/order-recovery/class-order-recovery-classifier.php';
 require dirname(__DIR__) . '/includes/order-recovery/class-order-recovery-payment-record.php';
@@ -121,4 +128,17 @@ ob_start(); SuperWoo_Order_Recovery_Payment_Record::render_hpos_order_list_colum
 $assert($csv_status === 'captured (CSV)', 'WooCommerce visibly labels the captured status as CSV-reported');
 $csv_refunded = $bulk_valid; $csv_refunded['id'] = 22; $csv_refunded['payment_id'] = 'pay_csvrefund123'; $csv_refunded['wc_order_id'] = 9022; $csv_refunded['refund_minor'] = 100;
 $assert(is_wp_error(SuperWoo_Order_Recovery_Payment_Record::create($csv_refunded, [], 19, 'csv')), 'CSV-only recovery refuses a reported refund');
+$recovered_order = WC_Order::$created[count(WC_Order::$created)-1];
+$GLOBALS['payment_record_existing_order'] = $recovered_order;
+$enrich_row = $bulk_valid;
+$enrich_row['payment_method'] = 'upi'; $enrich_row['fee_minor'] = 1874; $enrich_row['fee_gst_minor'] = 286;
+$enrich_row['notes'] = ['shipping_method_name'=>'Standard Shipping']; $enrich_row['description'] = 'Order 9010';
+$enriched = SuperWoo_Order_Recovery_Payment_Record::enrich_from_csv_row($enrich_row, str_repeat('c',64));
+$assert(!is_wp_error($enriched) && $enriched['changed'] && $recovered_order->meta['_superwoo_recovery_csv_method'] === 'upi' && $recovered_order->meta['_superwoo_recovery_csv_shipping_method_name'] === 'Standard Shipping', 'matching recovered order receives exact method and shipping method name from CSV');
+$assert($recovered_order->meta['_superwoo_recovery_csv_gateway_fee_minor'] === 1874 && $recovered_order->meta['_superwoo_recovery_csv_gateway_fee_tax_minor'] === 286 && !property_exists($recovered_order, 'items'), 'gateway charges stay in metadata and no item is fabricated');
+$repeat_enrich = SuperWoo_Order_Recovery_Payment_Record::enrich_from_csv_row($enrich_row, str_repeat('c',64));
+$assert(!is_wp_error($repeat_enrich) && !$repeat_enrich['changed'], 'repeat enrichment with the same CSV row is idempotent');
+$wrong_amount = $enrich_row; $wrong_amount['gross_minor'] = 99900;
+$rejected_enrich = SuperWoo_Order_Recovery_Payment_Record::enrich_from_csv_row($wrong_amount, str_repeat('d',64));
+$assert(is_wp_error($rejected_enrich) && $rejected_enrich->get_error_code() === 'recovery_enrich_order_mismatch', 'CSV enrichment rejects mismatched order totals');
 echo "PASS: {$checks} payment-only recovery checks\n";

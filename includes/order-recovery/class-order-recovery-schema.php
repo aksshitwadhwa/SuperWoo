@@ -3,7 +3,7 @@ defined('ABSPATH') || exit;
 
 /** Versioned schema for read-only Razorpay import evidence. */
 class SuperWoo_Order_Recovery_Schema {
-    const VERSION = '4';
+    const VERSION = '5';
     const OPTION = 'superwoo_order_recovery_schema_version';
 
     public static function table($name) {
@@ -45,6 +45,7 @@ class SuperWoo_Order_Recovery_Schema {
             description text NULL,
             notes_json longtext NULL,
             reported_status varchar(64) NOT NULL DEFAULT '',
+            payment_method varchar(50) NOT NULL DEFAULT '',
             verification_state varchar(24) NOT NULL DEFAULT 'unverified',
             verified_at_utc datetime NULL,
             verification_error varchar(64) NOT NULL DEFAULT '',

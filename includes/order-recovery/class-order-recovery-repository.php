@@ -37,7 +37,7 @@ class SuperWoo_Order_Recovery_Repository {
             'idempotency_key' => $key, 'payment_id' => $row['payment_id'], 'razorpay_order_id' => $row['razorpay_order_id'],
             'wc_order_id' => $row['wc_order_id'], 'wc_order_number' => $row['wc_order_number'], 'receipt' => $row['receipt'],
             'description' => $row['description'], 'notes_json' => wp_json_encode($row['notes']),
-            'reported_status' => $row['reported_status'], 'verification_state' => 'unverified',
+            'reported_status' => $row['reported_status'], 'payment_method' => (string) ($row['payment_method'] ?? ''), 'verification_state' => 'unverified',
             'classification' => $row['classification'], 'classification_reason' => $row['classification_reason'],
             'currency' => $row['currency'], 'gross_minor' => $row['gross_minor'], 'wc_total_minor' => $row['wc_total_minor'] ?? null, 'fee_minor' => $row['fee_minor'],
             'fee_gst_minor' => $row['fee_gst_minor'], 'refund_minor' => $row['refund_minor'],

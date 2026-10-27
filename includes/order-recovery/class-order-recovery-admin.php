@@ -10,6 +10,7 @@ class SuperWoo_Order_Recovery_Admin {
         add_action('admin_init', [$this, 'maybe_install_schema']);
         add_action('admin_init', [$this, 'export_previews']);
         add_action('admin_post_superwoo_order_recovery_import', [$this, 'import_csv']);
+        add_action('admin_post_superwoo_order_recovery_enrich', [$this, 'enrich_recovered_orders']);
         add_action('admin_post_superwoo_order_recovery_save_rules', [$this, 'save_rules']);
         add_action('admin_post_superwoo_order_recovery_verify', [$this, 'verify_provider']);
         add_action('admin_post_superwoo_order_recovery_create_payment_record', [$this, 'create_payment_record']);
@@ -61,6 +62,34 @@ class SuperWoo_Order_Recovery_Admin {
         $repo->finish_batch((int) $batch['id'], $counts);
         superwoo_log('Order recovery CSV import completed', ['batch_id' => (int) $batch['id'], 'rows' => $counts['rows'], 'inserted' => $counts['inserted'], 'updated' => $counts['updated'], 'duplicates' => $counts['duplicates'], 'errors' => $counts['errors']], 'orders');
         wp_safe_redirect(add_query_arg(['page' => 'superwoo-order-recovery', 'recovery_notice' => 'imported', 'batch_id' => (int) $batch['id'], 'missing_wc_only' => '1'], admin_url('admin.php')));
+        exit;
+    }
+
+    public function enrich_recovered_orders() {
+        if (!current_user_can(self::CAPABILITY) || !check_admin_referer('superwoo_order_recovery_enrich')) { wp_die(esc_html__('You are not allowed to enrich recovery orders.', 'superwoo')); }
+        $file = $_FILES['enrich_csv'] ?? null;
+        $name = is_array($file) && isset($file['name']) && is_scalar($file['name']) ? (string) $file['name'] : '';
+        if (!is_array($file) || (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || empty($file['tmp_name']) || !is_string($file['tmp_name']) || !is_uploaded_file($file['tmp_name']) || strtolower(pathinfo($name, PATHINFO_EXTENSION)) !== 'csv') { $this->fail('enrich_upload_invalid'); }
+        $parsed = SuperWoo_Order_Recovery_CSV::parse($file['tmp_name']);
+        if (is_wp_error($parsed)) { $this->fail($parsed->get_error_code()); }
+        $file_hash = hash_file('sha256', $file['tmp_name']);
+        if (!$file_hash) { $this->fail('enrich_hash_failed'); }
+        $results = ['updated' => 0, 'unchanged' => 0, 'skipped' => 0, 'error_count' => 0, 'errors' => []];
+        foreach ($parsed['rows'] as $row) {
+            $claim = !empty($row['payment_id']) ? SuperWoo_Order_Recovery_Payment_Record::claim($row['payment_id']) : false;
+            if (!is_array($claim) || 'created' !== ($claim['state'] ?? '') || empty($claim['order_id'])) { $results['skipped']++; continue; }
+            $result = SuperWoo_Order_Recovery_Payment_Record::enrich_from_csv_row($row, $file_hash);
+            if (is_wp_error($result)) {
+                $results['error_count']++;
+                if (count($results['errors']) < 20) { $results['errors'][] = ['historical_id' => absint($row['wc_order_id'] ?? 0), 'reason' => sanitize_key($result->get_error_code())]; }
+                continue;
+            }
+            if ($result['changed']) { $results['updated']++; } else { $results['unchanged']++; }
+        }
+        superwoo_log('Recovered order CSV enrichment completed', ['updated' => $results['updated'], 'unchanged' => $results['unchanged'], 'skipped' => $results['skipped'], 'errors' => $results['error_count']], 'orders');
+        $token = wp_generate_password(20, false, false);
+        set_transient('superwoo_recovery_enrich_' . get_current_user_id() . '_' . $token, $results, 15 * MINUTE_IN_SECONDS);
+        wp_safe_redirect(add_query_arg(['page' => 'superwoo-order-recovery', 'enrich_result' => $token], admin_url('admin.php')));
         exit;
     }
 
@@ -252,6 +281,7 @@ class SuperWoo_Order_Recovery_Admin {
             <div class="notice notice-warning inline"><p><strong><?php esc_html_e('Payment-only records contain no products or free gifts.', 'superwoo'); ?></strong> <?php esc_html_e('WooCommerce assigns a new order ID. The historical ID is retained in protected metadata. These review orders are not fulfillment-ready.', 'superwoo'); ?></p></div>
             <?php self::notice(); ?>
             <?php self::render_bulk_result(); ?>
+            <?php self::render_enrich_result(); ?>
             <h2><?php esc_html_e('Import Razorpay CSV', 'superwoo'); ?></h2>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="superwoo_order_recovery_import">
@@ -262,6 +292,15 @@ class SuperWoo_Order_Recovery_Admin {
                 <p class="description"><?php esc_html_e('Reparses the same file to restore newly recognized fields and update Workshop classifications. It creates no WooCommerce orders. Changed payment evidence must be verified again.', 'superwoo'); ?></p>
                 <p class="description"><?php esc_html_e('Maximum 10 MB and 50,000 rows. The temporary upload is parsed in place and is not copied to the media library or retained after the request.', 'superwoo'); ?></p>
                 <p class="description"><?php esc_html_e('Use the Razorpay payment report or captured-payment reconciliation CSV. A mixed transactions ledger with settlement and refund rows is not accepted as an order source.', 'superwoo'); ?></p>
+            </form>
+
+            <h2><?php esc_html_e('Add CSV details to recovered orders', 'superwoo'); ?></h2>
+            <p><?php esc_html_e('Upload the Razorpay Payment report CSV to add its payment method, description, gateway fee and tax, shipping method name, and available contact details to matching recovery review orders already created. Payment ID, original WooCommerce ID, currency and amount must match. This does not create item or shipping charge lines.', 'superwoo'); ?></p>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="superwoo_order_recovery_enrich">
+                <?php wp_nonce_field('superwoo_order_recovery_enrich'); ?>
+                <input type="file" name="enrich_csv" accept=".csv,text/csv" required>
+                <?php submit_button(__('Update recovered orders from CSV', 'superwoo'), 'secondary', 'submit', false); ?>
             </form>
 
             <h2><?php esc_html_e('Imported record summary', 'superwoo'); ?></h2>
@@ -450,6 +489,16 @@ class SuperWoo_Order_Recovery_Admin {
             echo '</li>';
         }
         echo '</ul></div>';
+    }
+
+    private static function render_enrich_result() {
+        $token = self::query_value('enrich_result');
+        if (!preg_match('/^[A-Za-z0-9]{20}$/D', $token)) { return; }
+        $result = get_transient('superwoo_recovery_enrich_' . get_current_user_id() . '_' . $token);
+        if (!is_array($result)) { return; }
+        echo '<div class="notice notice-info"><p>' . esc_html(sprintf(__('Recovered orders updated: %1$d; already current: %2$d; unrelated CSV rows skipped: %3$d; matching rows rejected: %4$d.', 'superwoo'), (int) ($result['updated'] ?? 0), (int) ($result['unchanged'] ?? 0), (int) ($result['skipped'] ?? 0), (int) ($result['error_count'] ?? 0))) . '</p>';
+        foreach ((array) ($result['errors'] ?? []) as $error) { echo '<p>' . esc_html(sprintf(__('Original WooCommerce order #%1$d: %2$s', 'superwoo'), absint($error['historical_id'] ?? 0), sanitize_key((string) ($error['reason'] ?? 'unknown_error')))) . '</p>'; }
+        echo '</div>';
     }
 
     private static function notice() {
