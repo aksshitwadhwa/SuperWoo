@@ -27,6 +27,16 @@ class WC_Product {
     }
 }
 
+class WC_Order_Item_Product {
+    public $metadata = [];
+    private $total;
+    private $subtotal;
+    public function __construct($total = 0, $subtotal = 0) { $this->total = $total; $this->subtotal = $subtotal; }
+    public function get_total() { return $this->total; }
+    public function get_subtotal() { return $this->subtotal; }
+    public function add_meta_data($key, $value, $unique = false) { $this->metadata[$key] = $value; }
+}
+
 class Test_Cart {
     public $cart_contents;
 
@@ -78,5 +88,16 @@ if (0.0 !== $gift_product->get_price()) {
     fwrite(STDERR, 'FAIL: selected free gift retained a payable price of ' . $gift_product->get_price() . "\n");
     exit(1);
 }
+
+$offers = new Test_Free_Gift_Bundle_Offers();
+$order_item = new WC_Order_Item_Product(0, 0);
+$offers->record_free_gift_order_line($order_item, 'gift-row', $cart->get_cart()['gift-row'], null);
+if (($order_item->metadata['_superwoo_free_gift'] ?? '') !== 'yes' || ($order_item->metadata['_superwoo_gift_id'] ?? 0) !== 77) {
+    fwrite(STDERR, "FAIL: free item identity was not retained on the WooCommerce order item\n");
+    exit(1);
+}
+$paid_item = new WC_Order_Item_Product(100, 100);
+$offers->record_free_gift_order_line($paid_item, 'gift-row', $cart->get_cart()['gift-row'], null);
+if ($paid_item->metadata) { fwrite(STDERR, "FAIL: a priced item was marked as a free gift\n"); exit(1); }
 
 echo "PASS: selected free gift is priced at zero in the cart calculation\n";

@@ -10,27 +10,27 @@ class SuperWoo_Order_Recovery_CSV {
         return [
             'payment_id' => ['payment id','payment_id','paymentid','razorpay payment id','id'],
             'razorpay_order_id' => ['order id','order_id','razorpay order id','razorpay_order_id'],
-            'wc_order_id' => ['woocommerce order id','woo order id','wc order id','order reference','woo order reference'],
-            'wc_order_number' => ['woocommerce order number','woo order number','order number','order no'],
+            'wc_order_id' => ['woocommerce order id','woo order id','wc order id','order reference','woo order reference','woocommerce order id in notes','woocommerce order id in razorpay notes'],
+            'wc_order_number' => ['woocommerce order number','woo order number','order number','order no','woocommerce order number in notes','woocommerce order number in razorpay notes'],
             'receipt' => ['receipt','receipt id','receipt number'],
-            'description' => ['description','payment description','product description'],
+            'description' => ['description','payment description','product description','razorpay description'],
             'notes' => ['notes','note','metadata','meta data','payment notes'],
             'reported_status' => ['status','payment status','payment_status'],
-            'gross' => ['amount','gross amount','payment amount','captured amount','amount in rupees','gross'],
+            'gross' => ['amount','gross amount','payment amount','captured amount','amount in rupees','gross','razorpay amount'],
             'gross_minor' => ['amount in paise','amount (paise)','amount minor','amount in minor units'],
             'fee' => ['fee','fees','gateway fee','razorpay fee','total fee'],
             'fee_minor' => ['fee in paise','fee (paise)','fee minor'],
             'fee_gst' => ['fee gst','gst on fee','tax on fee','fee tax'],
             'fee_gst_minor' => ['fee gst in paise','fee gst (paise)','fee gst minor'],
-            'refund' => ['refund','refund amount','amount refunded','total refund'],
+            'refund' => ['refund','refund amount','amount refunded','total refund','amount refunded in payment export'],
             'refund_minor' => ['refund in paise','refund (paise)','refund minor'],
             'refund_reference' => ['refund id','refund ids','refund reference','refund reference id'],
-            'refund_status' => ['refund status'],
+            'refund_status' => ['refund status','refund status in payment export'],
             'refund_at' => ['refund date','refund timestamp','refunded at'],
-            'paid_at' => ['created at','created_at','payment date','payment time','paid at','captured at','date'],
+            'paid_at' => ['created at','created_at','payment date','payment time','paid at','captured at','date','payment created at'],
             'currency' => ['currency','payment currency'],
-            'customer_email' => ['email','customer email','contact email'],
-            'customer_phone' => ['contact','phone','mobile','customer phone','contact number'],
+            'customer_email' => ['email','customer email','contact email','customer email in payment export'],
+            'customer_phone' => ['contact','phone','mobile','customer phone','contact number','customer contact in payment export'],
         ];
     }
 
@@ -61,6 +61,11 @@ class SuperWoo_Order_Recovery_CSV {
         }
         $header = fgetcsv($stream, 0, $delimiter, '"', '');
         if (!is_array($header) || count($header) < 2 || count($header) > 200) { fclose($stream); return new WP_Error('recovery_csv_header', __('CSV header row is missing, malformed, or too wide.', 'superwoo')); }
+        $normalized_headers = array_map([self::class, 'normalize_header'], $header);
+        if (count(array_intersect(['type', 'debit', 'credit', 'settlement id'], $normalized_headers)) === 4) {
+            fclose($stream);
+            return new WP_Error('recovery_csv_mixed_ledger', __('This ledger mixes payments, settlements and refunds. Import a payment report instead.', 'superwoo'));
+        }
         $aliases = self::aliases(); $columns = [];
         foreach ($header as $index => $label) {
             $normalized = self::normalize_header($label);
@@ -186,8 +191,10 @@ class SuperWoo_Order_Recovery_CSV {
         $order_id_raw = self::cell($values, $columns, 'wc_order_id');
         if ($order_id_raw === '' && isset($notes['woocommerce_order_id'])) { $order_id_raw = (string) $notes['woocommerce_order_id']; }
         if ($order_id_raw === '' && isset($notes['order_id'])) { $order_id_raw = (string) $notes['order_id']; }
-        $order_id = preg_match('/^\d+$/', $order_id_raw) ? absint($order_id_raw) : 0;
+        // Spreadsheet-generated reconciliation exports can serialize integer IDs as "8051.0".
+        $order_id = preg_match('/^\d+(?:\.0+)?$/D', $order_id_raw) ? absint($order_id_raw) : 0;
         $order_number = substr(sanitize_text_field(self::cell($values, $columns, 'wc_order_number')), 0, 190);
+        if (preg_match('/^\d+\.0+$/D', $order_number)) { $order_number = substr($order_number, 0, strpos($order_number, '.')); }
         $gross = self::parse_money(self::cell($values, $columns, 'gross'), $currency);
         if (null === $gross) { $gross = self::parse_money(self::cell($values, $columns, 'gross_minor'), $currency, true); }
         $fee = self::parse_money(self::cell($values, $columns, 'fee'), $currency);
@@ -233,6 +240,10 @@ class SuperWoo_Order_Recovery_CSV {
     private static function date_utc($value) {
         if ($value === '') { return null; }
         try {
+            if (preg_match('/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2}$/D', $value)) {
+                $date = DateTimeImmutable::createFromFormat('!d/m/Y H:i:s', $value, new DateTimeZone('UTC'));
+                return $date && $date->format('d/m/Y H:i:s') === $value ? $date->format('Y-m-d H:i:s') : null;
+            }
             $timezone = preg_match('/(?:Z|[+-]\d{2}:?\d{2})$/i', $value) ? null : new DateTimeZone('UTC');
             $date = new DateTimeImmutable($value, $timezone);
             return $date->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');

@@ -75,6 +75,9 @@ class SuperWoo_Order_Recovery_Preview {
         if (!in_array($source_type, ['checkout_snapshot', 'verified_backup'], true) || '' === $source_reference || empty($evidence['authority_confirmed'])) {
             return self::incomplete($result, 'evidence_source_not_authoritative');
         }
+        if (empty($evidence['payment_id']) || !hash_equals((string) ($record['payment_id'] ?? ''), (string) $evidence['payment_id'])) {
+            return self::conflict($result, 'checkout_payment_id_mismatch');
+        }
         $missing = self::validate_evidence($evidence);
         if ($missing) { return self::incomplete($result, 'authoritative_evidence_incomplete', $missing); }
 
@@ -128,6 +131,7 @@ class SuperWoo_Order_Recovery_Preview {
                 }
                 foreach (['product_id','variation_id','subtotal_minor','total_minor','tax_minor'] as $key) { if (isset($line[$key]) && !self::is_minor_unit($line[$key])) { $missing[] = 'line_items.' . $index . '.' . $key; } }
                 if (isset($line['quantity']) && (!is_numeric($line['quantity']) || (float)$line['quantity'] <= 0)) { $missing[] = 'line_items.' . $index . '.quantity'; }
+                if (!empty($line['superwoo_free_gift']) && ((int) ($line['subtotal_minor'] ?? -1) !== 0 || (int) ($line['total_minor'] ?? -1) !== 0 || (int) ($line['tax_minor'] ?? -1) !== 0)) { $missing[] = 'line_items.' . $index . '.free_gift_amounts'; }
                 if (empty($line['product_id']) || !isset($line['variation_id']) || !function_exists('wc_get_product')) { $missing[] = 'line_items.' . $index . '.woocommerce_product'; }
                 else {
                     $product = wc_get_product(absint($line['product_id']));

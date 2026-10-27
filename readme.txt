@@ -4,12 +4,12 @@ Tags: woocommerce, cart drawer, product benefits, faq, bundle discounts
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.5.5
+Stable tag: 1.5.7
 License: GPLv2 or later
 
 SuperWoo adds WooCommerce product benefit icons, how-to content, product FAQs, shoppable videos, bundle offer rules, cart notices, and an AJAX cart drawer.
 
-SuperWoo does not implement payment gateways or change payment/order status. Its cart and currency features can update WooCommerce cart totals according to the configured offers and currency settings; WooCommerce and the active gateway handle checkout and payment.
+SuperWoo does not implement a payment gateway. Its cart and currency features can update WooCommerce cart totals according to the configured offers and currency settings; WooCommerce and the active gateway handle checkout and payment. Order Recovery can create an individually approved, payment-only WooCommerce review order from a verified captured Razorpay payment. Such a record contains no reconstructed product lines and is not ready for fulfillment.
 
 When Shoppable Videos is enabled, SuperWoo stores pseudonymous, on-site video engagement events (views, product clicks, add-to-cart actions, and completions) for 90 days. It does not send those events to an external service. If Multi-Currency location detection or an exchange-rate provider is enabled, the site administrator is responsible for reviewing that provider's privacy policy and informing visitors as required.
 
@@ -57,6 +57,10 @@ Elementor:
 5. Configure offer rules under WooCommerce > Offers.
 
 == Changelog ==
+
+= 1.5.7 =
+* Add individually approved payment-only WooCommerce recovery review orders for verified captured Razorpay payments, with duplicate and Workshop safeguards.
+* Recognize the supplied Razorpay reconciliation export format and retain zero-priced gift identity on normal WooCommerce order lines.
 
 = 1.5.5 =
 * Fix price-range free gifts displaying as free while still contributing their catalog price to cart totals.

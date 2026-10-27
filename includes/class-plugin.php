@@ -22,6 +22,9 @@ class SuperWoo_Plugin {
         // Receive-only endpoint for Razorpay's abandoned-cart notification.
         // It records a redacted receipt summary and has no order/payment hooks.
         (new SuperWoo_Razorpay_Abandoned_Webhook())->hooks();
+        add_filter('woocommerce_register_shop_order_post_statuses', ['SuperWoo_Order_Recovery_Payment_Record', 'register_status']);
+        add_filter('wc_order_statuses', ['SuperWoo_Order_Recovery_Payment_Record', 'add_status']);
+        add_action('woocommerce_admin_order_data_after_order_details', ['SuperWoo_Order_Recovery_Payment_Record', 'render_admin_details']);
         (new SuperWoo_Order_Recovery_Admin())->hooks();
 
         add_action('admin_menu', [$this, 'register_settings_page']);

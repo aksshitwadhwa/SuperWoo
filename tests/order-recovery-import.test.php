@@ -96,6 +96,7 @@ $failed = $missing; $failed['reported_status'] = 'failed';
 $assert(SuperWoo_Order_Recovery_Classifier::classify($failed)['classification'] === 'manual_review', 'CSV-reported failed status must remain unverified manual review');
 $workshop = $missing; $workshop['receipt'] = 'WS-2025-44';
 $assert(SuperWoo_Order_Recovery_Classifier::classify($workshop, null, ['receipt_prefixes' => ['WS-']])['classification'] === 'workshop_excluded', 'configured exact Workshop receipt prefix should exclude');
+$assert(SuperWoo_Order_Recovery_Classifier::classify($workshop, $match, ['receipt_prefixes' => ['WS-']])['classification'] === 'existing_order', 'a matched WooCommerce order remains visible even when the payment has a Workshop receipt');
 $workshop_meta = $missing; $workshop_meta['notes'] = ['checkout_source' => 'workshop_checkout'];
 $assert(SuperWoo_Order_Recovery_Classifier::classify($workshop_meta, null, ['checkout_sources' => ['workshop_checkout']])['classification'] === 'workshop_excluded', 'configured exact checkout source should exclude');
 $keyword = $missing; $keyword['description'] = 'Workshop registration';
@@ -118,6 +119,20 @@ $assert(!is_wp_error($refunds) && $refunds['rows'][0]['refund_reference'] === 'r
 file_put_contents($tmp, "Payment ID,Status,Amount,Created At\npay_timezone,captured,12.34,2025-02-05 12:30:00\n");
 $timezone = SuperWoo_Order_Recovery_CSV::parse($tmp);
 $assert(!is_wp_error($timezone) && in_array('Timestamp had no timezone; interpreted as UTC.', $timezone['rows'][0]['data_warnings'], true), 'timezone-less timestamps should be explicitly warned as assumed UTC');
+file_put_contents($tmp, "Razorpay Payment ID,Razorpay Order ID,Razorpay Amount,Currency,Payment Status,Amount Refunded in Payment Export,Refund Status in Payment Export,Payment Created At,Razorpay Description,WooCommerce Order ID in Notes,WooCommerce Order Number in Notes,Customer Email in Payment Export,Customer Contact in Payment Export\n" .
+    "pay_recon,rz_recon,3845.0,INR,captured,0.0,,05/10/2026 16:32:22,Store purchase,8051.0,8051.0,,\n");
+$reconciliation = SuperWoo_Order_Recovery_CSV::parse($tmp);
+$assert(!is_wp_error($reconciliation), 'actual reconciliation export header format should parse');
+$recon_row = $reconciliation['rows'][0];
+$assert($recon_row['gross_minor'] === 384500 && $recon_row['wc_order_id'] === 8051 && $recon_row['wc_order_number'] === '8051', 'reconciliation amounts and spreadsheet-formatted WooCommerce IDs should normalize exactly');
+$assert($recon_row['paid_at_utc'] === '2026-10-05 16:32:22' && $recon_row['description'] === 'Store purchase', 'day-first reconciliation date and description should be retained');
+file_put_contents($tmp, "id,order_id,amount,currency,status,created_at,description,notes,WooCommerce Order ID in Razorpay Notes,WooCommerce Order Number in Razorpay Notes\n" .
+    "pay_raw,rz_raw,794.0,INR,captured,02/10/2026 10:33:40,Order 8002,,8002.0,8002.0\n");
+$raw_missing = SuperWoo_Order_Recovery_CSV::parse($tmp);
+$assert(!is_wp_error($raw_missing) && $raw_missing['rows'][0]['wc_order_id'] === 8002 && $raw_missing['rows'][0]['gross_minor'] === 79400, '47-row raw payment format should retain exact WooCommerce reference and rupee amount');
+file_put_contents($tmp, "type,debit,credit,settlement_id,payment_id,amount\npayment,0,100,,pay_ledger,100\n");
+$mixed_ledger = SuperWoo_Order_Recovery_CSV::parse($tmp);
+$assert(is_wp_error($mixed_ledger) && $mixed_ledger->get_error_code() === 'recovery_csv_mixed_ledger', 'mixed settlement ledger must not be imported as a payment-only report');
 file_put_contents($tmp, "Payment ID,Status,Amount\npay_no_currency,captured,12.34\n");
 $no_currency = SuperWoo_Order_Recovery_CSV::parse($tmp);
 $assert(!is_wp_error($no_currency) && $no_currency['rows'][0]['gross_minor'] === null && count($no_currency['rows'][0]['data_warnings']) === 1, 'amounts without currency must not be assigned a minor-unit value');

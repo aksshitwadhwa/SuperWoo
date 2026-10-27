@@ -11,6 +11,7 @@ class SuperWoo_Order_Recovery_Admin {
         add_action('admin_post_superwoo_order_recovery_import', [$this, 'import_csv']);
         add_action('admin_post_superwoo_order_recovery_save_rules', [$this, 'save_rules']);
         add_action('admin_post_superwoo_order_recovery_verify', [$this, 'verify_provider']);
+        add_action('admin_post_superwoo_order_recovery_create_payment_record', [$this, 'create_payment_record']);
     }
 
     public function maybe_install_schema() {
@@ -45,13 +46,13 @@ class SuperWoo_Order_Recovery_Admin {
         if (is_wp_error($batch)) { $this->fail($batch->get_error_code()); }
         if (!empty($batch['existing'])) {
             superwoo_log('Order recovery import skipped: identical file already imported', ['batch_id' => (int) $batch['id']], 'orders');
-            wp_safe_redirect(add_query_arg(['page' => 'superwoo-order-recovery', 'recovery_notice' => 'already_imported', 'batch_id' => (int) $batch['id']], admin_url('admin.php')));
+            wp_safe_redirect(add_query_arg(['page' => 'superwoo-order-recovery', 'recovery_notice' => 'already_imported', 'batch_id' => (int) $batch['id'], 'classification' => 'missing_order_candidate'], admin_url('admin.php')));
             exit;
         }
         $counts = SuperWoo_Order_Recovery_CSV::import_rows($parsed['rows'], $repo, (int) $batch['id'], self::workshop_rules());
         $repo->finish_batch((int) $batch['id'], $counts);
         superwoo_log('Order recovery CSV import completed', ['batch_id' => (int) $batch['id'], 'rows' => $counts['rows'], 'inserted' => $counts['inserted'], 'updated' => $counts['updated'], 'duplicates' => $counts['duplicates'], 'errors' => $counts['errors']], 'orders');
-        wp_safe_redirect(add_query_arg(['page' => 'superwoo-order-recovery', 'recovery_notice' => 'imported', 'batch_id' => (int) $batch['id']], admin_url('admin.php')));
+        wp_safe_redirect(add_query_arg(['page' => 'superwoo-order-recovery', 'recovery_notice' => 'imported', 'batch_id' => (int) $batch['id'], 'classification' => 'missing_order_candidate'], admin_url('admin.php')));
         exit;
     }
 
@@ -163,6 +164,24 @@ class SuperWoo_Order_Recovery_Admin {
         wp_safe_redirect(add_query_arg(['page'=>'superwoo-order-recovery','transaction'=>$id,'recovery_notice'=>'verified'], admin_url('admin.php'))); exit;
     }
 
+    public function create_payment_record() {
+        $id = isset($_POST['transaction_id']) && is_scalar($_POST['transaction_id']) ? absint(wp_unslash($_POST['transaction_id'])) : 0;
+        if (!current_user_can(self::CAPABILITY) || !$id || !check_admin_referer('superwoo_order_recovery_create_' . $id)) {
+            wp_die(esc_html__('You are not allowed to create this recovery review record.', 'superwoo'));
+        }
+        if (!isset($_POST['acknowledge_payment_only']) || !is_scalar($_POST['acknowledge_payment_only']) || '1' !== (string) wp_unslash($_POST['acknowledge_payment_only'])) {
+            wp_safe_redirect(add_query_arg(['page'=>'superwoo-order-recovery','transaction'=>$id,'recovery_notice'=>'payment_record_ack_required'], admin_url('admin.php'))); exit;
+        }
+        $record = self::repository()->transaction($id);
+        $result = $record ? SuperWoo_Order_Recovery_Payment_Record::create($record, self::workshop_rules(), get_current_user_id()) : new WP_Error('payment_record_not_found', __('The recovery record no longer exists.', 'superwoo'));
+        if (is_wp_error($result)) {
+            superwoo_log('Payment-only recovery review order was not created', ['record_id'=>$id,'reason'=>sanitize_key($result->get_error_code())], 'warning');
+            wp_safe_redirect(add_query_arg(['page'=>'superwoo-order-recovery','transaction'=>$id,'recovery_notice'=>'payment_record_error','recovery_reason'=>sanitize_key($result->get_error_code())], admin_url('admin.php'))); exit;
+        }
+        superwoo_log('Payment-only recovery review order created', ['record_id'=>$id,'order_id'=>absint($result)], 'orders');
+        wp_safe_redirect(add_query_arg(['page'=>'superwoo-order-recovery','transaction'=>$id,'recovery_notice'=>'payment_record_created'], admin_url('admin.php'))); exit;
+    }
+
     public static function render_page() {
         if (!current_user_can(self::CAPABILITY)) { wp_die(esc_html__('You are not allowed to view recovery records.', 'superwoo')); }
         $repo = self::repository();
@@ -175,8 +194,8 @@ class SuperWoo_Order_Recovery_Admin {
         ?>
         <div class="wrap superwoo-admin-page">
             <h1><?php esc_html_e('Order Recovery', 'superwoo'); ?></h1>
-            <p><?php esc_html_e('Previews are read-only. A candidate needs a provider-verified captured payment, no matching WooCommerce order, and complete authoritative checkout or backup evidence. Payment data alone cannot reconstruct an order.', 'superwoo'); ?></p>
-            <div class="notice notice-warning inline"><p><strong><?php esc_html_e('Order creation is not available.', 'superwoo'); ?></strong> <?php esc_html_e('No validated authoritative checkout evidence adapter is connected. Records remain review-only; do not treat a provider payment record as sufficient order evidence.', 'superwoo'); ?></p></div>
+            <p><?php esc_html_e('Exact product-order reconstruction still requires complete checkout evidence. A referenced captured payment can instead be recorded as a payment-only WooCommerce review order after individual administrator approval and fresh provider verification.', 'superwoo'); ?></p>
+            <div class="notice notice-warning inline"><p><strong><?php esc_html_e('Payment-only records contain no products or free gifts.', 'superwoo'); ?></strong> <?php esc_html_e('WooCommerce assigns a new order ID. The historical ID is retained in protected metadata. These review orders are not fulfillment-ready.', 'superwoo'); ?></p></div>
             <?php self::notice(); ?>
             <h2><?php esc_html_e('Import Razorpay CSV', 'superwoo'); ?></h2>
             <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
@@ -185,6 +204,7 @@ class SuperWoo_Order_Recovery_Admin {
                 <input type="file" name="razorpay_csv" accept=".csv,text/csv" required>
                 <?php submit_button(__('Import for review', 'superwoo'), 'primary', 'submit', false); ?>
                 <p class="description"><?php esc_html_e('Maximum 10 MB and 50,000 rows. The temporary upload is parsed in place and is not copied to the media library or retained after the request.', 'superwoo'); ?></p>
+                <p class="description"><?php esc_html_e('Use the Razorpay payment report or captured-payment reconciliation CSV. A mixed transactions ledger with settlement and refund rows is not accepted as an order source.', 'superwoo'); ?></p>
             </form>
 
             <h2><?php esc_html_e('Imported record summary', 'superwoo'); ?></h2>
@@ -275,6 +295,20 @@ class SuperWoo_Order_Recovery_Admin {
             <p><strong><?php esc_html_e('Provider verification', 'superwoo'); ?>:</strong> <?php echo esc_html(ucwords(str_replace('_', ' ', $item['verification_state']))); ?><?php if (!empty($item['verified_at_utc'])) : ?> · <?php echo esc_html($item['verified_at_utc']); ?> UTC<?php endif; ?><?php if (!empty($item['verification_error'])) : ?> · <?php echo esc_html($item['verification_error']); ?><?php endif; ?></p>
             <?php if (!empty($item['provider_status'])) : ?><p><strong><?php esc_html_e('Provider evidence', 'superwoo'); ?>:</strong> <?php echo esc_html(sprintf(__('Status %1$s; captured %2$s; amount %3$s; refunded %4$s; currency %5$s; Razorpay order %6$s', 'superwoo'), $item['provider_status'], null === $item['provider_captured'] ? __('unknown', 'superwoo') : ((int)$item['provider_captured'] ? __('yes', 'superwoo') : __('no', 'superwoo')), self::money($item['provider_amount_minor'], $item['provider_currency']), self::money($item['provider_amount_refunded_minor'], $item['provider_currency']), $item['provider_currency'] ?: '—', $item['provider_order_id'] ?: '—')); ?></p><p><strong><?php esc_html_e('Evidence correlation', 'superwoo'); ?>:</strong> <?php echo esc_html($item['provider_match_result'] ?: 'unmatched'); ?>. <?php esc_html_e('An exact payment ID identifies the provider record; amount, customer and time do not establish a WooCommerce order match. WooCommerce checkout metadata is not mapped because the active gateway contract is unavailable.', 'superwoo'); ?></p><?php endif; ?>
             <?php if (!empty($item['payment_id'])) : ?><form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>"><input type="hidden" name="action" value="superwoo_order_recovery_verify"><input type="hidden" name="transaction_id" value="<?php echo esc_attr((string)$item['id']); ?>"><?php wp_nonce_field('superwoo_order_recovery_verify'); ?><?php submit_button(__('Verify with Razorpay (read-only)', 'superwoo'), 'secondary', 'submit', false); ?><p class="description"><?php esc_html_e('Requires SUPERWOO_RAZORPAY_KEY_ID and SUPERWOO_RAZORPAY_KEY_SECRET constants in protected site configuration. Does not create an order, call capture/refund operations, or send notifications.', 'superwoo'); ?></p></form><?php endif; ?>
+            <?php $claim = !empty($item['payment_id']) ? SuperWoo_Order_Recovery_Payment_Record::claim((string) $item['payment_id']) : false; ?>
+            <?php if ($claim) : ?>
+                <p><strong><?php esc_html_e('Payment-only recovery claim', 'superwoo'); ?>:</strong> <?php echo esc_html((string) ($claim['state'] ?? 'claimed')); ?><?php if (!empty($claim['order_id'])) : ?> · <?php echo esc_html(sprintf(__('New WooCommerce order #%d', 'superwoo'), (int) $claim['order_id'])); ?><?php $created_order = function_exists('wc_get_order') ? wc_get_order(absint($claim['order_id'])) : false; if ($created_order && method_exists($created_order, 'get_edit_order_url')) : ?> <a href="<?php echo esc_url($created_order->get_edit_order_url()); ?>"><?php esc_html_e('Open order', 'superwoo'); ?></a><?php endif; ?><?php endif; ?></p>
+            <?php elseif ('missing_order_candidate' === $preview['current_classification']['classification'] && !empty($item['wc_order_id']) && 'verified' === $item['verification_state']) : ?>
+                <h3><?php esc_html_e('Create payment-only review order', 'superwoo'); ?></h3>
+                <p><?php esc_html_e('This creates a WooCommerce order in Recovery review status with the verified Razorpay amount, payment ID, currency, timestamp reference and available contact details. It has no product, free-gift, shipping or tax lines and is not ready for fulfillment. WooCommerce assigns a new ID; the historical ID stays in metadata. The payment is verified again when you submit.', 'superwoo'); ?></p>
+                <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                    <input type="hidden" name="action" value="superwoo_order_recovery_create_payment_record">
+                    <input type="hidden" name="transaction_id" value="<?php echo esc_attr((string) $item['id']); ?>">
+                    <?php wp_nonce_field('superwoo_order_recovery_create_' . (int) $item['id']); ?>
+                    <p><label><input type="checkbox" name="acknowledge_payment_only" value="1" required> <?php esc_html_e('I confirm this payment-only review order has no known product or gift lines and must not be fulfilled as a complete store order.', 'superwoo'); ?></label></p>
+                    <?php submit_button(__('Create payment-only review order', 'superwoo'), 'secondary', 'submit', false); ?>
+                </form>
+            <?php endif; ?>
             <p><strong><?php esc_html_e('Source values', 'superwoo'); ?>:</strong> <code><?php echo esc_html(wp_json_encode(is_array($source) ? $source : [])); ?></code></p>
             <p><strong><?php esc_html_e('Redacted notes / metadata', 'superwoo'); ?>:</strong> <code><?php echo esc_html(wp_json_encode(is_array($notes) ? $notes : [])); ?></code></p>
             <p><strong><?php esc_html_e('Source row fingerprint', 'superwoo'); ?>:</strong> <code><?php echo esc_html($item['source_row_hash']); ?></code></p>
@@ -338,8 +372,12 @@ class SuperWoo_Order_Recovery_Admin {
             'verify_error' => __('Provider verification did not complete. The payment remains unverified; inspect the record for a safe error code.', 'superwoo'),
             'verify_unavailable' => __('This record has no usable provider payment ID.', 'superwoo'),
             'import_error' => __('CSV import was rejected. Check the file format, size, headers, and upload status.', 'superwoo'),
+            'payment_record_created' => __('Payment-only WooCommerce review order created. It has no product lines and must be completed manually only after item evidence is found.', 'superwoo'),
+            'payment_record_error' => __('Payment-only order creation stopped. Review the reason and any existing claim before retrying.', 'superwoo'),
+            'payment_record_ack_required' => __('Confirm that this is a payment-only record before creating it.', 'superwoo'),
         ];
-        if (isset($messages[$notice])) { echo '<div class="notice notice-' . ('import_error' === $notice ? 'error' : 'success') . '"><p>' . esc_html($messages[$notice]) . '</p></div>'; }
+        if (isset($messages[$notice])) { echo '<div class="notice notice-' . (in_array($notice, ['import_error','payment_record_error'], true) ? 'error' : 'success') . '"><p>' . esc_html($messages[$notice]) . '</p></div>'; }
+        if ('payment_record_error' === $notice && self::query_value('recovery_reason')) { echo '<p><code>' . esc_html(sanitize_key(self::query_value('recovery_reason'))) . '</code></p>'; }
     }
 
     private static function query_value($key) { return isset($_GET[$key]) && is_scalar($_GET[$key]) ? (string) wp_unslash($_GET[$key]) : ''; }

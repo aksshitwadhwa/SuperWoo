@@ -53,12 +53,6 @@ class SuperWoo_Order_Recovery_Classifier {
     }
 
     public static function classify($row, $order_match = null, $rules = [], $duplicate_in_file = false) {
-        if (self::is_explicit_workshop($row, $rules)) {
-            return ['classification' => 'workshop_excluded', 'reason' => 'Matched a configured exact Workshop exclusion rule.'];
-        }
-        if (self::has_workshop_keyword($row)) {
-            return ['classification' => 'manual_review', 'reason' => 'Workshop-related text found; generic keywords cannot exclude or recover a transaction.'];
-        }
         if ($duplicate_in_file || !empty($order_match['ambiguous'])) {
             return ['classification' => 'duplicate_ambiguous', 'reason' => $duplicate_in_file ? 'Duplicate payment identifier occurs more than once in this CSV.' : 'More than one WooCommerce order has this payment identifier or order number.'];
         }
@@ -67,6 +61,12 @@ class SuperWoo_Order_Recovery_Classifier {
         }
         if (!empty($order_match['order'])) {
             return ['classification' => 'existing_order', 'reason' => 'WooCommerce CRUD lookup matched by ' . sanitize_key($order_match['match']) . '.'];
+        }
+        if (self::is_explicit_workshop($row, $rules)) {
+            return ['classification' => 'workshop_excluded', 'reason' => 'Matched a configured exact Workshop exclusion rule; no WooCommerce order was matched.'];
+        }
+        if (self::has_workshop_keyword($row)) {
+            return ['classification' => 'manual_review', 'reason' => 'Workshop-related text found; generic keywords cannot exclude or recover a transaction.'];
         }
         $reported = strtolower((string) ($row['reported_status'] ?? ''));
         if (in_array($reported, ['captured', 'paid', 'payment_captured', 'success', 'succeeded'], true)) {

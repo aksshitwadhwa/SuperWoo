@@ -21,6 +21,7 @@ class SuperWoo_Bundle_Offers {
         // This keeps free-gift notices and the actual cart contents aligned.
         add_action('woocommerce_before_calculate_totals', [$this, 'apply_discounts'], 20);
         add_action('woocommerce_cart_item_removed', [$this, 'sync_gifts_after_item_removed'], 20, 2);
+        add_action('woocommerce_checkout_create_order_line_item', [$this, 'record_free_gift_order_line'], 30, 4);
         add_filter('woocommerce_cart_item_name', [$this, 'gift_cart_item_name'], 10, 3);
         add_action('woocommerce_before_cart_table', [$this, 'render_notices']);
         add_shortcode('bundle_offers_notice', [$this, 'notice_shortcode']);
@@ -728,6 +729,19 @@ class SuperWoo_Bundle_Offers {
 
             $cart_item['data']->set_price(0);
         }
+    }
+
+    /** Keep the exact cart gift identity on the WooCommerce order item. */
+    public function record_free_gift_order_line($item, $cart_item_key, $values, $order) {
+        if (empty($values['superwoo_free_gift']) || !($item instanceof WC_Order_Item_Product)) {
+            return;
+        }
+        $gift_id = absint($values['superwoo_gift_id'] ?? (($values['variation_id'] ?? 0) ?: ($values['product_id'] ?? 0)));
+        if (!$gift_id || (float) $item->get_total() !== 0.0 || (float) $item->get_subtotal() !== 0.0) {
+            return;
+        }
+        $item->add_meta_data('_superwoo_free_gift', 'yes', true);
+        $item->add_meta_data('_superwoo_gift_id', $gift_id, true);
     }
 
     /** Restore pre-offer line prices so repeated totals passes cannot compound discounts. */

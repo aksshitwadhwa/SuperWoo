@@ -2,7 +2,7 @@
 /**
  * Plugin Name: SuperWoo
  * Description: WooCommerce product benefits, how-to content, FAQs, modern reviews, shoppable videos, offers, and AJAX cart drawer.
- * Version: 1.5.6
+ * Version: 1.5.7
  * Author: Aksshit Wadhwa
  * Author URI: https://digtize.com/
  * License: GPLv2 or later
@@ -57,7 +57,7 @@ register_shutdown_function(static function () {
     }
 });
 
-define('SUPERWOO_VERSION', '1.5.5');
+define('SUPERWOO_VERSION', '1.5.7');
 define('SUPERWOO_FILE', __FILE__);
 define('SUPERWOO_PATH', plugin_dir_path(__FILE__));
 define('SUPERWOO_URL', plugin_dir_url(__FILE__));
@@ -83,6 +83,7 @@ require_once SUPERWOO_PATH . 'includes/order-recovery/class-order-recovery-csv.p
 require_once SUPERWOO_PATH . 'includes/order-recovery/class-order-recovery-classifier.php';
 require_once SUPERWOO_PATH . 'includes/order-recovery/class-order-recovery-provider.php';
 require_once SUPERWOO_PATH . 'includes/order-recovery/class-order-recovery-preview.php';
+require_once SUPERWOO_PATH . 'includes/order-recovery/class-order-recovery-payment-record.php';
 require_once SUPERWOO_PATH . 'includes/order-recovery/class-order-recovery-admin.php';
 require_once SUPERWOO_PATH . 'includes/class-elementor-dynamic-tags.php';
 // The carousel module is optional; never let a missing optional file prevent
