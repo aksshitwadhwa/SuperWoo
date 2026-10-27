@@ -87,7 +87,7 @@ class SuperWoo_Order_Recovery_Repository {
             }
         }
         if (!$transaction_id) { return new WP_Error('recovery_transaction_write', __('Could not save an imported transaction.', 'superwoo')); }
-        $this->wpdb->query($this->wpdb->prepare('INSERT IGNORE INTO ' . $this->table('batch_transactions') . ' (batch_id,transaction_id,source_row_number,source_row_hash,created_at) VALUES (%d,%d,%d,%s,%s)', absint($batch_id), $transaction_id, absint($row_number), $row['source_row_hash'], $now));
+        $this->wpdb->query($this->wpdb->prepare('INSERT INTO ' . $this->table('batch_transactions') . ' (batch_id,transaction_id,source_row_number,source_row_hash,created_at) VALUES (%d,%d,%d,%s,%s) ON DUPLICATE KEY UPDATE transaction_id=VALUES(transaction_id),source_row_hash=VALUES(source_row_hash)', absint($batch_id), $transaction_id, absint($row_number), $row['source_row_hash'], $now));
         return ['id' => $transaction_id, 'new' => $was_new, 'duplicate' => !$was_new || $duplicate_in_file];
     }
 
@@ -105,6 +105,16 @@ class SuperWoo_Order_Recovery_Repository {
 
     public function transactions($args) {
         $where = ['1=1']; $values = [];
+        if (!empty($args['missing_wc_only'])) {
+            // A provider payment without an explicit WooCommerce ID cannot establish a missing store order.
+            $where[] = 'classification=%s'; $values[] = 'missing_order_candidate';
+            $where[] = 'wc_order_id > 0';
+            // Keep workshop-related text out even when an older import classified it before that rule existed.
+            foreach (['workshop', 'masterclass', 'webinar'] as $word) {
+                $where[] = "LOWER(CONCAT(COALESCE(description,''),' ',COALESCE(notes_json,''),' ',receipt)) NOT LIKE %s";
+                $values[] = '%' . $this->wpdb->esc_like($word) . '%';
+            }
+        }
         foreach (['classification', 'reported_status', 'verification_state', 'currency'] as $field) {
             if (!empty($args[$field])) { $where[] = "{$field}=%s"; $values[] = sanitize_text_field($args[$field]); }
         }

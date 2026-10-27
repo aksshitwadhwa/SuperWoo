@@ -4,7 +4,7 @@ Tags: woocommerce, cart drawer, product benefits, faq, bundle discounts
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.5.7
+Stable tag: 1.5.8
 License: GPLv2 or later
 
 SuperWoo adds WooCommerce product benefit icons, how-to content, product FAQs, shoppable videos, bundle offer rules, cart notices, and an AJAX cart drawer.
@@ -57,6 +57,10 @@ Elementor:
 5. Configure offer rules under WooCommerce > Offers.
 
 == Changelog ==
+
+= 1.5.8 =
+* Add a missing WooCommerce orders filter that requires an original order ID and hides Workshop-related payments.
+* Show the original WooCommerce order ID prominently and allow administrators to refresh previously imported CSV records without creating orders.
 
 = 1.5.7 =
 * Add individually approved payment-only WooCommerce recovery review orders for verified captured Razorpay payments, with duplicate and Workshop safeguards.
