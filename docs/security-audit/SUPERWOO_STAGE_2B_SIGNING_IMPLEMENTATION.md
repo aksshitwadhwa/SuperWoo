@@ -28,7 +28,7 @@ Canonicalization sorts object keys lexically, preserves list order, emits unesca
 
 ## Local signing command
 
-The CLI tool is `tools/sign-superwoo-release.php`. It requires PHP sodium and ZipArchive, verifies the ZIP's root and main plugin header version, hashes the final archive, checks the URL/filename and manifest values, and writes the canonical envelope to a new file without overwriting an existing one. It refuses unsigned output and rejects private-key files readable by group or others. This local file-based signer is for development fixtures only; production signing should use a protected KMS/HSM-backed service or offline signing workstation, never the public web server.
+The CLI tool is `tools/sign-superwoo-release.php`. It requires PHP sodium and ZipArchive, verifies the ZIP's root and main plugin header version, hashes the final archive, checks the URL/filename and manifest values, and writes the canonical envelope to a new file without overwriting an existing one. It refuses unsigned output and rejects private-key files readable by group or others. Use this file-based signer for production only on a dedicated offline signing workstation with the encrypted production key temporarily available to the authorized signer; never sign on the public web server or a general-purpose connected workstation.
 
 Example using a **development-only** Ed25519 secret key already stored in a mode-0600 file:
 
@@ -44,11 +44,11 @@ php tools/sign-superwoo-release.php \
   --output=/secure/local/update.json
 ```
 
-The tool does not generate keys, upload artifacts, contact Digtize, overwrite metadata, or install a plugin. Never pass a production private key to this tool. A production process must not copy its private key to the update host.
+The tool does not generate keys, upload artifacts, contact Digtize, overwrite metadata, or install a plugin. Never pass a production private key to this tool outside the approved offline signing procedure. A production process must not copy its private key to the update host.
 
 ## Key lifecycle design
 
-- Generate production Ed25519 keys only after separate owner approval. Prefer a KMS/HSM that supports detached Ed25519 signatures. If unavailable, generate on a dedicated offline signing workstation and encrypt a backup under dual control; do not use a web host, CI secret with broad access, shared drive, or source repository.
+- Generate the production Ed25519 key on a dedicated offline signing workstation only after owner approval. Store the key encrypted at rest, limit access to named custodians, keep a separate encrypted recovery copy under dual control, and log every signing operation. Do not use a web host, CI secret, shared drive, source repository, or support ticket for private-key storage or transfer.
 - Give each public key a unique, immutable `key_id`. Keep the public key in the plugin's trusted map. Do not fetch trust anchors from the metadata server.
 - For planned rotation, ship a reviewed client build containing both old and new public keys before publishing with the new key. Publish with the old key until that client build is validated; then sign new manifests with the new key during an overlap period. Remove the old trust anchor only in a later reviewed client release after adoption is sufficient.
 - For suspected compromise, stop signing with the key. A compromised signing key cannot securely authorize its own replacement. Recovery requires a separately authenticated trust-anchor package/update path, such as controlled administrator installation, then removal of the compromised key. Preserve evidence and the release ledger.
@@ -60,4 +60,4 @@ The actual Digtize server was not reachable for this task; its implementation an
 
 ## Current stop boundary
 
-Development fixtures and key material are generated only inside test temp directories and deleted by the tests. No production key exists or has been created. The production trust-anchor map is still empty, the current feed is unsigned, and the live endpoint could not be inspected. Do not publish this source as a production updater until the approved public key is pinned, the production server emits this schema, a bootstrap path is approved, and a staged WordPress update has passed.
+Development fixtures and key material are generated only inside test temp directories and deleted by the tests. No production key exists or has been created. The production trust-anchor map is still empty, the current feed is unsigned, and the live endpoint has not been configured for signed releases. Do not publish this source as a production updater until the approved public key is pinned, the production server emits this schema, a bootstrap path is approved, and a staged WordPress update has passed.

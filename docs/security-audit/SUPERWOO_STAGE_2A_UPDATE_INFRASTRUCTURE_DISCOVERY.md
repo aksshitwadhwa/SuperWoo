@@ -61,7 +61,7 @@ Use an immutable, versioned ZIP and static signed metadata on the approved Digti
 2. A reviewed release job produces the manifest required by Stage 1, with a globally increasing release sequence, key ID, version, requirements, and exact immutable package URL.
 3. The release signer signs only canonical manifest bytes with Ed25519. Publish the canonical `{ "manifest": ..., "signature": ... }` envelope and ZIP without redirects, and verify served byte count/hash against the signed manifest from a non-production test endpoint before promotion.
 4. Pin only the public key in the client’s `trusted_public_keys()` map. The public key is not secret and may be committed in a reviewed plugin release. Never embed or transmit the private key in the plugin or web server.
-5. Prefer a managed KMS/HSM asymmetric Ed25519 key where supported, with narrowly scoped signing identity, audited invocations, two-person release approval, and no exportable private-key material. If the selected KMS cannot sign Ed25519 directly, use an offline hardware-protected signer or an isolated, ephemeral signing job with a secret mounted only for the approved release job. Do not store the private key in the web root, plugin repository, site database, or general-purpose CI variables.
+5. Use a dedicated offline signing workstation for Ed25519 releases. Generate the production key there, keep the private-key file encrypted at rest with access limited to named custodians, require a second-person review for each signing operation, and retain an encrypted recovery copy separately under dual control. Do not store the private key in the web root, plugin repository, site database, shared drive, general-purpose CI variables, or support tickets. Reconnect the workstation only to transfer the signed metadata and public artifacts after review; never upload the private key.
 6. Maintain a signed release ledger and immutable artifact storage. Never replace an existing versioned ZIP. Record source commit, build inputs, artifact digest/size, manifest sequence, signer/key ID, approval, and publication result.
 
 The simplest compatible server deployment is a static canonical metadata file plus a static ZIP under the already allowlisted path. Whether Digtize’s existing hosting supports this configuration is unknown. Do not choose a new CDN or package host without a client allowlist review.
@@ -91,7 +91,7 @@ If dashboard-only migration is required for every existing installation, that co
 ## Remaining risks
 
 - Live metadata, current published package, hosting platform, server-side access controls, TLS behavior, and release automation are not verified because the public hostname did not resolve here and no infrastructure access was provided.
-- A malicious or compromised release signer can authorize malicious packages; protect signing authority with HSM/KMS controls, review, audit, and emergency revocation procedures.
+- A malicious or compromised release signer can authorize malicious packages; protect the offline signing workstation and encrypted key backups with dual control, review, an auditable release ledger, and emergency revocation procedures.
 - A server/database restore may roll back the client’s sequence high-water state. Recovery and replay behavior need a tested operational procedure.
 - No production trust key exists in the Stage 1 client yet, and the old production feed format is unsigned. Stage 1 must not be deployed as a standalone user-facing updater build.
 - Build reproducibility and package/header version equality are not established in the repository.
@@ -104,7 +104,7 @@ Before Stage 2 implementation or deployment, obtain explicit approval for:
 1. The production public key ID and base64 Ed25519 public key to pin in plugin source, including the rotation/revocation recovery plan.
 2. The final metadata schema, endpoint URL, exact approved package host/path, 50 MiB size ceiling, and required response headers.
 3. Digtize update-server owner participation to publish canonical signed metadata and immutable ZIPs, configure no-redirect serving, and keep signing private keys off the serving host.
-4. Signing-key custody model (KMS/HSM or offline/isolated signer), named key custodians, release approval/audit process, backup/recovery, and emergency compromise response.
+4. Offline signing workstation, named key custodians, encrypted key backup and recovery process, release approval/audit process, and emergency compromise response.
 5. The staging endpoint/domain and WordPress/PHP compatibility matrix for integration tests.
 6. The strict migration method: authenticated manual installation of the Stage 2 trust-anchor client for existing installations, plus the schedule for retiring the unsigned feed. A dashboard bootstrap over unsigned metadata would require a separate risk exception.
 7. A production deployment/change window after staging verification. This Stage 2A discovery did not deploy anything.

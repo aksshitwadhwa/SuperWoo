@@ -1,7 +1,7 @@
 # SuperWoo Updater Hardening Plan
 
 **Prepared:** 2026-10-23
-**Status:** Stage 1 local client implementation complete; Stage 2 signing and update-server integration remain pending. No production key or server change was made.
+**Status:** Historical plan. For the temporary 1.5.6 dashboard release, runtime signature verification is disabled by owner direction; see `UPDATER_UNSIGNED_INTERIM_RELEASE.md`. The unsigned HTTPS feed does not protect against update-host compromise.
 
 ## Current implementation
 
@@ -17,7 +17,7 @@ The source currently does not explicitly set `sslverify`, disable redirects, val
 2. The metadata must include a schema version, plugin slug, release version, WordPress/PHP requirements, package URL, package SHA-256, package byte length, release sequence, signing key ID, and detached signature. Validate types, bounds, slug, semantic version, URL host/path, and size before creating an update transient.
 3. Sign deterministic UTF-8 metadata using the updater's restricted canonical JSON representation, excluding the detached `signature` field. Object keys are lexically sorted; arrays preserve order; schema keys are ASCII and values have no floating-point numbers. Require canonical serialization to match the signed representation so duplicate-key ambiguity is rejected. This is not a general-purpose RFC 8785 implementation.
 4. Pin the public verification key in a plugin release. Use Ed25519; verify with the WordPress-bundled sodium compatibility API or native sodium, and fail closed if neither supported verifier is available. Do not download a replacement public key from the same update endpoint.
-5. Keep the private signing key outside the web root, plugin, and public update server—prefer offline/HSM-backed or access-controlled release CI signing. Restrict key use to reviewed release artifacts and audit every signing operation.
+5. Keep the private signing key encrypted on a dedicated offline signing workstation, outside the web root, plugin, source repository, and public update server. Limit access to named custodians, require a second-person release review, keep an encrypted recovery copy under dual control, and audit every signing operation.
 6. Require a monotonically increasing signed release sequence and a version greater than the installed release to limit replay of old-but-valid release metadata. Rotate keys by shipping a plugin release containing both the old and new public trust anchors, then stop signing with the old key after adoption.
 
 ### Package download and integrity

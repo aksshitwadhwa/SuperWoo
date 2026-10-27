@@ -1,10 +1,12 @@
 {
   "name": "SuperWoo",
   "slug": "superwoo",
-  "version": "1.5.5",
+  "version": "1.5.6",
   "requires": "6.2",
   "requires_php": "7.4",
-  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.5.5.zip",
+  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.5.6.zip",
+  "sha256": "fde979c6b7fe67bf0935fe352dee4d6e4bebb8a68af6f13f81ea9649fb99e342",
+  "package_size": 276723,
   "homepage": "https://digtize.com/plugins/superwoo/",
-  "description": "SuperWoo 1.5.5 fixes price-range free gifts being included in WooCommerce cart totals."
+  "description": "SuperWoo 1.5.6 adds order recovery tools and expands verified HTTPS-only plugin updates."
 }

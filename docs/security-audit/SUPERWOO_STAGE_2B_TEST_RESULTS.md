@@ -42,7 +42,7 @@ The integration test's “installation” verifies the returned local ZIP and ex
 - The live `digtize.com` endpoint, web server, CDN, TLS, MIME types, redirects, cache behavior, and ZIP bytes were not inspected; production compatibility is **unverified**.
 - Production trust anchors are still empty. The current signed local fixture key is test-only and has no production trust value. Do not publish or deploy this checkout as a hardened production updater.
 - The schema now requires `expires_at`, making this client incompatible with the old unsigned flat feed and any earlier signed envelope without that field. Bootstrap must be coordinated and cannot rely on an unsigned fallback.
-- The key file CLI is intentionally only a local/test mechanism. Production signing needs approved KMS/HSM or offline key custody and a reviewed release workflow.
+- The key file CLI is the approved offline signing mechanism; production use requires the dedicated offline workstation, encrypted key custody, dual control, and a reviewed release workflow.
 - The integration fixture does not test actual WordPress update-transient/plugin-directory behavior, supported PHP versions other than local 8.5.11, or sodium-compat behavior on older hosts.
 - Site sequence state can be lost or restored with a database backup. Expiration limits replay time, but recovery needs release-ledger checks.
 
