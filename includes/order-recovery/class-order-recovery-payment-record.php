@@ -25,12 +25,14 @@ class SuperWoo_Order_Recovery_Payment_Record {
     public static function render_admin_details($order) {
         if (!$order instanceof WC_Order || 'yes' !== $order->get_meta('_superwoo_recovery_payment_only', true)) { return; }
         echo '<div class="order_data_column"><h4>' . esc_html__('Payment-only recovery', 'superwoo') . '</h4>';
-        echo '<p>' . esc_html__('This order contains verified Razorpay payment facts only. Products, free gifts, shipping and taxes were unavailable in the source and require separate review before fulfillment.', 'superwoo') . '</p>';
+        $source = (string) $order->get_meta('_superwoo_recovery_payment_evidence', true);
+        echo '<p>' . esc_html('csv' === $source ? __('This payment was reported by an imported CSV and was not checked with Razorpay. Products, free gifts, shipping and taxes require separate review before fulfillment.', 'superwoo') : __('This order contains verified Razorpay payment facts only. Products, free gifts, shipping and taxes were unavailable in the source and require separate review before fulfillment.', 'superwoo')) . '</p>';
         echo '<p><strong>' . esc_html__('Historical WooCommerce reference', 'superwoo') . ':</strong> ' . esc_html((string) $order->get_meta('_superwoo_recovery_historical_order_id', true)) . '</p>';
         $historical_number = (string) $order->get_meta('_superwoo_recovery_historical_order_number', true);
         if ($historical_number !== '') { echo '<p><strong>' . esc_html__('Historical order number', 'superwoo') . ':</strong> ' . esc_html($historical_number) . '</p>'; }
-        echo '<p><strong>' . esc_html__('Verified Razorpay payment status', 'superwoo') . ':</strong> ' . esc_html((string) $order->get_meta('_superwoo_recovery_razorpay_status', true)) . '</p>';
-        echo '<p><strong>' . esc_html__('Razorpay status checked at', 'superwoo') . ':</strong> ' . esc_html((string) $order->get_meta('_superwoo_recovery_razorpay_verified_at_utc', true)) . ' UTC</p>';
+        echo '<p><strong>' . esc_html('csv' === $source ? __('CSV-reported Razorpay status', 'superwoo') : __('Verified Razorpay payment status', 'superwoo')) . ':</strong> ' . esc_html((string) $order->get_meta('_superwoo_recovery_razorpay_status', true)) . '</p>';
+        if ('csv' !== $source) { echo '<p><strong>' . esc_html__('Razorpay status checked at', 'superwoo') . ':</strong> ' . esc_html((string) $order->get_meta('_superwoo_recovery_razorpay_verified_at_utc', true)) . ' UTC</p>'; }
+        if ('csv' === $source) { echo '<p><strong>' . esc_html__('CSV payment timestamp', 'superwoo') . ':</strong> ' . esc_html((string) $order->get_meta('_superwoo_recovery_provider_created_at_utc', true)) . ' UTC</p>'; }
         echo '</div>';
     }
 
@@ -49,7 +51,8 @@ class SuperWoo_Order_Recovery_Payment_Record {
 
     private static function print_razorpay_status($order) {
         $status = $order instanceof WC_Order ? (string) $order->get_meta('_superwoo_recovery_razorpay_status', true) : '';
-        echo esc_html($status !== '' ? $status : '—');
+        $source = $order instanceof WC_Order ? (string) $order->get_meta('_superwoo_recovery_payment_evidence', true) : '';
+        echo esc_html($status !== '' ? $status . ('csv' === $source ? ' (CSV)' : ' (verified)') : '—');
     }
 
     private static function claim_key($payment_id) {
@@ -64,8 +67,8 @@ class SuperWoo_Order_Recovery_Payment_Record {
         return get_option(self::claim_key($payment_id), false);
     }
 
-    /** Create only the provider facts; no product, gift, shipping or tax is invented. */
-    public static function create($record, $rules, $actor_id) {
+    /** Create payment-only review evidence; no product, gift, shipping or tax is invented. */
+    public static function create($record, $rules, $actor_id, $evidence_mode = 'provider') {
         if (!current_user_can('manage_woocommerce')) {
             return new WP_Error('payment_record_forbidden', __('You are not allowed to create a recovery review order.', 'superwoo'));
         }
@@ -88,15 +91,20 @@ class SuperWoo_Order_Recovery_Payment_Record {
             return new WP_Error('payment_record_not_missing_store_order', __('This payment is existing, Workshop-related, ambiguous or otherwise not a missing store order.', 'superwoo'));
         }
 
-        $provider = (new SuperWoo_Order_Recovery_Provider())->verify($payment_id);
-        if (is_wp_error($provider)) { return $provider; }
-        $provider = SuperWoo_Order_Recovery_Provider::correlate($record, $provider, $match);
-        if ('verified' !== $provider['state'] || 'captured' !== $provider['status'] || true !== $provider['captured'] || empty($provider['refund_evidence_complete']) || (int) $provider['amount_refunded_minor'] !== 0 || !empty($provider['refunds'])) {
-            return new WP_Error('payment_record_provider_conflict', __('The provider did not verify an unrefunded captured payment matching this import.', 'superwoo'));
-        }
-        if ('INR' !== $provider['currency'] || (int) $provider['amount_minor'] <= 0 || empty($record['currency']) || 'INR' !== strtoupper((string) $record['currency']) || null === $record['gross_minor'] || (int) $record['gross_minor'] !== (int) $provider['amount_minor']) {
-            return new WP_Error('payment_record_amount_conflict', __('The provider amount or currency does not match the imported payment.', 'superwoo'));
-        }
+        if ('csv' === $evidence_mode) {
+            $provider = self::csv_payment_facts($record);
+            if (is_wp_error($provider)) { return $provider; }
+        } elseif ('provider' === $evidence_mode) {
+            $provider = (new SuperWoo_Order_Recovery_Provider())->verify($payment_id);
+            if (is_wp_error($provider)) { return $provider; }
+            $provider = SuperWoo_Order_Recovery_Provider::correlate($record, $provider, $match);
+            if ('verified' !== $provider['state'] || 'captured' !== $provider['status'] || true !== $provider['captured'] || empty($provider['refund_evidence_complete']) || (int) $provider['amount_refunded_minor'] !== 0 || !empty($provider['refunds'])) {
+                return new WP_Error('payment_record_provider_conflict', __('The provider did not verify an unrefunded captured payment matching this import.', 'superwoo'));
+            }
+            if ('INR' !== $provider['currency'] || (int) $provider['amount_minor'] <= 0 || empty($record['currency']) || 'INR' !== strtoupper((string) $record['currency']) || null === $record['gross_minor'] || (int) $record['gross_minor'] !== (int) $provider['amount_minor']) {
+                return new WP_Error('payment_record_amount_conflict', __('The provider amount or currency does not match the imported payment.', 'superwoo'));
+            }
+        } else { return new WP_Error('payment_record_evidence_mode_invalid', __('The recovery evidence mode is invalid.', 'superwoo')); }
 
         // The unique option name is a database-backed claim across PHP workers.
         $key = self::claim_key($payment_id);
@@ -126,7 +134,7 @@ class SuperWoo_Order_Recovery_Payment_Record {
             $order->set_created_via('superwoo-recovery');
             $order->set_currency('INR');
             $order->set_payment_method('razorpay');
-            $order->set_payment_method_title('Razorpay');
+            $order->set_payment_method_title('csv' === $evidence_mode ? 'Razorpay (CSV reported)' : 'Razorpay');
             $order->set_transaction_id($payment_id);
             $order->set_total(number_format(((int) $provider['amount_minor']) / 100, 2, '.', ''));
             if (!empty($record['customer_email']) && is_email($record['customer_email'])) { $order->set_billing_email($record['customer_email']); }
@@ -138,8 +146,10 @@ class SuperWoo_Order_Recovery_Payment_Record {
             $order->update_meta_data('_superwoo_recovery_source_row_hash', $record['source_row_hash']);
             $order->update_meta_data('_superwoo_recovery_provider_created_at_utc', (string) ($provider['created_at_utc'] ?? ''));
             $order->update_meta_data('_superwoo_recovery_provider_amount_minor', (int) $provider['amount_minor']);
+            $order->update_meta_data('_superwoo_recovery_payment_evidence', $evidence_mode);
+            if ('csv' === $evidence_mode) { $order->update_meta_data('_superwoo_recovery_csv_batch_id', absint($record['last_batch_id'] ?? 0)); }
             $order->update_meta_data('_superwoo_recovery_razorpay_status', sanitize_key((string) $provider['status']));
-            $order->update_meta_data('_superwoo_recovery_razorpay_verified_at_utc', gmdate('Y-m-d H:i:s'));
+            if ('provider' === $evidence_mode) { $order->update_meta_data('_superwoo_recovery_razorpay_verified_at_utc', gmdate('Y-m-d H:i:s')); }
             $order->update_meta_data('_superwoo_recovery_razorpay_refunded_minor', (int) $provider['amount_refunded_minor']);
             $order->update_meta_data('_superwoo_recovery_razorpay_order_id', (string) ($provider['order_id'] ?? $record['razorpay_order_id'] ?? ''));
             $order->update_meta_data('_superwoo_recovery_receipt', (string) ($record['receipt'] ?? ''));
@@ -153,11 +163,22 @@ class SuperWoo_Order_Recovery_Payment_Record {
                 'actor_id' => absint($actor_id), 'claimed_at_utc' => gmdate('Y-m-d H:i:s'), 'order_id' => absint($order_id),
             ], false);
             $repo = new SuperWoo_Order_Recovery_Repository();
-            $repo->save_provider_verification(absint($record['id']), $provider);
+            if ('provider' === $evidence_mode) { $repo->save_provider_verification(absint($record['id']), $provider); }
             $repo->mark_recovered(absint($record['id']), absint($order_id));
             return absint($order_id);
         } catch (Throwable $error) {
             return new WP_Error('payment_record_save_failed', __('WooCommerce did not complete the review order; inspect the claim before retrying.', 'superwoo'));
         }
+    }
+
+    public static function csv_payment_facts($record) {
+        if ('captured' !== strtolower((string) ($record['reported_status'] ?? '')) || 'INR' !== strtoupper((string) ($record['currency'] ?? '')) || !isset($record['gross_minor']) || (int) $record['gross_minor'] <= 0 || !isset($record['refund_minor']) || 0 !== (int) $record['refund_minor'] || !empty($record['refund_status']) || empty($record['razorpay_order_id'])) {
+            return new WP_Error('payment_record_csv_evidence_incomplete', __('CSV-only recovery requires a captured INR payment, positive amount, zero reported refund, and Razorpay order ID.', 'superwoo'));
+        }
+        return [
+            'status' => 'captured', 'amount_minor' => (int) $record['gross_minor'], 'currency' => 'INR',
+            'amount_refunded_minor' => 0, 'order_id' => (string) $record['razorpay_order_id'],
+            'created_at_utc' => (string) ($record['paid_at_utc'] ?? ''),
+        ];
     }
 }

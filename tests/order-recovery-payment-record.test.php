@@ -29,7 +29,8 @@ function wc_get_orders($args) { return (object) ['orders' => [], 'max_num_pages'
 function wc_get_order($id) { return $GLOBALS['payment_record_existing_order']; }
 class SuperWoo_Order_Recovery_Provider {
     public static $next;
-    public function verify($payment_id) { return self::$next; }
+    public static $verify_calls = 0;
+    public function verify($payment_id) { self::$verify_calls++; return self::$next; }
     public static function correlate($record, $result, $match) { return $result; }
 }
 class SuperWoo_Order_Recovery_Repository {
@@ -65,7 +66,7 @@ require dirname(__DIR__) . '/includes/order-recovery/class-order-recovery-admin.
 
 $checks = 0;
 $assert = static function ($ok, $message) use (&$checks) { $checks++; if (!$ok) { fwrite(STDERR, "FAIL: {$message}\n"); exit(1); } };
-$record = ['id'=>7,'payment_id'=>'pay_abc12345','wc_order_id'=>8051,'wc_order_number'=>'8051','source_row_hash'=>str_repeat('a',64),'reported_status'=>'captured','currency'=>'INR','gross_minor'=>384500,'notes_json'=>'{}','description'=>'Order 8051','duplicate_count'=>0,'customer_email'=>'buyer@example.test','customer_phone'=>'+911234567890'];
+$record = ['id'=>7,'payment_id'=>'pay_abc12345','razorpay_order_id'=>'order_abc12345','wc_order_id'=>8051,'wc_order_number'=>'8051','source_row_hash'=>str_repeat('a',64),'reported_status'=>'captured','currency'=>'INR','gross_minor'=>384500,'refund_minor'=>0,'refund_status'=>'','paid_at_utc'=>'2026-10-05 16:32:22','notes_json'=>'{}','description'=>'Order 8051','duplicate_count'=>0,'customer_email'=>'buyer@example.test','customer_phone'=>'+911234567890'];
 $provider = ['state'=>'verified','status'=>'captured','captured'=>true,'refund_evidence_complete'=>true,'amount_refunded_minor'=>0,'refunds'=>[],'currency'=>'INR','amount_minor'=>384500,'created_at_utc'=>'2026-10-05 16:32:22'];
 SuperWoo_Order_Recovery_Provider::$next = $provider;
 SuperWoo_Order_Recovery_Repository::$fresh = $record;
@@ -80,7 +81,7 @@ $assert($order->fields['status'] === 'superwoo-review' && $order->fields['total'
 $assert($order->meta['_superwoo_recovery_historical_order_id'] === 8051 && $order->meta['_superwoo_recovery_items_missing'] === 'yes' && $order->meta['_superwoo_recovery_payment_only'] === 'yes', 'historical reference and missing items are explicit');
 $assert($order->meta['_superwoo_recovery_razorpay_status'] === 'captured' && $order->meta['_superwoo_recovery_razorpay_refunded_minor'] === 0 && SuperWoo_Order_Recovery_Repository::$recovered[7] === 9001, 'exact verified provider status is stored and the recovered record leaves the missing list');
 ob_start(); SuperWoo_Order_Recovery_Payment_Record::render_hpos_order_list_column('superwoo_razorpay_status', $order); $shown_status = ob_get_clean();
-$assert($shown_status === 'captured', 'WooCommerce order list displays the exact verified Razorpay status');
+$assert($shown_status === 'captured (verified)', 'WooCommerce order list displays the exact verified Razorpay status');
 $assert(!property_exists($order, 'items') && SuperWoo_Order_Recovery_Payment_Record::claim($record['payment_id'])['order_id'] === 9001, 'no item is fabricated and the claim records the new order ID');
 $same_history = $record; $same_history['payment_id'] = 'pay_samehistory123';
 $blocked = SuperWoo_Order_Recovery_Payment_Record::create($same_history, [], 19);
@@ -111,6 +112,13 @@ $assert(is_wp_error($again) && $again->get_error_code() === 'payment_record_alre
 $bulk_valid = $record; $bulk_valid['id'] = 20; $bulk_valid['payment_id'] = 'pay_bulkvalid123'; $bulk_valid['wc_order_id'] = 9010;
 $bulk_workshop = $record; $bulk_workshop['id'] = 21; $bulk_workshop['payment_id'] = 'pay_bulkshop123'; $bulk_workshop['wc_order_id'] = 9011; $bulk_workshop['description'] = 'Workshop Purchase';
 SuperWoo_Order_Recovery_Repository::$records = [20 => $bulk_valid, 21 => $bulk_workshop];
+SuperWoo_Order_Recovery_Provider::$next = new WP_Error('credentials_unavailable');
+$calls_before_csv = SuperWoo_Order_Recovery_Provider::$verify_calls;
 $bulk_results = SuperWoo_Order_Recovery_Admin::recover_selected([20, 21], new SuperWoo_Order_Recovery_Repository(), [], 19);
 $assert(count($bulk_results) === 2 && $bulk_results[0]['order_id'] > 0 && $bulk_results[1]['order_id'] === 0 && $bulk_results[1]['reason'] === 'payment_record_not_missing_store_order', 'bulk recovery creates an eligible order and individually skips a Workshop payment');
+$assert(SuperWoo_Order_Recovery_Provider::$verify_calls === $calls_before_csv && WC_Order::$created[count(WC_Order::$created)-1]->meta['_superwoo_recovery_payment_evidence'] === 'csv', 'CSV-only bulk recovery creates without API credentials or provider requests');
+ob_start(); SuperWoo_Order_Recovery_Payment_Record::render_hpos_order_list_column('superwoo_razorpay_status', WC_Order::$created[count(WC_Order::$created)-1]); $csv_status = ob_get_clean();
+$assert($csv_status === 'captured (CSV)', 'WooCommerce visibly labels the captured status as CSV-reported');
+$csv_refunded = $bulk_valid; $csv_refunded['id'] = 22; $csv_refunded['payment_id'] = 'pay_csvrefund123'; $csv_refunded['wc_order_id'] = 9022; $csv_refunded['refund_minor'] = 100;
+$assert(is_wp_error(SuperWoo_Order_Recovery_Payment_Record::create($csv_refunded, [], 19, 'csv')), 'CSV-only recovery refuses a reported refund');
 echo "PASS: {$checks} payment-only recovery checks\n";
