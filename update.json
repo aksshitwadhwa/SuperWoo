@@ -1,12 +1,12 @@
 {
   "name": "SuperWoo",
   "slug": "superwoo",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "requires": "6.2",
   "requires_php": "7.4",
-  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.6.2.zip",
-  "sha256": "b36371183b3e44f127610cb66e17f22e0c3f27b2bf95173dede4719960b19df3",
-  "package_size": 292680,
+  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.6.3.zip",
+  "sha256": "21704a0cf24cdfb0e2b3ac4545d77a85d1224d337e26076aa77ef657502b5322",
+  "package_size": 294597,
   "homepage": "https://digtize.com/plugins/superwoo/",
-  "description": "SuperWoo 1.6.2 allows approved CSV-only payment recovery without Razorpay API credentials."
+  "description": "SuperWoo 1.6.3 adds CSV enrichment for existing payment-only recovery orders."
 }
