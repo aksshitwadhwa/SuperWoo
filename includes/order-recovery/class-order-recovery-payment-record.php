@@ -24,9 +24,14 @@ class SuperWoo_Order_Recovery_Payment_Record {
 
     public static function render_admin_details($order) {
         if (!$order instanceof WC_Order || 'yes' !== $order->get_meta('_superwoo_recovery_payment_only', true)) { return; }
-        echo '<div class="order_data_column"><h4>' . esc_html__('Payment-only recovery', 'superwoo') . '</h4>';
+        echo '<div class="order_data_column"><h4>' . esc_html__('Recovery review', 'superwoo') . '</h4>';
         $source = (string) $order->get_meta('_superwoo_recovery_payment_evidence', true);
-        echo '<p>' . esc_html('csv' === $source ? __('This payment was reported by an imported CSV and was not checked with Razorpay. Products, free gifts, shipping and taxes require separate review before fulfillment.', 'superwoo') : __('This order contains verified Razorpay payment facts only. Products, free gifts, shipping and taxes were unavailable in the source and require separate review before fulfillment.', 'superwoo')) . '</p>';
+        $items_reviewed = 'no' === $order->get_meta('_superwoo_recovery_items_missing', true);
+        echo '<p>' . esc_html('csv' === $source ? __('This payment was reported by an imported CSV and was not checked with Razorpay.', 'superwoo') : __('This order contains verified Razorpay payment facts.', 'superwoo')) . '</p>';
+        echo '<p>' . esc_html($items_reviewed ? __('Product lines were added from separately reviewed evidence. Shipping, tax and address details still require their own evidence.', 'superwoo') : __('Products and free gifts are still unknown. Shipping, tax and address details require separate evidence before fulfillment.', 'superwoo')) . '</p>';
+        $record_id = absint($order->get_meta('_superwoo_recovery_record_id', true));
+        if (!$items_reviewed && $record_id) { echo '<p><a href="' . esc_url(add_query_arg(['page'=>'superwoo-order-recovery','transaction'=>$record_id], admin_url('admin.php'))) . '">' . esc_html__('Review purchased products', 'superwoo') . '</a></p>'; }
+        if ($items_reviewed) { echo '<p><strong>' . esc_html__('Item evidence', 'superwoo') . ':</strong> ' . esc_html((string) $order->get_meta('_superwoo_recovery_items_evidence', true)) . '</p>'; }
         echo '<p><strong>' . esc_html__('Historical WooCommerce reference', 'superwoo') . ':</strong> ' . esc_html((string) $order->get_meta('_superwoo_recovery_historical_order_id', true)) . '</p>';
         $historical_number = (string) $order->get_meta('_superwoo_recovery_historical_order_number', true);
         if ($historical_number !== '') { echo '<p><strong>' . esc_html__('Historical order number', 'superwoo') . ':</strong> ' . esc_html($historical_number) . '</p>'; }

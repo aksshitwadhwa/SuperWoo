@@ -12,6 +12,7 @@ class SuperWoo_Order_Recovery_Admin {
         add_action('admin_post_superwoo_order_recovery_import', [$this, 'import_csv']);
         add_action('admin_post_superwoo_order_recovery_enrich', [$this, 'enrich_recovered_orders']);
         add_action('admin_post_superwoo_order_recovery_enrich_pair', [$this, 'enrich_recovered_orders_from_pair']);
+        add_action('admin_post_superwoo_order_recovery_add_items', [$this, 'add_reviewed_items']);
         add_action('admin_post_superwoo_order_recovery_save_rules', [$this, 'save_rules']);
         add_action('admin_post_superwoo_order_recovery_verify', [$this, 'verify_provider']);
         add_action('admin_post_superwoo_order_recovery_create_payment_record', [$this, 'create_payment_record']);
@@ -294,6 +295,20 @@ class SuperWoo_Order_Recovery_Admin {
         wp_safe_redirect(add_query_arg(['page'=>'superwoo-order-recovery','transaction'=>$id,'recovery_notice'=>'payment_record_created'], admin_url('admin.php'))); exit;
     }
 
+    public function add_reviewed_items() {
+        $id = isset($_POST['transaction_id']) && is_scalar($_POST['transaction_id']) ? absint(wp_unslash($_POST['transaction_id'])) : 0;
+        if (!current_user_can(self::CAPABILITY) || !$id || !check_admin_referer('superwoo_order_recovery_items_' . $id)) { wp_die(esc_html__('You cannot review these recovery items.', 'superwoo')); }
+        $confirmed = isset($_POST['acknowledge_item_evidence']) && is_scalar($_POST['acknowledge_item_evidence']) && (string) wp_unslash($_POST['acknowledge_item_evidence']) === '1';
+        $raw_lines = isset($_POST['item_lines']) && is_array($_POST['item_lines']) ? wp_unslash($_POST['item_lines']) : [];
+        $source = isset($_POST['item_evidence']) && is_scalar($_POST['item_evidence']) ? wp_unslash($_POST['item_evidence']) : '';
+        $record = self::repository()->transaction($id);
+        $result = $confirmed && $record ? SuperWoo_Order_Recovery_Items::add($record, $raw_lines, $source, get_current_user_id()) : new WP_Error('recovery_items_confirmation_required', __('Item evidence and administrator confirmation are required.', 'superwoo'));
+        $reason = is_wp_error($result) ? sanitize_key($result->get_error_code()) : '';
+        superwoo_log(is_wp_error($result) ? 'Recovery product review rejected' : 'Recovery product lines approved', ['record_id' => $id, 'order_id' => is_wp_error($result) ? 0 : absint($result), 'reason' => $reason], is_wp_error($result) ? 'warning' : 'orders');
+        wp_safe_redirect(add_query_arg(['page'=>'superwoo-order-recovery','transaction'=>$id,'recovery_notice'=>is_wp_error($result) ? 'items_error' : 'items_added','recovery_reason'=>$reason], admin_url('admin.php')));
+        exit;
+    }
+
     public function bulk_create_payment_records() {
         if (!current_user_can(self::CAPABILITY) || !check_admin_referer('superwoo_order_recovery_bulk_create')) {
             wp_die(esc_html__('You are not allowed to recover these orders.', 'superwoo'));
@@ -487,6 +502,26 @@ class SuperWoo_Order_Recovery_Admin {
             <?php $claim = !empty($item['payment_id']) ? SuperWoo_Order_Recovery_Payment_Record::claim((string) $item['payment_id']) : false; ?>
             <?php if ($claim) : ?>
                 <p><strong><?php esc_html_e('Payment-only recovery claim', 'superwoo'); ?>:</strong> <?php echo esc_html((string) ($claim['state'] ?? 'claimed')); ?><?php if (!empty($claim['order_id'])) : ?> · <?php echo esc_html(sprintf(__('New WooCommerce order #%d', 'superwoo'), (int) $claim['order_id'])); ?><?php $created_order = function_exists('wc_get_order') ? wc_get_order(absint($claim['order_id'])) : false; if ($created_order && method_exists($created_order, 'get_edit_order_url')) : ?> <a href="<?php echo esc_url($created_order->get_edit_order_url()); ?>"><?php esc_html_e('Open order', 'superwoo'); ?></a><?php endif; ?><?php endif; ?></p>
+                <?php if (isset($created_order) && $created_order instanceof WC_Order && $created_order->get_status() === SuperWoo_Order_Recovery_Payment_Record::STATUS && $created_order->get_meta('_superwoo_recovery_items_missing', true) === 'yes' && !$created_order->get_items('line_item')) : ?>
+                    <h3><?php esc_html_e('Review and add exact purchased products', 'superwoo'); ?></h3>
+                    <p><?php esc_html_e('Razorpay exports do not identify products. Enter products only from a checkout record, customer proof or another source that shows the exact items and amounts. Use the variation ID for a variation. Include any free gift as a zero-total line. All line totals must equal the recorded payment; this form cannot infer shipping charges or taxes.', 'superwoo'); ?></p>
+                    <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>">
+                        <input type="hidden" name="action" value="superwoo_order_recovery_add_items">
+                        <input type="hidden" name="transaction_id" value="<?php echo esc_attr((string) $item['id']); ?>">
+                        <?php wp_nonce_field('superwoo_order_recovery_items_' . (int) $item['id']); ?>
+                        <p><strong><?php echo esc_html(sprintf(__('Recorded payment: %s', 'superwoo'), self::money($item['gross_minor'], $item['currency']))); ?></strong></p>
+                        <table class="widefat striped"><thead><tr><th><?php esc_html_e('Product or variation ID', 'superwoo'); ?></th><th><?php esc_html_e('Quantity', 'superwoo'); ?></th><th><?php esc_html_e('Line subtotal (INR)', 'superwoo'); ?></th><th><?php esc_html_e('Line total after discount (INR)', 'superwoo'); ?></th></tr></thead><tbody>
+                        <?php for ($line_index = 0; $line_index < 10; $line_index++) : ?><tr>
+                            <td><input type="number" min="1" step="1" name="item_lines[<?php echo esc_attr((string) $line_index); ?>][product_id]" aria-label="<?php echo esc_attr(sprintf(__('Product ID for line %d', 'superwoo'), $line_index + 1)); ?>"></td>
+                            <td><input type="number" min="1" max="100" step="1" name="item_lines[<?php echo esc_attr((string) $line_index); ?>][quantity]" aria-label="<?php echo esc_attr(sprintf(__('Quantity for line %d', 'superwoo'), $line_index + 1)); ?>"></td>
+                            <td><input type="number" min="0" step="0.01" name="item_lines[<?php echo esc_attr((string) $line_index); ?>][subtotal]" aria-label="<?php echo esc_attr(sprintf(__('Subtotal for line %d', 'superwoo'), $line_index + 1)); ?>"></td>
+                            <td><input type="number" min="0" step="0.01" name="item_lines[<?php echo esc_attr((string) $line_index); ?>][total]" aria-label="<?php echo esc_attr(sprintf(__('Total for line %d', 'superwoo'), $line_index + 1)); ?>"></td>
+                        </tr><?php endfor; ?></tbody></table>
+                        <p><label for="superwoo-item-evidence"><strong><?php esc_html_e('Where the exact item details came from', 'superwoo'); ?></strong></label><br><input type="text" class="regular-text" id="superwoo-item-evidence" name="item_evidence" maxlength="500" required placeholder="<?php echo esc_attr__('e.g. customer checkout screenshot dated 28 Oct', 'superwoo'); ?>"></p>
+                        <p><label><input type="checkbox" name="acknowledge_item_evidence" value="1" required> <?php esc_html_e('I checked the products, quantities and prices against this evidence.', 'superwoo'); ?></label></p>
+                        <?php submit_button(__('Add reviewed products to WooCommerce order', 'superwoo'), 'primary', 'submit', false); ?>
+                    </form>
+                <?php endif; ?>
             <?php elseif ('missing_order_candidate' === $preview['current_classification']['classification'] && !empty($item['wc_order_id']) && !is_wp_error(SuperWoo_Order_Recovery_Payment_Record::csv_payment_facts($item))) : ?>
                 <h3><?php esc_html_e('Create CSV-only review order', 'superwoo'); ?></h3>
                 <p><?php esc_html_e('This creates a WooCommerce order in Recovery review status from the imported CSV amount, payment ID, status and available contact details. Razorpay is not contacted, so the status is CSV-reported and may have changed since export. It has no product, free-gift, shipping or tax lines and is not ready for fulfillment. WooCommerce assigns a new ID; the historical ID stays in metadata.', 'superwoo'); ?></p>
@@ -598,9 +633,11 @@ class SuperWoo_Order_Recovery_Admin {
             'payment_record_created' => __('CSV-only WooCommerce review order created. Its payment status was not live-verified, and it has no product lines.', 'superwoo'),
             'payment_record_error' => __('Payment-only order creation stopped. Review the reason and any existing claim before retrying.', 'superwoo'),
             'payment_record_ack_required' => __('Confirm that this is a payment-only record before creating it.', 'superwoo'),
+            'items_added' => __('Reviewed product lines were added to the WooCommerce recovery order. Its payment status remains under review.', 'superwoo'),
+            'items_error' => __('Product lines were not added. Check the reason and exact evidence before trying again.', 'superwoo'),
         ];
-        if (isset($messages[$notice])) { echo '<div class="notice notice-' . (in_array($notice, ['import_error','payment_record_error','refresh_error'], true) ? 'error' : 'success') . '"><p>' . esc_html($messages[$notice]) . '</p></div>'; }
-        if ('payment_record_error' === $notice && self::query_value('recovery_reason')) { echo '<p><code>' . esc_html(sanitize_key(self::query_value('recovery_reason'))) . '</code></p>'; }
+        if (isset($messages[$notice])) { echo '<div class="notice notice-' . (in_array($notice, ['import_error','payment_record_error','refresh_error','items_error'], true) ? 'error' : 'success') . '"><p>' . esc_html($messages[$notice]) . '</p></div>'; }
+        if (in_array($notice, ['payment_record_error','items_error'], true) && self::query_value('recovery_reason')) { echo '<p><code>' . esc_html(sanitize_key(self::query_value('recovery_reason'))) . '</code></p>'; }
     }
 
     private static function query_value($key) { return isset($_GET[$key]) && is_scalar($_GET[$key]) ? (string) wp_unslash($_GET[$key]) : ''; }
