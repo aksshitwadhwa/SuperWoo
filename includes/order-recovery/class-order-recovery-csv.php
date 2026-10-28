@@ -8,9 +8,9 @@ class SuperWoo_Order_Recovery_CSV {
 
     private static function aliases() {
         return [
-            'payment_id' => ['payment id','payment_id','paymentid','razorpay payment id','id'],
+            'payment_id' => ['payment id','payment_id','paymentid','razorpay payment id','id','entity id'],
             'razorpay_order_id' => ['order id','order_id','razorpay order id','razorpay_order_id'],
-            'wc_order_id' => ['woocommerce order id','woo order id','wc order id','order reference','woo order reference','woocommerce order id in notes','woocommerce order id in razorpay notes'],
+            'wc_order_id' => ['woocommerce order id','woo order id','wc order id','order reference','woo order reference','woocommerce order id in notes','woocommerce order id in razorpay notes','order receipt'],
             'wc_order_number' => ['woocommerce order number','woo order number','order number','order no','woocommerce order number in notes','woocommerce order number in razorpay notes'],
             'receipt' => ['receipt','receipt id','receipt number'],
             'description' => ['description','payment description','product description','razorpay description'],
@@ -30,6 +30,10 @@ class SuperWoo_Order_Recovery_CSV {
             'paid_at' => ['created at','created_at','payment date','payment time','paid at','captured at','date','payment created at'],
             'currency' => ['currency','payment currency'],
             'payment_method' => ['method','payment method','razorpay method'],
+            'settlement_id' => ['settlement id'],
+            'settled_at' => ['settled at'],
+            'credit' => ['credit'],
+            'settled' => ['settled'],
             'customer_email' => ['email','customer email','contact email','customer email in payment export'],
             'customer_phone' => ['contact','phone','mobile','customer phone','contact number','customer contact in payment export'],
         ];
@@ -43,7 +47,7 @@ class SuperWoo_Order_Recovery_CSV {
         return trim(preg_replace('/\s+/', ' ', $header));
     }
 
-    public static function parse($path) {
+    public static function parse($path, $payment_ledger_only = false) {
         if (!is_file($path) || !is_readable($path)) { return new WP_Error('recovery_csv_unreadable', __('The uploaded CSV cannot be read.', 'superwoo')); }
         $size = filesize($path);
         if (false === $size || $size < 1 || $size > self::MAX_BYTES) { return new WP_Error('recovery_csv_size', __('CSV must be between 1 byte and 10 MB.', 'superwoo')); }
@@ -63,10 +67,13 @@ class SuperWoo_Order_Recovery_CSV {
         $header = fgetcsv($stream, 0, $delimiter, '"', '');
         if (!is_array($header) || count($header) < 2 || count($header) > 200) { fclose($stream); return new WP_Error('recovery_csv_header', __('CSV header row is missing, malformed, or too wide.', 'superwoo')); }
         $normalized_headers = array_map([self::class, 'normalize_header'], $header);
-        if (count(array_intersect(['type', 'debit', 'credit', 'settlement id'], $normalized_headers)) === 4) {
+        $mixed_ledger = count(array_intersect(['type', 'debit', 'credit', 'settlement id'], $normalized_headers)) === 4;
+        if ($mixed_ledger && !$payment_ledger_only) {
             fclose($stream);
             return new WP_Error('recovery_csv_mixed_ledger', __('This ledger mixes payments, settlements and refunds. Import a payment report instead.', 'superwoo'));
         }
+        if ($payment_ledger_only && !$mixed_ledger) { fclose($stream); return new WP_Error('recovery_csv_ledger_required', __('Expected a Razorpay transactions ledger with payment rows.', 'superwoo')); }
+        $type_index = array_search('type', $normalized_headers, true);
         $aliases = self::aliases(); $columns = [];
         foreach ($header as $index => $label) {
             $normalized = self::normalize_header($label);
@@ -94,11 +101,58 @@ class SuperWoo_Order_Recovery_CSV {
             if (!is_array($values) || (count($values) === 1 && trim((string) $values[0]) === '')) { continue; }
             if (count($values) > count($header)) { fclose($stream); return new WP_Error('recovery_csv_malformed', __('A CSV row contains more columns than the header.', 'superwoo')); }
             if (count($values) < count($header)) { $values = array_pad($values, count($header), ''); }
+            if ($payment_ledger_only && strtolower(trim((string) $values[$type_index])) !== 'payment') { continue; }
             $rows[] = self::normalize_row($values, $columns, $line);
         }
         fclose($stream);
         if (!$rows) { return new WP_Error('recovery_csv_empty', __('CSV contains no transaction rows.', 'superwoo')); }
         return ['columns' => array_keys($columns), 'rows' => $rows];
+    }
+
+    public static function combine_reconciliation_and_ledger($reconciliation, $ledger) {
+        foreach (['payment_id','razorpay_order_id','wc_order_id','currency','gross_minor'] as $field) {
+            if (empty($reconciliation[$field]) || empty($ledger[$field]) || (string) $reconciliation[$field] !== (string) $ledger[$field]) {
+                return new WP_Error('recovery_csv_ledger_mismatch', __('The transaction ledger does not exactly match the captured payment CSV.', 'superwoo'));
+            }
+        }
+        foreach (['payment_method','fee_minor','fee_gst_minor'] as $field) {
+            if (isset($reconciliation[$field], $ledger[$field]) && $reconciliation[$field] !== '' && $ledger[$field] !== '' && (string) $reconciliation[$field] !== (string) $ledger[$field]) {
+                return new WP_Error('recovery_csv_ledger_detail_conflict', __('The transaction ledger conflicts with the payment report.', 'superwoo'));
+            }
+        }
+        $combined = $reconciliation;
+        foreach (['payment_method','fee_minor','fee_gst_minor','settlement_id','settled_at','credit_minor','settled'] as $field) { $combined[$field] = $ledger[$field] ?? null; }
+        $combined['ledger_created_at_utc'] = $ledger['paid_at_utc'] ?? null;
+        $combined['notes'] = array_merge((array) ($reconciliation['notes'] ?? []), (array) ($ledger['notes'] ?? []));
+        $combined['source_row_hash'] = hash('sha256', (string) ($reconciliation['source_row_hash'] ?? '') . ':' . (string) ($ledger['source_row_hash'] ?? ''));
+        return $combined;
+    }
+
+    public static function combine_reconciliation_and_report($reconciliation, $report) {
+        foreach (['payment_id','razorpay_order_id','wc_order_id','currency','gross_minor'] as $field) {
+            if (empty($reconciliation[$field]) || empty($report[$field]) || (string) $reconciliation[$field] !== (string) $report[$field]) {
+                return new WP_Error('recovery_csv_report_mismatch', __('The payment report does not exactly match the captured payment CSV.', 'superwoo'));
+            }
+        }
+        if ('captured' !== (string) ($report['reported_status'] ?? '') || (int) ($report['refund_minor'] ?? -1) !== 0 || !empty($report['refund_status'])) {
+            return new WP_Error('recovery_csv_report_status_conflict', __('The payment report does not show an unrefunded captured payment.', 'superwoo'));
+        }
+        foreach (['customer_email','customer_phone'] as $field) {
+            $left = (string) ($reconciliation[$field] ?? '');
+            $right = (string) ($report[$field] ?? '');
+            if ($field === 'customer_phone') { $left = preg_replace('/\D/', '', $left); $right = preg_replace('/\D/', '', $right); }
+            if ($left !== '' && $right !== '' && strcasecmp($left, $right) !== 0) {
+                return new WP_Error('recovery_csv_report_contact_conflict', __('The payment report contact does not match the captured payment CSV.', 'superwoo'));
+            }
+        }
+        $combined = $reconciliation;
+        foreach (['payment_method','fee_minor','fee_gst_minor','customer_email','customer_phone'] as $field) {
+            if (isset($report[$field]) && $report[$field] !== '' && $report[$field] !== null) { $combined[$field] = $report[$field]; }
+        }
+        if (empty($combined['description']) && !empty($report['description'])) { $combined['description'] = $report['description']; }
+        $combined['notes'] = array_merge((array) ($reconciliation['notes'] ?? []), (array) ($report['notes'] ?? []));
+        $combined['source_row_hash'] = hash('sha256', (string) ($reconciliation['source_row_hash'] ?? '') . ':' . (string) ($report['source_row_hash'] ?? ''));
+        return $combined;
     }
 
     public static function import_rows($rows, $repository, $batch_id, $rules = []) {
@@ -204,6 +258,7 @@ class SuperWoo_Order_Recovery_CSV {
         if (null === $fee_gst) { $fee_gst = self::parse_money(self::cell($values, $columns, 'fee_gst_minor'), $currency, true); }
         $refund = self::parse_money(self::cell($values, $columns, 'refund'), $currency);
         if (null === $refund) { $refund = self::parse_money(self::cell($values, $columns, 'refund_minor'), $currency, true); }
+        $credit = self::parse_money(self::cell($values, $columns, 'credit'), $currency);
         $paid_at = self::date_utc(self::cell($values, $columns, 'paid_at'));
         $refund_at = self::date_utc(self::cell($values, $columns, 'refund_at'));
         $status = strtolower(substr(sanitize_text_field(self::cell($values, $columns, 'reported_status')), 0, 64));
@@ -213,6 +268,9 @@ class SuperWoo_Order_Recovery_CSV {
             'description' => substr(self::redact_free_text(self::cell($values, $columns, 'description')), 0, 2000), 'notes' => $notes,
             'reported_status' => $status, 'currency' => preg_match('/^[A-Z]{3}$/', $currency) ? $currency : '',
             'payment_method' => substr(sanitize_key(self::cell($values, $columns, 'payment_method')), 0, 50),
+            'settlement_id' => substr(sanitize_text_field(self::cell($values, $columns, 'settlement_id')), 0, 190),
+            'settled_at' => substr(sanitize_text_field(self::cell($values, $columns, 'settled_at')), 0, 50),
+            'credit_minor' => $credit, 'settled' => self::cell($values, $columns, 'settled') === '1',
             'gross_minor' => $gross, 'fee_minor' => $fee, 'fee_gst_minor' => $fee_gst, 'refund_minor' => $refund,
             'refund_reference' => substr(sanitize_text_field(self::cell($values, $columns, 'refund_reference')), 0, 500),
             'refund_status' => substr(strtolower(sanitize_text_field(self::cell($values, $columns, 'refund_status'))), 0, 64),
@@ -222,7 +280,7 @@ class SuperWoo_Order_Recovery_CSV {
             'missing_fields' => [], 'data_warnings' => [], 'source_row_number' => (int) $line,
         ];
         $row['source_values'] = [];
-        foreach (['payment_id','razorpay_order_id','wc_order_id','wc_order_number','receipt','reported_status','gross','gross_minor','fee','fee_minor','fee_gst','fee_gst_minor','refund','refund_minor','refund_reference','refund_status','refund_at','paid_at','currency','payment_method'] as $source_field) {
+        foreach (['payment_id','razorpay_order_id','wc_order_id','wc_order_number','receipt','reported_status','gross','gross_minor','fee','fee_minor','fee_gst','fee_gst_minor','refund','refund_minor','refund_reference','refund_status','refund_at','paid_at','currency','payment_method','settlement_id','settled_at','credit','settled'] as $source_field) {
             $raw = self::cell($values, $columns, $source_field);
             if ($raw !== '') { $row['source_values'][$source_field] = substr(sanitize_text_field($raw), 0, 500); }
         }

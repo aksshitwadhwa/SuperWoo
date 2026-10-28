@@ -37,13 +37,15 @@ class SuperWoo_Order_Recovery_Payment_Record {
             '_superwoo_recovery_csv_method' => __('Payment method in CSV', 'superwoo'),
             '_superwoo_recovery_csv_description' => __('Payment description in CSV', 'superwoo'),
             '_superwoo_recovery_csv_shipping_method_name' => __('Shipping method name in CSV', 'superwoo'),
+            '_superwoo_recovery_csv_settlement_id' => __('Settlement ID in CSV', 'superwoo'),
+            '_superwoo_recovery_csv_settled_at' => __('Settlement date in CSV', 'superwoo'),
         ] as $key => $label) {
             $value = (string) $order->get_meta($key, true);
             if ($value !== '') { echo '<p><strong>' . esc_html($label) . ':</strong> ' . esc_html($value) . '</p>'; }
         }
-        foreach (['_superwoo_recovery_csv_gateway_fee_minor' => __('Gateway fee (paise)', 'superwoo'), '_superwoo_recovery_csv_gateway_fee_tax_minor' => __('Gateway fee tax (paise)', 'superwoo')] as $key => $label) {
+        foreach (['_superwoo_recovery_csv_gateway_fee_minor' => __('Gateway fee (CSV)', 'superwoo'), '_superwoo_recovery_csv_gateway_fee_tax_minor' => __('Gateway fee tax (CSV)', 'superwoo'), '_superwoo_recovery_csv_net_credit_minor' => __('Net settlement credit (CSV)', 'superwoo')] as $key => $label) {
             $value = $order->get_meta($key, true);
-            if ($value !== '') { echo '<p><strong>' . esc_html($label) . ':</strong> ' . esc_html((string) $value) . '</p>'; }
+            if ($value !== '') { echo '<p><strong>' . esc_html($label) . ':</strong> ' . esc_html('INR ' . number_format(((int) $value) / 100, 2, '.', ',')) . '</p>'; }
         }
         echo '</div>';
     }
@@ -169,6 +171,13 @@ class SuperWoo_Order_Recovery_Payment_Record {
                 if (is_array($csv_notes) && isset($csv_notes['shipping_method_name']) && is_scalar($csv_notes['shipping_method_name'])) { $order->update_meta_data('_superwoo_recovery_csv_shipping_method_name', substr(sanitize_text_field((string) $csv_notes['shipping_method_name']), 0, 190)); }
                 if (null !== ($record['fee_minor'] ?? null)) { $order->update_meta_data('_superwoo_recovery_csv_gateway_fee_minor', (int) $record['fee_minor']); }
                 if (null !== ($record['fee_gst_minor'] ?? null)) { $order->update_meta_data('_superwoo_recovery_csv_gateway_fee_tax_minor', (int) $record['fee_gst_minor']); }
+                $enrichment = json_decode((string) ($fresh['enrichment_json'] ?? ''), true);
+                if (is_array($enrichment) && (string) ($enrichment['payment_id'] ?? '') === $payment_id && absint($enrichment['wc_order_id'] ?? 0) === absint($record['wc_order_id']) && (string) ($enrichment['razorpay_order_id'] ?? '') === (string) ($record['razorpay_order_id'] ?? '') && (string) ($enrichment['currency'] ?? '') === 'INR' && (int) ($enrichment['gross_minor'] ?? -1) === (int) $provider['amount_minor']) {
+                    $enrichment['notes'] = ['shipping_method_name' => (string) ($enrichment['shipping_method_name'] ?? '')];
+                    self::apply_csv_details($order, $enrichment);
+                    $order->update_meta_data('_superwoo_recovery_enrichment_file_sha256', (string) ($fresh['enrichment_source_hash'] ?? ''));
+                    $order->update_meta_data('_superwoo_recovery_enrichment_source_row_hash', (string) ($fresh['enrichment_source_hash'] ?? ''));
+                }
             }
             $order->update_meta_data('_superwoo_recovery_razorpay_status', sanitize_key((string) $provider['status']));
             if ('provider' === $evidence_mode) { $order->update_meta_data('_superwoo_recovery_razorpay_verified_at_utc', gmdate('Y-m-d H:i:s')); }
@@ -222,6 +231,15 @@ class SuperWoo_Order_Recovery_Payment_Record {
         if ((string) $order->get_meta('_superwoo_recovery_enrichment_file_sha256', true) === (string) $file_hash && (string) $order->get_meta('_superwoo_recovery_enrichment_source_row_hash', true) === (string) ($row['source_row_hash'] ?? '')) {
             return ['order_id' => $order->get_id(), 'changed' => false];
         }
+        self::apply_csv_details($order, $row);
+        $order->update_meta_data('_superwoo_recovery_enrichment_file_sha256', (string) $file_hash);
+        $order->update_meta_data('_superwoo_recovery_enrichment_source_row_hash', (string) ($row['source_row_hash'] ?? ''));
+        $order->update_meta_data('_superwoo_recovery_enriched_at_utc', gmdate('Y-m-d H:i:s'));
+        $saved = $order->save();
+        return $saved ? ['order_id' => absint($saved), 'changed' => true] : new WP_Error('recovery_enrich_save_failed', __('The recovered order could not be updated.', 'superwoo'));
+    }
+
+    private static function apply_csv_details($order, $row) {
         $method = sanitize_key((string) ($row['payment_method'] ?? ''));
         if ($method !== '') {
             $order->update_meta_data('_superwoo_recovery_csv_method', $method);
@@ -234,12 +252,12 @@ class SuperWoo_Order_Recovery_Payment_Record {
         if ($shipping_name !== '') { $order->update_meta_data('_superwoo_recovery_csv_shipping_method_name', $shipping_name); }
         if (null !== ($row['fee_minor'] ?? null)) { $order->update_meta_data('_superwoo_recovery_csv_gateway_fee_minor', (int) $row['fee_minor']); }
         if (null !== ($row['fee_gst_minor'] ?? null)) { $order->update_meta_data('_superwoo_recovery_csv_gateway_fee_tax_minor', (int) $row['fee_gst_minor']); }
+        if (null !== ($row['credit_minor'] ?? null)) { $order->update_meta_data('_superwoo_recovery_csv_net_credit_minor', (int) $row['credit_minor']); }
+        if (!empty($row['settlement_id'])) { $order->update_meta_data('_superwoo_recovery_csv_settlement_id', substr(sanitize_text_field((string) $row['settlement_id']), 0, 190)); }
+        if (!empty($row['settled_at'])) { $order->update_meta_data('_superwoo_recovery_csv_settled_at', substr(sanitize_text_field((string) $row['settled_at']), 0, 50)); }
+        if (isset($row['settled'])) { $order->update_meta_data('_superwoo_recovery_csv_settled_flag', !empty($row['settled']) ? 'yes' : 'no'); }
+        if (!empty($row['ledger_created_at_utc'])) { $order->update_meta_data('_superwoo_recovery_csv_ledger_created_at_utc', (string) $row['ledger_created_at_utc']); }
         if (!$order->get_billing_email() && !empty($row['customer_email']) && is_email($row['customer_email'])) { $order->set_billing_email($row['customer_email']); }
         if (!$order->get_billing_phone() && !empty($row['customer_phone'])) { $order->set_billing_phone($row['customer_phone']); }
-        $order->update_meta_data('_superwoo_recovery_enrichment_file_sha256', (string) $file_hash);
-        $order->update_meta_data('_superwoo_recovery_enrichment_source_row_hash', (string) ($row['source_row_hash'] ?? ''));
-        $order->update_meta_data('_superwoo_recovery_enriched_at_utc', gmdate('Y-m-d H:i:s'));
-        $saved = $order->save();
-        return $saved ? ['order_id' => absint($saved), 'changed' => true] : new WP_Error('recovery_enrich_save_failed', __('The recovered order could not be updated.', 'superwoo'));
     }
 }

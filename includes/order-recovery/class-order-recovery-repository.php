@@ -140,6 +140,29 @@ class SuperWoo_Order_Recovery_Repository {
     }
 
     public function transaction($id) { return $this->wpdb->get_row($this->wpdb->prepare('SELECT * FROM ' . $this->table('transactions') . ' WHERE id=%d', absint($id)), ARRAY_A); }
+    public function transaction_by_payment($payment_id) { return $this->wpdb->get_row($this->wpdb->prepare('SELECT * FROM ' . $this->table('transactions') . ' WHERE payment_id=%s', (string) $payment_id), ARRAY_A); }
+    public function save_paired_enrichment($row, $source_hash) {
+        $payment_id = (string) ($row['payment_id'] ?? '');
+        if ($payment_id === '' || !preg_match('/^[a-f0-9]{64}$/D', (string) $source_hash)) { return new WP_Error('recovery_enrichment_invalid', __('The paired CSV evidence is invalid.', 'superwoo')); }
+        $record = $this->transaction_by_payment($payment_id);
+        if (!$record || ('missing_order_candidate' !== (string) $record['classification'] && !absint($record['recovered_order_id'] ?? 0)) || absint($record['wc_order_id']) !== absint($row['wc_order_id'] ?? 0) || (string) $record['razorpay_order_id'] !== (string) ($row['razorpay_order_id'] ?? '') || strtoupper((string) $record['currency']) !== strtoupper((string) ($row['currency'] ?? '')) || (int) $record['gross_minor'] !== (int) ($row['gross_minor'] ?? -1)) {
+            return new WP_Error('recovery_enrichment_record_mismatch', __('The paired CSV does not match the imported recovery record.', 'superwoo'));
+        }
+        $safe = [
+            'payment_id' => $payment_id, 'wc_order_id' => absint($row['wc_order_id']), 'razorpay_order_id' => (string) $row['razorpay_order_id'],
+            'gross_minor' => (int) $row['gross_minor'], 'currency' => (string) $row['currency'],
+            'payment_method' => sanitize_key((string) ($row['payment_method'] ?? '')),
+            'customer_email' => sanitize_email((string) ($row['customer_email'] ?? '')),
+            'customer_phone' => substr(preg_replace('/[^0-9+]/', '', (string) ($row['customer_phone'] ?? '')), 0, 40),
+            'description' => substr(sanitize_text_field((string) ($row['description'] ?? '')), 0, 500),
+            'shipping_method_name' => isset($row['notes']['shipping_method_name']) ? substr(sanitize_text_field((string) $row['notes']['shipping_method_name']), 0, 190) : '',
+            'fee_minor' => $row['fee_minor'] ?? null, 'fee_gst_minor' => $row['fee_gst_minor'] ?? null,
+            'credit_minor' => $row['credit_minor'] ?? null, 'settlement_id' => (string) ($row['settlement_id'] ?? ''),
+            'settled_at' => (string) ($row['settled_at'] ?? ''), 'settled' => !empty($row['settled']),
+            'ledger_created_at_utc' => (string) ($row['ledger_created_at_utc'] ?? ''),
+        ];
+        return $this->wpdb->update($this->table('transactions'), ['enrichment_json' => wp_json_encode($safe), 'enrichment_source_hash' => (string) $source_hash], ['id' => absint($record['id'])]);
+    }
     public function mark_recovered($record_id, $order_id) {
         return $this->wpdb->update($this->table('transactions'), ['recovered_order_id' => absint($order_id)], ['id' => absint($record_id)]);
     }

@@ -135,9 +135,24 @@ file_put_contents($tmp, "id,amount,currency,status,order_id,method,amount_refund
 $payment_report = SuperWoo_Order_Recovery_CSV::parse($tmp);
 $assert(!is_wp_error($payment_report) && $payment_report['rows'][0]['wc_order_id'] === 8002 && $payment_report['rows'][0]['payment_method'] === 'upi', 'Razorpay payment report retains the original order ID and payment method');
 $assert($payment_report['rows'][0]['fee_minor'] === 1874 && $payment_report['rows'][0]['fee_gst_minor'] === 286 && $payment_report['rows'][0]['notes']['shipping_method_name'] === 'Standard Shipping', 'Razorpay fee, fee tax and shipping method name remain separate evidence');
+$matching_report = $payment_report['rows'][0];
+$matching_report['payment_id'] = 'pay_recon'; $matching_report['razorpay_order_id'] = 'rz_recon'; $matching_report['wc_order_id'] = 8051; $matching_report['gross_minor'] = 384500;
+$report_combined = SuperWoo_Order_Recovery_CSV::combine_reconciliation_and_report($recon_row, $matching_report);
+$assert(!is_wp_error($report_combined) && $report_combined['payment_method'] === 'upi' && $report_combined['customer_email'] === 'buyer@example.test' && $report_combined['notes']['shipping_method_name'] === 'Standard Shipping', 'exactly matched Payment report adds available contact and payment details');
+$wrong_report = $matching_report; $wrong_report['gross_minor']++;
+$assert(is_wp_error(SuperWoo_Order_Recovery_CSV::combine_reconciliation_and_report($recon_row, $wrong_report)), 'Payment report with a different amount is rejected');
 file_put_contents($tmp, "type,debit,credit,settlement_id,payment_id,amount\npayment,0,100,,pay_ledger,100\n");
 $mixed_ledger = SuperWoo_Order_Recovery_CSV::parse($tmp);
 $assert(is_wp_error($mixed_ledger) && $mixed_ledger->get_error_code() === 'recovery_csv_mixed_ledger', 'mixed settlement ledger must not be imported as a payment-only report');
+file_put_contents($tmp, "entity_id,type,debit,credit,amount,currency,fee,tax,settled,created_at,settled_at,settlement_id,description,notes,order_id,order_receipt,method\n" .
+    "pay_recon,payment,0,3750.00,3845.00,INR,95.00,14.49,1,05/10/2026 16:33:00,07-10-2026,setl_test,Order 8051,\"{\"\"shipping_method_name\"\":\"\"Standard Shipping\"\",\"\"woocommerce_order_id\"\":\"\"8051\"\"}\",rz_recon,8051,upi\n" .
+    "setl_test,settlement,3750.00,0,3750.00,INR,0,0,1,07/10/2026 00:00:00,07-10-2026,setl_test,,,,\n");
+$ledger = SuperWoo_Order_Recovery_CSV::parse($tmp, true);
+$assert(!is_wp_error($ledger) && count($ledger['rows']) === 1 && $ledger['rows'][0]['payment_id'] === 'pay_recon' && $ledger['rows'][0]['wc_order_id'] === 8051, 'ledger enrichment reads only payment rows and their original WooCommerce reference');
+$combined = SuperWoo_Order_Recovery_CSV::combine_reconciliation_and_ledger($recon_row, $ledger['rows'][0]);
+$assert(!is_wp_error($combined) && $combined['credit_minor'] === 375000 && $combined['fee_minor'] === 9500 && $combined['fee_gst_minor'] === 1449 && $combined['notes']['shipping_method_name'] === 'Standard Shipping', 'matching ledger details remain separate from the captured payment amount');
+$bad_ledger = $ledger['rows'][0]; $bad_ledger['gross_minor']++;
+$assert(is_wp_error(SuperWoo_Order_Recovery_CSV::combine_reconciliation_and_ledger($recon_row, $bad_ledger)), 'mismatched ledger amount cannot enrich a recovered order');
 file_put_contents($tmp, "Payment ID,Status,Amount\npay_no_currency,captured,12.34\n");
 $no_currency = SuperWoo_Order_Recovery_CSV::parse($tmp);
 $assert(!is_wp_error($no_currency) && $no_currency['rows'][0]['gross_minor'] === null && count($no_currency['rows'][0]['data_warnings']) === 1, 'amounts without currency must not be assigned a minor-unit value');

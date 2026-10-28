@@ -3,7 +3,7 @@ defined('ABSPATH') || exit;
 
 /** Versioned schema for read-only Razorpay import evidence. */
 class SuperWoo_Order_Recovery_Schema {
-    const VERSION = '5';
+    const VERSION = '6';
     const OPTION = 'superwoo_order_recovery_schema_version';
 
     public static function table($name) {
@@ -78,6 +78,8 @@ class SuperWoo_Order_Recovery_Schema {
             missing_fields text NULL,
             data_warnings text NULL,
             source_values_json longtext NULL,
+            enrichment_json longtext NULL,
+            enrichment_source_hash char(64) NOT NULL DEFAULT '',
             source_row_hash char(64) NOT NULL,
             recovered_order_id bigint(20) unsigned NOT NULL DEFAULT 0,
             first_batch_id bigint(20) unsigned NOT NULL,

@@ -11,6 +11,7 @@ class SuperWoo_Order_Recovery_Admin {
         add_action('admin_init', [$this, 'export_previews']);
         add_action('admin_post_superwoo_order_recovery_import', [$this, 'import_csv']);
         add_action('admin_post_superwoo_order_recovery_enrich', [$this, 'enrich_recovered_orders']);
+        add_action('admin_post_superwoo_order_recovery_enrich_pair', [$this, 'enrich_recovered_orders_from_pair']);
         add_action('admin_post_superwoo_order_recovery_save_rules', [$this, 'save_rules']);
         add_action('admin_post_superwoo_order_recovery_verify', [$this, 'verify_provider']);
         add_action('admin_post_superwoo_order_recovery_create_payment_record', [$this, 'create_payment_record']);
@@ -91,6 +92,78 @@ class SuperWoo_Order_Recovery_Admin {
         set_transient('superwoo_recovery_enrich_' . get_current_user_id() . '_' . $token, $results, 15 * MINUTE_IN_SECONDS);
         wp_safe_redirect(add_query_arg(['page' => 'superwoo-order-recovery', 'enrich_result' => $token], admin_url('admin.php')));
         exit;
+    }
+
+    public function enrich_recovered_orders_from_pair() {
+        if (!current_user_can(self::CAPABILITY) || !check_admin_referer('superwoo_order_recovery_enrich_pair')) { wp_die(esc_html__('You are not allowed to enrich recovery orders.', 'superwoo')); }
+        SuperWoo_Order_Recovery_Schema::maybe_install();
+        $reconciliation = self::parse_enrichment_upload('reconciliation_csv', false);
+        $ledger = self::parse_enrichment_upload('transactions_csv', true);
+        $report_file = $_FILES['payment_report_csv'] ?? null;
+        $report = is_array($report_file) && (int) ($report_file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE ? null : self::parse_enrichment_upload('payment_report_csv', false);
+        if (is_wp_error($reconciliation) || is_wp_error($ledger) || is_wp_error($report)) { $this->fail('enrich_upload_invalid'); }
+        $ledger_by_payment = [];
+        foreach ($ledger['parsed']['rows'] as $row) {
+            $id = (string) ($row['payment_id'] ?? '');
+            if ($id === '') { continue; }
+            if (array_key_exists($id, $ledger_by_payment)) { $ledger_by_payment[$id] = false; }
+            else { $ledger_by_payment[$id] = $row; }
+        }
+        $report_by_payment = [];
+        if ($report) {
+            foreach ($report['parsed']['rows'] as $report_row) {
+                $id = (string) ($report_row['payment_id'] ?? '');
+                if ($id === '') { continue; }
+                $report_by_payment[$id] = array_key_exists($id, $report_by_payment) ? false : $report_row;
+            }
+        }
+        $combined_file_hash = hash('sha256', $reconciliation['hash'] . ':' . $ledger['hash'] . ':' . ($report['hash'] ?? ''));
+        $results = ['updated' => 0, 'unchanged' => 0, 'stored' => 0, 'skipped' => 0, 'no_ledger' => 0, 'no_report' => 0, 'error_count' => 0, 'errors' => []];
+        $repo = self::repository();
+        foreach ($reconciliation['parsed']['rows'] as $row) {
+            if (empty($row['wc_order_id'])) { $results['skipped']++; continue; }
+            $claim = !empty($row['payment_id']) ? SuperWoo_Order_Recovery_Payment_Record::claim($row['payment_id']) : false;
+            $payment_id = (string) $row['payment_id'];
+            $stored_record = $repo->transaction_by_payment($payment_id);
+            if (!$stored_record || ('missing_order_candidate' !== (string) $stored_record['classification'] && !(is_array($claim) && 'created' === ($claim['state'] ?? '') && !empty($claim['order_id'])))) { $results['skipped']++; continue; }
+            $combined = $row;
+            if ($report) {
+                if (!array_key_exists($payment_id, $report_by_payment)) { $results['no_report']++; }
+                elseif (false === $report_by_payment[$payment_id]) { $combined = new WP_Error('recovery_csv_report_duplicate', __('More than one payment report row uses this payment ID.', 'superwoo')); }
+                else { $combined = SuperWoo_Order_Recovery_CSV::combine_reconciliation_and_report($combined, $report_by_payment[$payment_id]); }
+            }
+            if (!is_wp_error($combined)) {
+                if (!array_key_exists($payment_id, $ledger_by_payment)) { $results['no_ledger']++; }
+                elseif (false === $ledger_by_payment[$payment_id]) { $combined = new WP_Error('recovery_csv_ledger_duplicate', __('More than one payment row uses this payment ID.', 'superwoo')); }
+                else { $combined = SuperWoo_Order_Recovery_CSV::combine_reconciliation_and_ledger($combined, $ledger_by_payment[$payment_id]); }
+            }
+            $source_hash = $combined_file_hash;
+            $result = is_wp_error($combined) ? $combined : $repo->save_paired_enrichment($combined, $source_hash);
+            if (!is_wp_error($result) && (false === $result)) { $result = new WP_Error('recovery_enrichment_store_failed', __('The paired CSV could not be stored.', 'superwoo')); }
+            if (!is_wp_error($result) && (!is_array($claim) || 'created' !== ($claim['state'] ?? '') || empty($claim['order_id']))) { $results['stored']++; continue; }
+            if (!is_wp_error($result)) { $result = SuperWoo_Order_Recovery_Payment_Record::enrich_from_csv_row($combined, $source_hash); }
+            if (is_wp_error($result)) {
+                $results['error_count']++;
+                if (count($results['errors']) < 20) { $results['errors'][] = ['historical_id' => absint($row['wc_order_id'] ?? 0), 'reason' => sanitize_key($result->get_error_code())]; }
+                continue;
+            }
+            if ($result['changed']) { $results['updated']++; } else { $results['unchanged']++; }
+        }
+        superwoo_log('Recovered order paired CSV enrichment completed', ['updated' => $results['updated'], 'unchanged' => $results['unchanged'], 'stored' => $results['stored'], 'skipped' => $results['skipped'], 'errors' => $results['error_count']], 'orders');
+        $token = wp_generate_password(20, false, false);
+        set_transient('superwoo_recovery_enrich_' . get_current_user_id() . '_' . $token, $results, 15 * MINUTE_IN_SECONDS);
+        wp_safe_redirect(add_query_arg(['page' => 'superwoo-order-recovery', 'enrich_result' => $token], admin_url('admin.php')));
+        exit;
+    }
+
+    private static function parse_enrichment_upload($field, $ledger) {
+        $file = $_FILES[$field] ?? null;
+        $name = is_array($file) && isset($file['name']) && is_scalar($file['name']) ? (string) $file['name'] : '';
+        if (!is_array($file) || (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK || empty($file['tmp_name']) || !is_string($file['tmp_name']) || !is_uploaded_file($file['tmp_name']) || strtolower(pathinfo($name, PATHINFO_EXTENSION)) !== 'csv') { return new WP_Error('recovery_enrich_upload_invalid', __('The CSV upload is invalid.', 'superwoo')); }
+        $parsed = SuperWoo_Order_Recovery_CSV::parse($file['tmp_name'], $ledger);
+        if (is_wp_error($parsed)) { return $parsed; }
+        $hash = hash_file('sha256', $file['tmp_name']);
+        return $hash ? ['parsed' => $parsed, 'hash' => $hash] : new WP_Error('recovery_enrich_hash_failed', __('The CSV hash could not be calculated.', 'superwoo'));
     }
 
     private function fail($reason) {
@@ -302,6 +375,15 @@ class SuperWoo_Order_Recovery_Admin {
                 <input type="file" name="enrich_csv" accept=".csv,text/csv" required>
                 <?php submit_button(__('Update recovered orders from CSV', 'superwoo'), 'secondary', 'submit', false); ?>
             </form>
+            <p><?php esc_html_e('For the supplied exports, upload captured-payment reconciliation and transactions together; add Payment report when available. Matching details update existing review orders and are saved for future recoveries. No CSV contains product lines or addresses.', 'superwoo'); ?></p>
+            <form method="post" action="<?php echo esc_url(admin_url('admin-post.php')); ?>" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="superwoo_order_recovery_enrich_pair">
+                <?php wp_nonce_field('superwoo_order_recovery_enrich_pair'); ?>
+                <p><label><?php esc_html_e('Captured payments reconciliation CSV', 'superwoo'); ?> <input type="file" name="reconciliation_csv" accept=".csv,text/csv" required></label></p>
+                <p><label><?php esc_html_e('Razorpay transactions ledger CSV', 'superwoo'); ?> <input type="file" name="transactions_csv" accept=".csv,text/csv" required></label></p>
+                <p><label><?php esc_html_e('Razorpay Payment report CSV (optional)', 'superwoo'); ?> <input type="file" name="payment_report_csv" accept=".csv,text/csv"></label></p>
+                <?php submit_button(__('Update recovered orders from CSVs', 'superwoo'), 'secondary', 'submit', false); ?>
+            </form>
 
             <h2><?php esc_html_e('Imported record summary', 'superwoo'); ?></h2>
             <div class="notice notice-info inline"><p><?php
@@ -496,7 +578,7 @@ class SuperWoo_Order_Recovery_Admin {
         if (!preg_match('/^[A-Za-z0-9]{20}$/D', $token)) { return; }
         $result = get_transient('superwoo_recovery_enrich_' . get_current_user_id() . '_' . $token);
         if (!is_array($result)) { return; }
-        echo '<div class="notice notice-info"><p>' . esc_html(sprintf(__('Recovered orders updated: %1$d; already current: %2$d; unrelated CSV rows skipped: %3$d; matching rows rejected: %4$d.', 'superwoo'), (int) ($result['updated'] ?? 0), (int) ($result['unchanged'] ?? 0), (int) ($result['skipped'] ?? 0), (int) ($result['error_count'] ?? 0))) . '</p>';
+        echo '<div class="notice notice-info"><p>' . esc_html(sprintf(__('Recovered orders updated: %1$d; already current: %2$d; matched CSV details stored for future recovery: %3$d; unrelated rows skipped: %4$d; matching rows rejected: %5$d; rows without a ledger payment match: %6$d; rows without a Payment report match: %7$d.', 'superwoo'), (int) ($result['updated'] ?? 0), (int) ($result['unchanged'] ?? 0), (int) ($result['stored'] ?? 0), (int) ($result['skipped'] ?? 0), (int) ($result['error_count'] ?? 0), (int) ($result['no_ledger'] ?? 0), (int) ($result['no_report'] ?? 0))) . '</p>';
         foreach ((array) ($result['errors'] ?? []) as $error) { echo '<p>' . esc_html(sprintf(__('Original WooCommerce order #%1$d: %2$s', 'superwoo'), absint($error['historical_id'] ?? 0), sanitize_key((string) ($error['reason'] ?? 'unknown_error')))) . '</p>'; }
         echo '</div>';
     }
