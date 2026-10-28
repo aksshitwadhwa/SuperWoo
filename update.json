@@ -1,12 +1,12 @@
 {
   "name": "SuperWoo",
   "slug": "superwoo",
-  "version": "1.6.3",
+  "version": "1.6.4",
   "requires": "6.2",
   "requires_php": "7.4",
-  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.6.3.zip",
-  "sha256": "21704a0cf24cdfb0e2b3ac4545d77a85d1224d337e26076aa77ef657502b5322",
-  "package_size": 294597,
+  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.6.4.zip",
+  "sha256": "813be5ac4444796f324beed94fd7357bcabd7eeb30209daaedebce4241baa77c",
+  "package_size": 297397,
   "homepage": "https://digtize.com/plugins/superwoo/",
-  "description": "SuperWoo 1.6.3 adds CSV enrichment for existing payment-only recovery orders."
+  "description": "SuperWoo 1.6.4 improves reconciliation matching and payment-only order enrichment."
 }
