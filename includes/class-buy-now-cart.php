@@ -9,7 +9,14 @@ class SuperWoo_Buy_Now_Cart {
     private const SESSION_KEY = 'superwoo_buy_now_saved_cart_v1';
 
     public function hooks() {
+        add_action('wp_ajax_superwoo_snapshot_buy_now_cart', [$this, 'ajax_snapshot_cart']);
+        add_action('wp_ajax_nopriv_superwoo_snapshot_buy_now_cart', [$this, 'ajax_snapshot_cart']);
+        add_action('wp_ajax_superwoo_refresh_buy_now_nonce', [$this, 'ajax_refresh_snapshot_nonce']);
+        add_action('wp_ajax_nopriv_superwoo_refresh_buy_now_nonce', [$this, 'ajax_refresh_snapshot_nonce']);
+        add_filter('rest_dispatch_request', [$this, 'restore_before_regular_cart_api'], 4, 4);
         add_filter('rest_dispatch_request', [$this, 'prepare_razorpay_order'], 5, 4);
+        add_filter('rest_request_after_callbacks', [$this, 'restore_after_razorpay_request'], PHP_INT_MAX, 3);
+        add_action('template_redirect', [$this, 'restore_before_cart_fragments'], -10);
         add_action('template_redirect', [$this, 'restore_on_storefront'], 0);
         add_action('wp_enqueue_scripts', [$this, 'enqueue_assets']);
     }
@@ -19,6 +26,68 @@ class SuperWoo_Buy_Now_Cart {
             return;
         }
         wp_enqueue_script('superwoo-buy-now-cart', SUPERWOO_URL . 'public/js/buy-now-cart.js', [], SUPERWOO_VERSION . '.' . filemtime(SUPERWOO_PATH . 'public/js/buy-now-cart.js'), true);
+        wp_localize_script('superwoo-buy-now-cart', 'SuperWooBuyNowCart', [
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('superwoo_buy_now_snapshot'),
+            'error' => __('Buy Now could not preserve your cart. Please try again.', 'superwoo'),
+        ]);
+    }
+
+    /** Save the normal cart before Razorpay can start any checkout request. */
+    public function ajax_snapshot_cart() {
+        $nonce = isset($_POST['nonce']) ? sanitize_text_field(wp_unslash($_POST['nonce'])) : '';
+        if (!$nonce || !wp_verify_nonce($nonce, 'superwoo_buy_now_snapshot')) {
+            wp_send_json_error(['code' => 'superwoo_buy_now_invalid_nonce'], 403);
+        }
+        if (!function_exists('wc_load_cart') || !function_exists('WC')) {
+            wp_send_json_error(['code' => 'superwoo_buy_now_cart_unavailable'], 503);
+        }
+        $cart_was_missing = null === WC()->cart;
+        wc_load_cart();
+        if ($cart_was_missing && WC()->cart) {
+            // admin-ajax runs after wp_loaded. A newly created WC_Cart will
+            // otherwise miss WooCommerce's session hydration action.
+            WC()->cart->get_cart_from_session();
+        }
+        if (!WC()->cart || !WC()->session) {
+            wp_send_json_error(['code' => 'superwoo_buy_now_cart_unavailable'], 503);
+        }
+
+        $saved = WC()->session->get(self::SESSION_KEY);
+        if (!is_array($saved) || !isset($saved['cart']) || !is_array($saved['cart'])) {
+            $saved = $this->snapshot();
+            WC()->session->set(self::SESSION_KEY, $saved);
+        }
+        $stored = WC()->session->get(self::SESSION_KEY);
+        if (!is_array($stored) || !isset($stored['cart']) || $stored['cart'] !== $saved['cart']) {
+            wp_send_json_error(['code' => 'superwoo_buy_now_snapshot_not_saved'], 503);
+        }
+        if (is_callable([WC()->session, 'set_customer_session_cookie'])) {
+            WC()->session->set_customer_session_cookie(true);
+        }
+        wp_send_json_success(['saved' => true, 'count' => count($saved['cart'])]);
+    }
+
+    public function ajax_refresh_snapshot_nonce() {
+        nocache_headers();
+        wp_send_json_success(['nonce' => wp_create_nonce('superwoo_buy_now_snapshot')]);
+    }
+
+    /** A normal Store API cart read must never expose Razorpay's temporary cart. */
+    public function restore_before_regular_cart_api($result, $request, $route, $handler) {
+        if (null !== $result || '/wc/store/v1/cart' !== $route || 'GET' !== $request->get_method() || !function_exists('wc_load_cart')) {
+            return $result;
+        }
+        wc_load_cart();
+        self::restore_pending(false);
+        return $result;
+    }
+
+    public function restore_before_cart_fragments() {
+        $action = isset($_GET['wc-ajax']) ? sanitize_key(wp_unslash($_GET['wc-ajax'])) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        if (in_array($action, ['get_refreshed_fragments', 'superwoo_update_cart_item', 'superwoo_remove_cart_item'], true)) {
+            self::restore_pending(false);
+        }
     }
 
     public function prepare_razorpay_order($result, $request, $route, $handler) {
@@ -84,20 +153,17 @@ class SuperWoo_Buy_Now_Cart {
         }
 
         $saved = WC()->session->get(self::SESSION_KEY);
-        if (!is_array($saved) || empty($saved['cart'])) {
+        if (!is_array($saved) || !isset($saved['cart']) || !is_array($saved['cart'])) {
+            // The original cart can be empty. It still must replace the
+            // temporary Buy Now product after the gateway builds its order.
             $saved = $this->snapshot();
-            // An empty original cart has nothing to preserve.
-            if (!empty($saved['cart'])) {
-                WC()->session->set(self::SESSION_KEY, $saved);
-            }
+            WC()->session->set(self::SESSION_KEY, $saved);
         }
 
         WC()->cart->empty_cart(false);
         $added = WC()->cart->add_to_cart($product_id, $quantity, $variation_id, $variations);
         if (!$added) {
-            if (!empty($saved['cart'])) {
-                self::restore_pending();
-            }
+            self::restore_pending();
             return new WP_Error('superwoo_buy_now_add_failed', __('The selected product could not be added to Buy Now.', 'superwoo'), ['status' => 400]);
         }
         WC()->cart->calculate_totals();
@@ -117,12 +183,12 @@ class SuperWoo_Buy_Now_Cart {
         return $saved;
     }
 
-    public static function restore_pending() {
+    public static function restore_pending($clear_snapshot = true) {
         if (!function_exists('WC') || !WC()->session || !WC()->cart) {
             return false;
         }
         $saved = WC()->session->get(self::SESSION_KEY);
-        if (!is_array($saved) || empty($saved['cart'])) {
+        if (!is_array($saved) || !isset($saved['cart']) || !is_array($saved['cart'])) {
             return false;
         }
         // Keep the saved snapshot until WooCommerce has rehydrated the cart.
@@ -133,8 +199,29 @@ class SuperWoo_Buy_Now_Cart {
         WC()->cart->get_cart_from_session();
         WC()->cart->calculate_totals();
         WC()->cart->set_session();
-        WC()->session->__unset(self::SESSION_KEY);
+        // Razorpay calls empty_cart() with its default argument in some later
+        // callbacks. That deletes a logged-in shopper's persistent cart, so
+        // restore it from the same original snapshot as the session cart.
+        if (isset(WC()->cart->session) && method_exists(WC()->cart->session, 'persistent_cart_update')) {
+            WC()->cart->session->persistent_cart_update();
+        }
+        if ($clear_snapshot) {
+            WC()->session->__unset(self::SESSION_KEY);
+        }
         return true;
+    }
+
+    /**
+     * Razorpay's order and shipping callbacks can replace or empty the cart.
+     * Keep their response/order intact, then put the original cart back before
+     * WooCommerce saves the request's session. Retain the snapshot until the
+     * shopper returns to the normal storefront or opens the cart drawer.
+     */
+    public function restore_after_razorpay_request($response, $handler, $request) {
+        if (method_exists($request, 'get_route') && 0 === strpos($request->get_route(), '/1cc/v1/')) {
+            self::restore_pending(false);
+        }
+        return $response;
     }
 
     public function restore_on_storefront() {

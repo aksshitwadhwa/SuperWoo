@@ -4,7 +4,7 @@ Tags: woocommerce, cart drawer, product benefits, faq, bundle discounts
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.6.6
+Stable tag: 1.6.14
 License: GPLv2 or later
 
 SuperWoo adds WooCommerce product benefit icons, how-to content, product FAQs, shoppable videos, bundle offer rules, cart notices, and an AJAX cart drawer.
@@ -57,6 +57,37 @@ Elementor:
 5. Configure offer rules under WooCommerce > Offers.
 
 == Changelog ==
+
+= 1.6.14 =
+* Make cart recommendation arrows work independently of cached cart scripts and advance one product card per click.
+
+= 1.6.13 =
+* Save and verify the existing WooCommerce cart before Razorpay product-page Buy Now starts.
+* Hydrate carts created late during admin AJAX, restore the saved cart for normal cart reads, and block Buy Now with a visible error if preservation fails.
+
+= 1.6.12 =
+* Confirm quantity changes were saved in the WooCommerce session before reporting success; show a clear error otherwise.
+
+= 1.6.11 =
+* Send compact, authoritative quantity responses without rebuilding recommendation products or duplicate cart fragments.
+* Keep cart scroll position, combine rapid clicks, and serialize cart writes so stale responses cannot replace newer quantities.
+
+= 1.6.10 =
+* Use WooCommerce's storefront AJAX route for cart quantity and removal updates, avoiding the admin bootstrap.
+* Show requested quantities immediately, restore them on failure, and use WooCommerce's confirmed response for all prices and totals.
+* Avoid a redundant Store API cart-count request after SuperWoo has already received the updated count.
+
+= 1.6.9 =
+* Restore the original WooCommerce cart immediately after Razorpay product-page Buy Now creates its draft order, and after later gateway callbacks.
+* Preserve the original coupons and logged-in persistent cart, including when the original cart was empty.
+
+= 1.6.8 =
+* Make cart recommendations show two complete cards so each arrow moves exactly one product on desktop and mobile.
+
+= 1.6.7 =
+* Keep cart quantity and prices at their last confirmed values until the AJAX update completes, then refresh them together.
+* Retry an expired cart nonce once on cached pages and show a visible error if an update is rejected.
+* Avoid a second WooCommerce fragment request that could replace freshly calculated cart prices.
 
 = 1.6.6 =
 * Show the cart drawer subtotal at regular merchandise prices, with sale, offer, coupon and gift savings on a separate green Discount line.

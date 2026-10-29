@@ -21,6 +21,7 @@
     var productAddInFlight = false;
     var lastProductAddKey = '';
     var lastProductAddAt = 0;
+    var applyingOwnCartFragments = false;
 
     function shell() {
         return $('[data-superwoo-cart-shell]').first();
@@ -54,6 +55,12 @@
 
     function announce(message) {
         shell().find('.superwoo-cart-live').text(message || '');
+    }
+
+    function showCartError(message) {
+        shell().find('[data-superwoo-cart-error]')
+            .text(message || '')
+            .prop('hidden', !message);
     }
 
     function offerStateItems(state, type) {
@@ -472,7 +479,7 @@
         $('body').removeClass('superwoo-mobile-search-open');
     }
 
-    function replaceFragments(fragments) {
+    function replaceFragments(fragments, preserveCrossSells) {
         if (!fragments) {
             return;
         }
@@ -491,8 +498,14 @@
             var $drawer = drawer();
             var $inner = $drawer.find('.superwoo-cart-drawer__inner').first();
             var $replacement = $(drawerInner).filter('.superwoo-cart-drawer__inner').first();
+            var $oldScroll = $inner.find('[data-superwoo-cart-scroll]').first();
+            var scrollTop = $oldScroll.scrollTop();
+            var $recommendations = preserveCrossSells ? $inner.find('.superwoo-cross-sells').first().detach() : $();
 
             if ($replacement.length) {
+                if ($recommendations.length) {
+                    $replacement.find('[data-superwoo-cart-scroll]').first().append($recommendations);
+                }
                 if ($inner.length) {
                     $inner.replaceWith($replacement);
                 } else {
@@ -503,11 +516,79 @@
             } else {
                 $drawer.html('<div class="superwoo-cart-drawer__inner">' + drawerInner + '</div>');
             }
+            $drawer.find('[data-superwoo-cart-scroll]').first().scrollTop(scrollTop);
         }
 
         syncCartTriggerBadges();
         syncCrossSellNavigation();
-        $(document.body).trigger('wc_fragments_refreshed');
+        applyingOwnCartFragments = true;
+        try {
+            $(document.body).trigger('wc_fragments_refreshed');
+        } finally {
+            applyingOwnCartFragments = false;
+        }
+    }
+
+    function ajaxWithNonceRetry(action, data, url) {
+        var request = $.Deferred();
+
+        function attempt(retried) {
+            $.ajax({ url: url, method: 'POST', data: data, cache: false })
+                .done(function (response) {
+                    request.resolve(response);
+                })
+                .fail(function (xhr, status, error) {
+                    var response = xhr && xhr.responseJSON;
+                    var invalidNonce = xhr && xhr.status === 403 && response && response.data && response.data.code === 'superwoo_invalid_nonce';
+
+                    if (retried || !invalidNonce || !SuperWooCart.ajaxUrl) {
+                        request.reject(xhr, status, error);
+                        return;
+                    }
+
+                    $.ajax({
+                        url: SuperWooCart.ajaxUrl,
+                        method: 'POST',
+                        data: { action: 'superwoo_refresh_cart_nonce', _: Date.now() },
+                        cache: false
+                    }).done(function (nonceResponse) {
+                        if (!nonceResponse || !nonceResponse.success || !nonceResponse.data || !nonceResponse.data.nonce) {
+                            request.reject(xhr, status, error);
+                            return;
+                        }
+                        SuperWooCart.nonce = nonceResponse.data.nonce;
+                        data.nonce = SuperWooCart.nonce;
+                        data.security = SuperWooCart.nonce;
+                        data._ = Date.now();
+                        attempt(true);
+                    }).fail(function () {
+                        request.reject(xhr, status, error);
+                    });
+                });
+        }
+
+        attempt(false);
+        return request.promise();
+    }
+
+    // WooCommerce stores a whole cart per session. Two overlapping cart writes
+    // can save in the opposite order and make the newer click appear lost.
+    var cartRequestTail = $.Deferred().resolve().promise();
+
+    function enqueueCartRequest(action, data, url) {
+        var result = $.Deferred();
+        var previous = cartRequestTail;
+        cartRequestTail = result.promise();
+
+        previous.always(function () {
+            data.nonce = SuperWooCart.nonce;
+            data.security = SuperWooCart.nonce;
+            ajaxWithNonceRetry(action, data, url)
+                .done(function (response) { result.resolve(response); })
+                .fail(function (xhr, status, error) { result.reject(xhr, status, error); });
+        });
+
+        return result.promise();
     }
 
     function post(action, data, $item, options) {
@@ -525,16 +606,13 @@
         }
 
         announce(SuperWooCart.i18n.updating);
+        showCartError('');
 
-        return $.ajax({
-            url: options.url || SuperWooCart.ajaxUrl,
-            method: 'POST',
-            data: data,
-            cache: false
-        })
+        var cartEndpoint = SuperWooCart.wcAjaxUrls && SuperWooCart.wcAjaxUrls[action];
+        return enqueueCartRequest(action, data, options.url || cartEndpoint || SuperWooCart.ajaxUrl)
             .done(function (response) {
                 if (response && response.success && response.data) {
-                    replaceFragments(response.data.fragments);
+                    replaceFragments(response.data.fragments, !!response.data.preserveCrossSells);
                     syncProductQuantityFromDrawer();
                     syncOfferState(response.data.offerState, showOfferEvents(response.data.offerEvents));
                     if (typeof response.data.count !== 'undefined') {
@@ -546,19 +624,23 @@
                     if (options.openCart) {
                         openCart();
                     }
-                    announce('');
-                } else {
-                    if (window.console && response && response.data && response.data.message) {
-                        window.console.warn('SuperWoo cart:', response.data.message);
+                    if (options.expectedQuantity && parseInt(response.data.updatedQuantity, 10) !== options.expectedQuantity) {
+                        showCartError(SuperWooCart.i18n.quantityNotSaved);
+                        announce(SuperWooCart.i18n.quantityNotSaved);
+                    } else {
+                        announce('');
                     }
-                    announce(SuperWooCart.i18n.error);
+                } else {
+                    var message = response && response.data && response.data.message ? response.data.message : SuperWooCart.i18n.error;
+                    showCartError(message);
+                    announce(message);
                 }
             })
             .fail(function (xhr) {
-                if (window.console && xhr && xhr.responseText) {
-                    window.console.warn('SuperWoo cart request failed:', xhr.responseText);
-                }
-                announce(SuperWooCart.i18n.error);
+                var message = xhr && xhr.responseJSON && xhr.responseJSON.data && xhr.responseJSON.data.message
+                    ? xhr.responseJSON.data.message : SuperWooCart.i18n.error;
+                showCartError(message);
+                announce(message);
             })
             .always(function () {
                 if ($item && $item.length) {
@@ -1384,48 +1466,126 @@
         }
     }
 
-    function updateItem($item, quantity) {
-        var nextQuantity = Math.max(1, parseInt(quantity, 10) || 1);
-        var key = $item.attr('data-cart-item-key');
-        var $input = $item.find('[data-superwoo-qty-input]');
-        var previousQuantity = parseInt($input.prop('defaultValue'), 10) || 1;
+    var quantityEdits = {};
 
-        if (!key || $item.hasClass('is-loading')) {
+    function cartItemByKey(key) {
+        return shell().find('.superwoo-cart-item').filter(function () {
+            return $(this).attr('data-cart-item-key') === key;
+        }).first();
+    }
+
+    function finishQuantityEdit(key, confirmed) {
+        var $item = cartItemByKey(key);
+        if ($item.length) {
+            $item.removeClass('is-loading');
+            $item.find('[data-superwoo-qty-input]').val(confirmed);
+        }
+        delete quantityEdits[key];
+    }
+
+    function sendQuantityEdit(key) {
+        var state = quantityEdits[key];
+        var sent;
+        if (!state || state.inFlight) {
+            return;
+        }
+        if (state.desired === state.confirmed) {
+            finishQuantityEdit(key, state.confirmed);
             return;
         }
 
-        if (nextQuantity === previousQuantity) {
-            $input.val(previousQuantity);
-            return;
-        }
-
-        $input.val(nextQuantity);
-
+        sent = state.desired;
+        state.inFlight = true;
         post('superwoo_update_cart_item', {
             cart_item_key: key,
-            quantity: nextQuantity
-        }, $item, { refreshWooFragments: true }).done(function (response) {
-            if ((!response || !response.success) && document.body.contains($item.get(0))) {
-                $input.val(previousQuantity);
+            quantity: sent
+        }, null, { expectedQuantity: sent }).done(function (response) {
+            var updated = response && response.success && response.data
+                ? parseInt(response.data.updatedQuantity, 10) : NaN;
+            var $current;
+
+            if (updated !== sent) {
+                if (state.removeAfter) {
+                    delete quantityEdits[key];
+                    removeItem(cartItemByKey(key));
+                } else {
+                    finishQuantityEdit(key, !isNaN(updated) && updated > 0 ? updated : state.confirmed);
+                }
+                return;
+            }
+            state.confirmed = sent;
+            state.inFlight = false;
+            $current = cartItemByKey(key);
+            if (state.removeAfter) {
+                delete quantityEdits[key];
+                removeItem($current);
+            } else if (state.desired !== state.confirmed && $current.length) {
+                $current.addClass('is-loading');
+                $current.find('[data-superwoo-qty-input]').val(state.desired);
+                sendQuantityEdit(key);
+            } else {
+                finishQuantityEdit(key, state.confirmed);
             }
         }).fail(function () {
-            if (document.body.contains($item.get(0))) {
-                $input.val(previousQuantity);
+            if (state.removeAfter) {
+                delete quantityEdits[key];
+                removeItem(cartItemByKey(key));
+            } else {
+                finishQuantityEdit(key, state.confirmed);
             }
         });
     }
 
-    function removeItem($item) {
+    function updateItem($item, quantity) {
         var key = $item.attr('data-cart-item-key');
+        var $input = $item.find('[data-superwoo-qty-input]');
+        var state;
         if (!key) {
             return;
         }
 
-        $item.addClass('is-loading');
+        state = quantityEdits[key];
+        if (!state) {
+            state = {
+                confirmed: parseInt($input.attr('data-superwoo-qty-committed'), 10)
+                    || parseInt($input.prop('defaultValue'), 10) || 1,
+                desired: 0,
+                inFlight: false,
+                timer: null,
+                removeAfter: false
+            };
+            quantityEdits[key] = state;
+        }
 
-        post('superwoo_remove_cart_item', {
-            cart_item_key: key
-        }, $item, { refreshWooFragments: true });
+        state.desired = Math.max(1, parseInt(quantity, 10) || 1);
+        $input.val(state.desired);
+        $item.addClass('is-loading');
+        if (!state.inFlight) {
+            window.clearTimeout(state.timer);
+            // Combine a short burst of clicks into one cart calculation.
+            state.timer = window.setTimeout(function () { sendQuantityEdit(key); }, 35);
+        }
+    }
+
+    function removeItem($item) {
+        var key = $item.attr('data-cart-item-key');
+        var state = key && quantityEdits[key];
+        if (!key) {
+            return;
+        }
+        if (state) {
+            window.clearTimeout(state.timer);
+            if (state.inFlight) {
+                state.removeAfter = true;
+                $item.addClass('is-removing');
+                return;
+            }
+            delete quantityEdits[key];
+        }
+        $item.addClass('is-removing');
+        post('superwoo_remove_cart_item', { cart_item_key: key }, $item).fail(function () {
+            $item.removeClass('is-removing');
+        });
     }
 
     $(document).on('click', '[data-superwoo-open-cart]', function (event) {
@@ -1550,7 +1710,7 @@
         event.preventDefault();
         event.stopPropagation();
         $item = $(control).closest('.superwoo-cart-item');
-        if (!$item.length || $item.hasClass('is-loading')) {
+        if (!$item.length || $item.hasClass('is-removing')) {
             return;
         }
 
@@ -1821,6 +1981,11 @@
     });
 
     $(document.body).on('wc_fragments_loaded wc_fragments_refreshed removed_from_cart updated_cart_totals', function () {
+        if (applyingOwnCartFragments) {
+            // This response already includes the authoritative cart count.
+            // Avoid another Store API request racing against its new totals.
+            return;
+        }
         window.setTimeout(function () {
             syncCartTriggerBadges();
             fetchCartCount();

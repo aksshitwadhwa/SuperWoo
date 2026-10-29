@@ -349,12 +349,12 @@ function superwoo_cart_drawer_fragments($calculate_totals = true) {
     ];
 }
 
-function superwoo_cart_drawer_inner_fragment_html($cart_drawer = null) {
+function superwoo_cart_drawer_inner_fragment_html($cart_drawer = null, $include_cross_sells = true) {
     if (!$cart_drawer instanceof SuperWoo_Cart_Drawer) {
         $cart_drawer = new SuperWoo_Cart_Drawer();
     }
 
-    return '<div class="superwoo-cart-drawer__inner">' . $cart_drawer->get_inner_html() . '</div>';
+    return '<div class="superwoo-cart-drawer__inner">' . $cart_drawer->get_inner_html($include_cross_sells) . '</div>';
 }
 
 function superwoo_cart_offer_notices_html() {
