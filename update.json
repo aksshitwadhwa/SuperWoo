@@ -1,12 +1,12 @@
 {
   "name": "SuperWoo",
   "slug": "superwoo",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "requires": "6.2",
   "requires_php": "7.4",
-  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.6.0.zip",
-  "sha256": "1f177976c17cf6608d0dee52ee1c71b08cf74cb4004da89a3a61d151ecb3bfe0",
-  "package_size": 288191,
+  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.6.1.zip",
+  "sha256": "dd11fd28db048d336afba2d171260d6e6f7050887777ad5ea15a3b3fffeeb12c",
+  "package_size": 283187,
   "homepage": "https://digtize.com/plugins/superwoo/",
-  "description": "SuperWoo 1.6.0 improves order recovery and Razorpay reconciliation workflows."
+  "description": "SuperWoo 1.6.1 fixes product price display, cart recommendation scrolling, and sale-item offer discounts."
 }
