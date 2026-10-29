@@ -117,6 +117,7 @@ $cart->merchandise = 3956.40;
 $cart->fees = 0;
 $cart->total = 3956.40;
 $summary = superwoo_cart_summary_amounts($cart);
+check(superwoo_cart_item_subtotal_amount($cart->items['sale-offer']) === 4396.0, 'product card did not keep the sale price before the cart offer');
 check($summary['subtotal'] === 4396.0 && $summary['discount'] === 439.60, '10% offer savings were not calculated from the sale price and quantity');
 check(abs($summary['subtotal'] - $summary['discount'] - $cart->total) < 0.001, 'sale-price offer summary does not reconcile to the payable total');
 $GLOBALS['summary_currency']->enabled = true;
@@ -131,15 +132,30 @@ $GLOBALS['summary_currency']->enabled = false;
 check(superwoo_cart_item_pre_offer_price(['data' => new WC_Product(2472, 1998)]) === 1998.0, 'cart item without an offer changed its displayed price');
 
 $cart->items = [
-    'paid' => ['data' => new WC_Product(1236, 999), 'quantity' => 3, 'line_total' => 2997],
+    'paid' => ['data' => new WC_Product(1236, 999), 'quantity' => 2, 'line_total' => 1998],
     'gift' => ['data' => new WC_Product(639, 0), 'quantity' => 1, 'line_total' => 0, 'superwoo_free_gift' => true],
 ];
-$cart->merchandise = 2997;
-$cart->total = 2997;
+$cart->merchandise = 1998;
+$cart->total = 1998;
 $paid_subtotal = superwoo_cart_item_subtotal_amount($cart->items['paid']);
 $gift_subtotal = superwoo_cart_item_subtotal_amount($cart->items['gift']);
+$gift_shares = superwoo_cart_gift_subtotal_shares($cart);
 $summary = superwoo_cart_summary_amounts($cart);
-check($paid_subtotal === 2997.0 && $gift_subtotal === 639.0, 'paid item and free gift subtotal amounts were mixed');
+check($paid_subtotal === 1998.0 && $gift_subtotal === 639.0, 'paid item and free gift subtotal amounts were mixed');
+check(abs($gift_shares['paid'] - 639.0) < 0.001, 'free-gift value was not assigned to the paid card');
+check($paid_subtotal + $gift_shares['paid'] === 2637.0 && 2472.0 + $gift_shares['paid'] === 3111.0, 'sale and crossed-out regular prices did not use the same gift share');
 check($summary['subtotal'] === $paid_subtotal + $gift_subtotal && $summary['discount'] === $gift_subtotal && abs($summary['subtotal'] - $summary['discount'] - $cart->total) < 0.001, 'item subtotals, gift saving and cart total do not reconcile');
+
+$cart->items = [
+    'first' => ['data' => new WC_Product(100, 100), 'quantity' => 1, 'line_total' => 100],
+    'second' => ['data' => new WC_Product(200, 200), 'quantity' => 1, 'line_total' => 200],
+    'gift' => ['data' => new WC_Product(90, 0), 'quantity' => 1, 'line_total' => 0, 'superwoo_free_gift' => true],
+];
+$cart->merchandise = 300;
+$cart->total = 300;
+$gift_shares = superwoo_cart_gift_subtotal_shares($cart);
+$summary = superwoo_cart_summary_amounts($cart);
+check(abs($gift_shares['first'] - 30.0) < 0.001 && abs($gift_shares['second'] - 60.0) < 0.001, 'gift value was not distributed once across paid cards');
+check($summary['subtotal'] === 390.0 && $summary['discount'] === 90.0 && abs($summary['subtotal'] - $summary['discount'] - 300.0) < 0.001, 'multiple paid cards and free gift do not reconcile with the cart summary');
 
 echo "PASS: item and cart subtotals reconcile across sale, offer, coupon, gift, tax, fees, currency and quantity\n";

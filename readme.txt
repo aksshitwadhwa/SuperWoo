@@ -4,7 +4,7 @@ Tags: woocommerce, cart drawer, product benefits, faq, bundle discounts
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.6.17
+Stable tag: 1.6.21
 License: GPLv2 or later
 
 SuperWoo adds WooCommerce product benefit icons, how-to content, product FAQs, shoppable videos, bundle offer rules, cart notices, and an AJAX cart drawer.
@@ -57,6 +57,18 @@ Elementor:
 5. Configure offer rules under WooCommerce > Offers.
 
 == Changelog ==
+
+= 1.6.21 =
+* Replace the cart drawer WhatsApp updates checkbox with a linked Privacy Policy acknowledgement before checkout.
+
+= 1.6.20 =
+* Show crossed-out regular and sale subtotals on paid cart cards using the same free-gift value included in the bottom subtotal; leave the discount and checkout total unchanged.
+
+= 1.6.19 =
+* Restore crossed-out regular and pre-offer sale prices on paid cart cards; keep free-gift savings in the cart summary.
+
+= 1.6.18 =
+* Show the full pre-discount subtotal on paid cart cards when a free gift adds value to the cart subtotal, without changing checkout prices.
 
 = 1.6.17 =
 * Show each cart item's subtotal beside its quantity controls and show free-gift value on the gift row so item subtotals reconcile with the cart summary.

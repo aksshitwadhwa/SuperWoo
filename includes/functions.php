@@ -483,6 +483,42 @@ function superwoo_cart_item_subtotal_amount($item, $including_tax = false) {
     return max($base_display, $payable_line);
 }
 
+/** Share free-gift value across paid cards for their displayed subtotal prices. */
+function superwoo_cart_gift_subtotal_shares($cart) {
+    $including_tax = $cart->display_prices_including_tax();
+    $paid_amounts = [];
+    $paid_total = 0.0;
+    $gift_total = 0.0;
+
+    foreach ($cart->get_cart() as $key => $item) {
+        $amount = superwoo_cart_item_subtotal_amount($item, $including_tax);
+        if (!empty($item['superwoo_free_gift'])) {
+            $gift_total += $amount;
+        } else {
+            $paid_amounts[$key] = $amount;
+            $paid_total += $amount;
+        }
+    }
+
+    if (!$paid_amounts || $gift_total <= 0) {
+        return [];
+    }
+
+    $factor = 10 ** wc_get_price_decimals();
+    $remaining_minor = (int) round($gift_total * $factor);
+    $last_key = array_key_last($paid_amounts);
+    $shares = [];
+    foreach ($paid_amounts as $key => $amount) {
+        $share_minor = $key === $last_key
+            ? $remaining_minor
+            : ($paid_total > 0 ? (int) floor($gift_total * $factor * $amount / $paid_total) : 0);
+        $remaining_minor -= $share_minor;
+        $shares[$key] = $share_minor / $factor;
+    }
+
+    return $shares;
+}
+
 /**
  * Use the price before the cart offer as the subtotal. This is the catalog
  * sale price when a product is on sale, so the discount row measures the
