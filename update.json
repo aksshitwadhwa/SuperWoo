@@ -1,12 +1,12 @@
 {
   "name": "SuperWoo",
   "slug": "superwoo",
-  "version": "1.6.14",
+  "version": "1.6.17",
   "requires": "6.2",
   "requires_php": "7.4",
-  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.6.14.zip",
-  "sha256": "d1c7cb61ec20d0733506795921aa5632fc77615edc3f6b865e3ec8986d38cbc7",
-  "package_size": 295853,
+  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.6.17.zip",
+  "sha256": "d121ed7bda02028e6f187e6dd3d96f7521c9a86b3d170c862e2a938304e010a5",
+  "package_size": 296751,
   "homepage": "https://digtize.com/plugins/superwoo/",
-  "description": "SuperWoo 1.6.14 fixes cart recommendation arrow clicks and advances one product card at a time."
+  "description": "SuperWoo 1.6.17 shows each cart item's subtotal and the free-gift value alongside a matching cart summary."
 }

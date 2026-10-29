@@ -1,5 +1,5 @@
 <?php
-/** Verify regular-price subtotal, savings, shipping, tax and WooCommerce total. */
+/** Verify sale-price subtotal, cart savings, shipping, tax and WooCommerce total. */
 define('ABSPATH', __DIR__ . '/');
 class WooCommerce {}
 class WC_Product {
@@ -57,11 +57,11 @@ $cart->merchandise = 594;
 $cart->shipping = 75;
 $cart->total = 669;
 $summary = superwoo_cart_summary_amounts($cart);
-check($summary['subtotal'] === 934.0 && $summary['discount'] === 340.0, 'MRP and combined sale/free-gift savings are wrong');
+check($summary['subtotal'] === 694.0 && $summary['discount'] === 100.0, 'catalog sale savings were counted again as a cart discount');
 check(abs($summary['subtotal'] - $summary['discount'] + $cart->shipping - $cart->total) < 0.001, 'cart summary does not reconcile to payable total');
 $html = superwoo_cart_total_html();
-check(strpos($html, 'INR934.00') < strpos($html, '-INR340.00'), 'subtotal/discount display order is wrong');
-check(strpos($html, '-INR340.00') < strpos($html, 'Shipping') && strpos($html, 'Shipping') < strpos($html, 'Total'), 'shipping/total display order is wrong');
+check(strpos($html, 'INR694.00') < strpos($html, '-INR100.00'), 'subtotal/discount display order is wrong');
+check(strpos($html, '-INR100.00') < strpos($html, 'Shipping') && strpos($html, 'Shipping') < strpos($html, 'Total'), 'shipping/total display order is wrong');
 check(strpos($html, 'INR669.00') !== false, 'WooCommerce payable total not shown');
 
 $cart->items = ['custom' => ['data' => new WC_Product(100, 120), 'quantity' => 1, 'line_total' => 120]];
@@ -100,7 +100,7 @@ $cart->tax = 0;
 $cart->total = 1076;
 $GLOBALS['summary_currency']->enabled = true;
 $summary = superwoo_cart_summary_amounts($cart);
-check($summary['subtotal'] === 1836.0 && $summary['discount'] === 760.0, 'quantity or currency-converted regular price not used');
+check($summary['subtotal'] === 1076.0 && $summary['discount'] === 0.0, 'currency-converted sale price was counted as a discount');
 
 $GLOBALS['summary_currency']->enabled = false;
 $cart->items = ['fee-discount' => ['data' => new WC_Product(100, 100), 'quantity' => 1, 'line_total' => 100]];
@@ -110,4 +110,36 @@ $cart->total = 90;
 $summary = superwoo_cart_summary_amounts($cart);
 check($summary['subtotal'] === 100.0 && $summary['discount'] === 10.0 && $summary['fees'] === 0.0, 'negative fee discount did not reconcile');
 
-echo "PASS: regular subtotal, sale/coupon/gift savings, custom price, tax, fees, currency and payable total\n";
+$offer_item = ['data' => new WC_Product(2472, 1978.20), '_superwoo_offer_base_price' => 2198];
+check(superwoo_cart_item_pre_offer_price($offer_item) === 2198.0, 'cart item displayed the offer price instead of its pre-offer sale price');
+$cart->items = ['sale-offer' => $offer_item + ['quantity' => 2, 'line_total' => 3956.40]];
+$cart->merchandise = 3956.40;
+$cart->fees = 0;
+$cart->total = 3956.40;
+$summary = superwoo_cart_summary_amounts($cart);
+check($summary['subtotal'] === 4396.0 && $summary['discount'] === 439.60, '10% offer savings were not calculated from the sale price and quantity');
+check(abs($summary['subtotal'] - $summary['discount'] - $cart->total) < 0.001, 'sale-price offer summary does not reconcile to the payable total');
+$GLOBALS['summary_currency']->enabled = true;
+check(superwoo_cart_item_pre_offer_price($offer_item) === 4396.0, 'pre-offer sale price was not converted for display currency');
+check(superwoo_cart_item_pre_offer_price(['data' => new WC_Product(2472, 1998), '_superwoo_base_inr_price' => 2100, '_superwoo_offer_base_price' => 2198]) === 4200.0, 'currency base price was not preferred over offer base price');
+$cart->items = ['currency-offer' => ['data' => new WC_Product(2472, 1998), '_superwoo_base_inr_price' => 2100, '_superwoo_offer_base_price' => 2100, 'quantity' => 2, 'line_total' => 7560]];
+$cart->merchandise = 7560;
+$cart->total = 7560;
+$summary = superwoo_cart_summary_amounts($cart);
+check($summary['subtotal'] === 8400.0 && $summary['discount'] === 840.0, 'converted sale-price discount or quantity was wrong');
+$GLOBALS['summary_currency']->enabled = false;
+check(superwoo_cart_item_pre_offer_price(['data' => new WC_Product(2472, 1998)]) === 1998.0, 'cart item without an offer changed its displayed price');
+
+$cart->items = [
+    'paid' => ['data' => new WC_Product(1236, 999), 'quantity' => 3, 'line_total' => 2997],
+    'gift' => ['data' => new WC_Product(639, 0), 'quantity' => 1, 'line_total' => 0, 'superwoo_free_gift' => true],
+];
+$cart->merchandise = 2997;
+$cart->total = 2997;
+$paid_subtotal = superwoo_cart_item_subtotal_amount($cart->items['paid']);
+$gift_subtotal = superwoo_cart_item_subtotal_amount($cart->items['gift']);
+$summary = superwoo_cart_summary_amounts($cart);
+check($paid_subtotal === 2997.0 && $gift_subtotal === 639.0, 'paid item and free gift subtotal amounts were mixed');
+check($summary['subtotal'] === $paid_subtotal + $gift_subtotal && $summary['discount'] === $gift_subtotal && abs($summary['subtotal'] - $summary['discount'] - $cart->total) < 0.001, 'item subtotals, gift saving and cart total do not reconcile');
+
+echo "PASS: item and cart subtotals reconcile across sale, offer, coupon, gift, tax, fees, currency and quantity\n";

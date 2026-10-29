@@ -80,6 +80,24 @@ expect_amount($cart->subtotal(), 617, 'cart subtotal after offer');
 $offers->apply_discounts($cart);
 expect_amount($cart->subtotal(), 617, 'repeated totals do not compound the offer');
 
+$updated_sale = new WC_Product(11, 360, 250);
+$restored_item = $offers->reset_offer_base_price_from_session([
+    'product_id' => 11,
+    'quantity' => 2,
+    'data' => $updated_sale,
+    '_superwoo_offer_base_price' => 265,
+]);
+if (isset($restored_item['_superwoo_offer_base_price'])) {
+    fwrite(STDERR, "FAIL: old offer base survived cart session restore\n");
+    exit(1);
+}
+$updated_cart = new Offer_Test_Cart(['sale' => $restored_item]);
+$offers->apply_discounts($updated_cart);
+expect_amount($updated_sale->get_price(), 225, 'offer did not use the updated catalog sale price');
+expect_amount($offers->get_cart_subtotal_excluding_gifts($updated_cart), 500, 'offer threshold did not use the sale price before discount');
+$offers->apply_discounts($updated_cart);
+expect_amount($updated_sale->get_price(), 225, 'updated sale price compounded on repeated totals');
+
 $offers->discount = 0;
 $offers->apply_discounts($cart);
 expect_amount($sale->get_price(), 265, 'sale price restored when offer no longer qualifies');
@@ -91,4 +109,4 @@ expect_amount($sale->get_price(), 0, 'full discount on sale item');
 expect_amount($regular->get_price(), 0, 'full discount on regular item');
 expect_amount($other->get_price(), 50, 'unrelated item unchanged at full discount');
 
-echo "PASS: sale and regular items use payable-price discounts; totals are stable and reversible\n";
+echo "PASS: sale and regular items use sale-price discounts; restored sessions use current sale prices; totals are stable and reversible\n";

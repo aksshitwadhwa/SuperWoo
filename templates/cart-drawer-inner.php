@@ -44,19 +44,20 @@
                 $permalink = $product->is_visible() ? $product->get_permalink($cart_item) : '';
                 $is_free_gift = !empty($cart_item['superwoo_free_gift']);
                 $quantity = max(1, absint($cart_item['quantity'] ?? 1));
-                $item_price_html = $cart->get_product_subtotal($product, $quantity);
+                $line_subtotal = superwoo_cart_item_subtotal_amount($cart_item, $cart->display_prices_including_tax());
+                $item_price_html = wc_price($line_subtotal);
                 $regular_price = (float) $product->get_regular_price('edit');
-                $current_price = (float) $product->get_price();
 
-                // WC_Cart formats only the current price. Build a sale-price
-                // display from the product's regular price when it is higher.
-                if (!$is_free_gift && $regular_price > $current_price && $current_price >= 0) {
-                    if (function_exists('superwoo_currency') && superwoo_currency()->is_enabled()) {
-                        $regular_price = superwoo_currency()->convert_product_price($product, $regular_price);
-                    }
-
+                if (function_exists('superwoo_currency') && superwoo_currency()->is_enabled()) {
+                    $regular_price = superwoo_currency()->convert_product_price($product, $regular_price);
+                }
+                // The same row subtotal feeds the bottom summary. Show a
+                // catalog regular price only when it exceeds that subtotal.
+                if (!$is_free_gift && $regular_price > 0) {
                     $regular_display_price = wc_get_price_to_display($product, ['price' => $regular_price, 'qty' => $quantity]);
-                    $item_price_html = wc_format_sale_price(wc_price($regular_display_price), $item_price_html);
+                    if ($regular_display_price > $line_subtotal) {
+                        $item_price_html = wc_format_sale_price(wc_price($regular_display_price), $item_price_html);
+                    }
                 }
                 ?>
                 <div class="superwoo-cart-item"
@@ -79,8 +80,10 @@
                         </div>
                         <div class="superwoo-cart-item__price">
                             <?php if ($is_free_gift) : ?>
+                                <?php if ($line_subtotal > 0) : ?><del class="superwoo-cart-item__gift-worth"><?php echo wp_kses_post($item_price_html); ?></del><?php endif; ?>
                                 <span class="superwoo-free-gift-badge"><strong><?php esc_html_e('Free', 'superwoo'); ?></strong></span>
                             <?php else : ?>
+                                <span class="superwoo-cart-item__price-label"><?php esc_html_e('Subtotal', 'superwoo'); ?></span>
                                 <?php echo wp_kses_post($item_price_html); ?>
                             <?php endif; ?>
                         </div>

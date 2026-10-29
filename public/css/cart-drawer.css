@@ -681,6 +681,22 @@ body.superwoo-cart-open .superwoo-mobile-bottom-nav {
     font-size: 15px;
 }
 
+.superwoo-cart-shell .superwoo-cart-item__price-label {
+    color: #667085;
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.3;
+    margin-bottom: 2px;
+}
+
+.superwoo-cart-shell .superwoo-cart-item__gift-worth {
+    color: #667085;
+    font-size: 13px;
+    font-weight: 500;
+    margin-right: 6px;
+}
+
 .superwoo-cart-shell .superwoo-free-gift-badge,
 .superwoo-cart-shell .superwoo-gift-qty,
 .superwoo-free-gift-label {

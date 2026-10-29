@@ -1673,13 +1673,19 @@
         event.stopPropagation();
     }, { passive: false, capture: true });
 
+    var touchStartX = 0;
     var touchStartY = 0;
+    var touchCrossSellRow = null;
+    var touchDirection = '';
     document.addEventListener('touchstart', function (event) {
         if (!shell().hasClass('is-open') || !drawer().get(0) || !drawer().get(0).contains(event.target)) {
             return;
         }
 
+        touchStartX = event.touches[0].clientX;
         touchStartY = event.touches[0].clientY;
+        touchCrossSellRow = event.target.closest && event.target.closest('.superwoo-cross-sells__row');
+        touchDirection = '';
     }, { passive: true, capture: true });
 
     document.addEventListener('touchmove', function (event) {
@@ -1689,7 +1695,17 @@
             return;
         }
 
+        var nextX = event.touches[0].clientX;
         var nextY = event.touches[0].clientY;
+        if (touchCrossSellRow && touchCrossSellRow.scrollWidth > touchCrossSellRow.clientWidth) {
+            if (!touchDirection && (Math.abs(nextX - touchStartX) > 5 || Math.abs(nextY - touchStartY) > 5)) {
+                touchDirection = Math.abs(nextX - touchStartX) > Math.abs(nextY - touchStartY) ? 'horizontal' : 'vertical';
+            }
+            if (touchDirection === 'horizontal' || !touchDirection) {
+                // Let the row's native touch scrolling move the cards.
+                return;
+            }
+        }
         scroller.scrollTop += touchStartY - nextY;
         touchStartY = nextY;
         event.preventDefault();
