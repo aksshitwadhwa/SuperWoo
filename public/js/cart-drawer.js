@@ -318,6 +318,37 @@
         }).promise();
     }
 
+    function updateCrossSellNavigation(section) {
+        var row = section.querySelector('.superwoo-cross-sells__row');
+        var controls = section.querySelector('.superwoo-cross-sells__controls');
+        var maxScrollLeft;
+
+        if (!row || !controls || !row.clientWidth) {
+            return;
+        }
+
+        maxScrollLeft = Math.max(0, row.scrollWidth - row.clientWidth);
+        controls.hidden = maxScrollLeft <= 1;
+        controls.querySelector('[data-superwoo-cross-sell-nav="previous"]').disabled = row.scrollLeft <= 1;
+        controls.querySelector('[data-superwoo-cross-sell-nav="next"]').disabled = row.scrollLeft >= maxScrollLeft - 1;
+    }
+
+    function syncCrossSellNavigation() {
+        shell().find('.superwoo-cross-sells').each(function () {
+            var section = this;
+            var row = section.querySelector('.superwoo-cross-sells__row');
+
+            if (row && !row.dataset.superwooCrossSellNavBound) {
+                row.dataset.superwooCrossSellNavBound = '1';
+                row.addEventListener('scroll', function () {
+                    updateCrossSellNavigation(section);
+                }, { passive: true });
+            }
+
+            updateCrossSellNavigation(section);
+        });
+    }
+
     function openCart() {
         var $shell = shell();
         if (!$shell.length) {
@@ -329,6 +360,7 @@
         $('body').addClass('superwoo-cart-open');
         window.setTimeout(function () {
             drawer().trigger('focus');
+            syncCrossSellNavigation();
         }, 20);
     }
 
@@ -402,6 +434,7 @@
         }
 
         syncCartTriggerBadges();
+        syncCrossSellNavigation();
         $(document.body).trigger('wc_fragments_refreshed');
     }
 
@@ -1639,6 +1672,23 @@
         });
     });
 
+    $(document).on('click', '[data-superwoo-cross-sell-nav]', function (event) {
+        var section = this.closest('.superwoo-cross-sells');
+        var row = section && section.querySelector('.superwoo-cross-sells__row');
+        var firstCard = row && row.querySelector('.superwoo-cross-sell');
+        var gap = row ? parseFloat(window.getComputedStyle(row).columnGap) || 0 : 0;
+        var amount = firstCard ? firstCard.getBoundingClientRect().width + gap : (row ? row.clientWidth * 0.8 : 0);
+        var direction = this.getAttribute('data-superwoo-cross-sell-nav') === 'previous' ? -1 : 1;
+
+        event.preventDefault();
+        if (!row || !amount || this.disabled) {
+            return;
+        }
+
+        row.scrollLeft = Math.max(0, Math.min(row.scrollWidth - row.clientWidth, row.scrollLeft + direction * amount));
+        updateCrossSellNavigation(section);
+    });
+
     // A vertical mouse wheel cannot move a horizontal recommendations row by
     // itself. Translate it while the pointer is over the row; touch devices
     // retain native horizontal swipe scrolling.
@@ -1681,6 +1731,7 @@
         window.setTimeout(function () {
             syncCartTriggerBadges();
             fetchCartCount();
+            syncCrossSellNavigation();
         }, 20);
     });
 
@@ -1700,6 +1751,7 @@
         }
 
         syncCartTriggerBadges();
+        syncCrossSellNavigation();
         startTriggerObserver();
         fetchCartCount();
         prepareInlineProductActions();
@@ -1730,6 +1782,7 @@
 
     $(window).on('resize.superwooCart orientationchange.superwooCart', function () {
         scheduleStickyBuyNowSync();
+        syncCrossSellNavigation();
     });
 
 

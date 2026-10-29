@@ -700,14 +700,15 @@ class SuperWoo_Bundle_Offers {
                 continue;
             }
 
-            $regular_price = (float) $product->get_regular_price();
             $current_price = (float) $product->get_price();
 
-            if ($regular_price <= 0 || $current_price <= 0) {
+            if ($current_price <= 0) {
                 continue;
             }
 
-            $bundle_price = round($regular_price * (1 - $discount / 100), wc_get_price_decimals());
+            // The restored base is the price this customer would otherwise pay,
+            // including an existing sale. Never calculate an offer from MRP.
+            $bundle_price = round($current_price * (1 - $discount / 100), wc_get_price_decimals());
             if ($bundle_price < $current_price) {
                 $product->set_price($bundle_price);
             }

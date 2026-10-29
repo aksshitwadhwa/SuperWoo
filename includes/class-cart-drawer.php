@@ -43,10 +43,10 @@ class SuperWoo_Cart_Drawer {
             $deps[] = 'wc-cart-fragments';
         }
 
-        wp_enqueue_style('superwoo-cart-drawer', SUPERWOO_URL . 'public/css/cart-drawer.css', [], SUPERWOO_VERSION);
+        wp_enqueue_style('superwoo-cart-drawer', SUPERWOO_URL . 'public/css/cart-drawer.css', [], SUPERWOO_VERSION . '.' . filemtime(SUPERWOO_PATH . 'public/css/cart-drawer.css'));
         wp_enqueue_style('superwoo-bundle-offers', SUPERWOO_URL . 'public/css/bundle-offers.css', [], SUPERWOO_VERSION);
 
-        wp_enqueue_script('superwoo-cart-drawer', SUPERWOO_URL . 'public/js/cart-drawer.js', $deps, SUPERWOO_VERSION, true);
+        wp_enqueue_script('superwoo-cart-drawer', SUPERWOO_URL . 'public/js/cart-drawer.js', $deps, SUPERWOO_VERSION . '.' . filemtime(SUPERWOO_PATH . 'public/js/cart-drawer.js'), true);
 
         $settings = superwoo_get_settings();
 

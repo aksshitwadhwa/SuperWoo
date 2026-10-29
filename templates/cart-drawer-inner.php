@@ -101,8 +101,20 @@
 
         <?php if (!empty($crosssell)) : ?>
             <div class="superwoo-cross-sells">
-                <h3><?php esc_html_e('You may also like', 'superwoo'); ?></h3>
-                <div class="superwoo-cross-sells__row">
+                <div class="superwoo-cross-sells__header">
+                    <h3><?php esc_html_e('You may also like', 'superwoo'); ?></h3>
+                    <?php if (count($crosssell) > 1) : ?>
+                        <div class="superwoo-cross-sells__controls" aria-label="<?php esc_attr_e('Browse recommended products', 'superwoo'); ?>">
+                            <button type="button" class="superwoo-cross-sells__arrow" data-superwoo-cross-sell-nav="previous" aria-controls="superwoo-cross-sells-list" aria-label="<?php esc_attr_e('Previous recommended products', 'superwoo'); ?>">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m15 18-6-6 6-6"/></svg>
+                            </button>
+                            <button type="button" class="superwoo-cross-sells__arrow" data-superwoo-cross-sell-nav="next" aria-controls="superwoo-cross-sells-list" aria-label="<?php esc_attr_e('Next recommended products', 'superwoo'); ?>">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m9 18 6-6-6-6"/></svg>
+                            </button>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <div class="superwoo-cross-sells__row" id="superwoo-cross-sells-list" role="region" aria-label="<?php esc_attr_e('Recommended products', 'superwoo'); ?>" tabindex="0">
                     <?php foreach ($crosssell as $product) : ?>
                         <div class="superwoo-cross-sell">
                             <a href="<?php echo esc_url($product->get_permalink()); ?>" class="superwoo-cross-sell__image">
