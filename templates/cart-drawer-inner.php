@@ -42,7 +42,8 @@
                 $product_id = absint($cart_item['product_id']);
                 $permalink = $product->is_visible() ? $product->get_permalink($cart_item) : '';
                 $is_free_gift = !empty($cart_item['superwoo_free_gift']);
-                $item_price_html = $cart->get_product_price($product);
+                $quantity = max(1, absint($cart_item['quantity'] ?? 1));
+                $item_price_html = $cart->get_product_subtotal($product, $quantity);
                 $regular_price = (float) $product->get_regular_price('edit');
                 $current_price = (float) $product->get_price();
 
@@ -53,7 +54,7 @@
                         $regular_price = superwoo_currency()->convert_product_price($product, $regular_price);
                     }
 
-                    $regular_display_price = wc_get_price_to_display($product, ['price' => $regular_price]);
+                    $regular_display_price = wc_get_price_to_display($product, ['price' => $regular_price, 'qty' => $quantity]);
                     $item_price_html = wc_format_sale_price(wc_price($regular_display_price), $item_price_html);
                 }
                 ?>

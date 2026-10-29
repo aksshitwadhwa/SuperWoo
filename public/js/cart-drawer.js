@@ -318,6 +318,43 @@
         }).promise();
     }
 
+    function moveCrossSellByCard(row, direction) {
+        var cards = row.querySelectorAll('.superwoo-cross-sell');
+        var rowLeft = row.getBoundingClientRect().left;
+        var current = row.scrollLeft;
+        var maxScrollLeft = Math.max(0, row.scrollWidth - row.clientWidth);
+        var target = direction > 0 ? maxScrollLeft : 0;
+        var i;
+        var cardLeft;
+
+        if (!cards.length || maxScrollLeft <= 1) {
+            return;
+        }
+
+        // Use the actual card positions: card widths and gaps may vary with
+        // viewport size or styles supplied by the active theme.
+        if (direction > 0) {
+            for (i = 0; i < cards.length; i += 1) {
+                cardLeft = current + cards[i].getBoundingClientRect().left - rowLeft;
+                if (cardLeft > current + 2) {
+                    target = cardLeft;
+                    break;
+                }
+            }
+        } else {
+            for (i = cards.length - 1; i >= 0; i -= 1) {
+                cardLeft = current + cards[i].getBoundingClientRect().left - rowLeft;
+                if (cardLeft < current - 2) {
+                    target = cardLeft;
+                    break;
+                }
+            }
+        }
+
+        target = Math.max(0, Math.min(maxScrollLeft, target));
+        row.scrollLeft = target;
+    }
+
     function updateCrossSellNavigation(section) {
         var row = section.querySelector('.superwoo-cross-sells__row');
         var controls = section.querySelector('.superwoo-cross-sells__controls');
@@ -349,7 +386,7 @@
         });
     }
 
-    function openCart() {
+    function showCart() {
         var $shell = shell();
         if (!$shell.length) {
             return;
@@ -362,6 +399,41 @@
             drawer().trigger('focus');
             syncCrossSellNavigation();
         }, 20);
+    }
+
+    var restoringBuyNowCart = false;
+
+    function openCart() {
+        var pending = false;
+        try {
+            pending = window.sessionStorage.getItem('superwoo_buy_now_pending') === '1';
+        } catch (error) {
+            pending = false;
+        }
+
+        if (!pending) {
+            showCart();
+            return;
+        }
+        if (restoringBuyNowCart) {
+            return;
+        }
+        restoringBuyNowCart = true;
+        refreshDrawerAfterStoreApiChange()
+            .done(function (response) {
+                if (!response || !response.success) {
+                    return;
+                }
+                try {
+                    window.sessionStorage.removeItem('superwoo_buy_now_pending');
+                } catch (error) {
+                    // The server has restored the cart regardless.
+                }
+                showCart();
+            })
+            .always(function () {
+                restoringBuyNowCart = false;
+            });
     }
 
     function closeCart() {
@@ -493,16 +565,6 @@
                     $item.removeClass('is-loading');
                 }
             });
-    }
-
-    function wcPost(endpoint, data, $item, options) {
-        if (!window.SuperWooCart || !SuperWooCart.wcAjaxUrl) {
-            return $.Deferred().reject().promise();
-        }
-
-        options = options || {};
-        options.url = SuperWooCart.wcAjaxUrl.replace('%%endpoint%%', endpoint);
-        return post('', data, $item, options);
     }
 
     function serializeForm($form, $button) {
@@ -1325,13 +1387,32 @@
     function updateItem($item, quantity) {
         var nextQuantity = Math.max(1, parseInt(quantity, 10) || 1);
         var key = $item.attr('data-cart-item-key');
-        $item.find('[data-superwoo-qty-input]').val(nextQuantity);
-        $item.addClass('is-loading');
+        var $input = $item.find('[data-superwoo-qty-input]');
+        var previousQuantity = parseInt($input.prop('defaultValue'), 10) || 1;
 
-        wcPost('superwoo_update_cart_item', {
+        if (!key || $item.hasClass('is-loading')) {
+            return;
+        }
+
+        if (nextQuantity === previousQuantity) {
+            $input.val(previousQuantity);
+            return;
+        }
+
+        $input.val(nextQuantity);
+
+        post('superwoo_update_cart_item', {
             cart_item_key: key,
             quantity: nextQuantity
-        }, $item, { refreshWooFragments: true });
+        }, $item, { refreshWooFragments: true }).done(function (response) {
+            if ((!response || !response.success) && document.body.contains($item.get(0))) {
+                $input.val(previousQuantity);
+            }
+        }).fail(function () {
+            if (document.body.contains($item.get(0))) {
+                $input.val(previousQuantity);
+            }
+        });
     }
 
     function removeItem($item) {
@@ -1342,7 +1423,7 @@
 
         $item.addClass('is-loading');
 
-        wcPost('superwoo_remove_cart_item', {
+        post('superwoo_remove_cart_item', {
             cart_item_key: key
         }, $item, { refreshWooFragments: true });
     }
@@ -1455,37 +1536,52 @@
         event.stopPropagation();
     }, { passive: false, capture: true });
 
-    $(document).on('click', '[data-superwoo-qty-minus]', function (event) {
+    // The drawer is replaced after each response. Capture controls before
+    // theme delegates can stop their clicks, and use the new row on reruns.
+    document.addEventListener('click', function (event) {
+        var control = event.target.closest && event.target.closest('[data-superwoo-qty-minus], [data-superwoo-qty-plus], [data-superwoo-remove-item]');
+        var $item;
+        var current;
+
+        if (!control || !control.closest('[data-superwoo-cart-shell]')) {
+            return;
+        }
+
         event.preventDefault();
         event.stopPropagation();
-        event.stopImmediatePropagation();
-        var $item = $(this).closest('.superwoo-cart-item');
-        var $input = $item.find('[data-superwoo-qty-input]');
-        var current = parseInt($input.val(), 10) || 1;
+        $item = $(control).closest('.superwoo-cart-item');
+        if (!$item.length || $item.hasClass('is-loading')) {
+            return;
+        }
 
-        if (current <= 1) {
+        if (control.hasAttribute('data-superwoo-remove-item')) {
             removeItem($item);
             return;
         }
 
-        updateItem($item, current - 1);
-    });
+        current = parseInt($item.find('[data-superwoo-qty-input]').val(), 10) || 1;
+        if (control.hasAttribute('data-superwoo-qty-minus') && current <= 1) {
+            removeItem($item);
+            return;
+        }
 
-    $(document).on('click', '[data-superwoo-qty-plus]', function (event) {
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation();
-        var $item = $(this).closest('.superwoo-cart-item');
-        var $input = $item.find('[data-superwoo-qty-input]');
-        updateItem($item, (parseInt($input.val(), 10) || 0) + 1);
-    });
+        updateItem($item, current + (control.hasAttribute('data-superwoo-qty-plus') ? 1 : -1));
+    }, true);
 
-    $(document).on('change', '[data-superwoo-qty-input]', function (event) {
-        event.preventDefault();
+    document.addEventListener('change', function (event) {
+        var input = event.target.closest && event.target.closest('[data-superwoo-qty-input]');
+        var $item;
+
+        if (!input || !input.closest('[data-superwoo-cart-shell]')) {
+            return;
+        }
+
         event.stopPropagation();
-        var $item = $(this).closest('.superwoo-cart-item');
-        updateItem($item, $(this).val());
-    });
+        $item = $(input).closest('.superwoo-cart-item');
+        if ($item.length) {
+            updateItem($item, input.value);
+        }
+    }, true);
 
     $(document).on('change', '[data-superwoo-whatsapp-consent]', function () {
         var $checkbox = $(this);
@@ -1505,13 +1601,6 @@
         });
     });
 
-    $(document).on('click', '[data-superwoo-remove-item]', function (event) {
-        event.preventDefault();
-        event.stopPropagation();
-        event.stopImmediatePropagation();
-        var $item = $(this).closest('.superwoo-cart-item');
-        removeItem($item);
-    });
 
     function handleSingleProductAdd(control, event) {
         var $button = $(control);
@@ -1672,22 +1761,26 @@
         });
     });
 
-    $(document).on('click', '[data-superwoo-cross-sell-nav]', function (event) {
-        var section = this.closest('.superwoo-cross-sells');
+    // Capture the click before theme handlers can stop bubbling. The drawer
+    // contents are replaced after cart changes, so bind once to document.
+    document.addEventListener('click', function (event) {
+        var button = event.target.closest && event.target.closest('[data-superwoo-cross-sell-nav]');
+        var section = button && button.closest('.superwoo-cross-sells');
         var row = section && section.querySelector('.superwoo-cross-sells__row');
-        var firstCard = row && row.querySelector('.superwoo-cross-sell');
-        var gap = row ? parseFloat(window.getComputedStyle(row).columnGap) || 0 : 0;
-        var amount = firstCard ? firstCard.getBoundingClientRect().width + gap : (row ? row.clientWidth * 0.8 : 0);
-        var direction = this.getAttribute('data-superwoo-cross-sell-nav') === 'previous' ? -1 : 1;
+        var direction;
 
+        if (!button) {
+            return;
+        }
         event.preventDefault();
-        if (!row || !amount || this.disabled) {
+        if (!row || button.disabled) {
             return;
         }
 
-        row.scrollLeft = Math.max(0, Math.min(row.scrollWidth - row.clientWidth, row.scrollLeft + direction * amount));
+        direction = button.getAttribute('data-superwoo-cross-sell-nav') === 'previous' ? -1 : 1;
+        moveCrossSellByCard(row, direction);
         updateCrossSellNavigation(section);
-    });
+    }, true);
 
     // A vertical mouse wheel cannot move a horizontal recommendations row by
     // itself. Translate it while the pointer is over the row; touch devices

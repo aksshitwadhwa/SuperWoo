@@ -52,7 +52,6 @@ class SuperWoo_Cart_Drawer {
 
         wp_localize_script('superwoo-cart-drawer', 'SuperWooCart', [
             'ajaxUrl'       => admin_url('admin-ajax.php'),
-            'wcAjaxUrl'     => class_exists('WC_AJAX') ? WC_AJAX::get_endpoint('%%endpoint%%') : '',
             'nonce'         => wp_create_nonce('superwoo_cart_nonce'),
             'cartUrl'       => wc_get_cart_url(),
             'checkoutUrl'   => wc_get_checkout_url(),
@@ -189,22 +188,20 @@ class SuperWoo_Cart_Drawer {
         $cart_item_key = isset($_POST['cart_item_key']) ? sanitize_text_field(wp_unslash($_POST['cart_item_key'])) : '';
         $quantity = isset($_POST['quantity']) ? max(1, absint($_POST['quantity'])) : 1;
 
-        if (!$cart_item_key || !$this->get_cart_item($cart_item_key)) {
+        $cart_item = $cart_item_key ? $this->get_cart_item($cart_item_key) : null;
+        if (!$cart_item || !empty($cart_item['superwoo_free_gift'])) {
             superwoo_log('Cart drawer quantity update rejected: invalid cart item', [], 'warning');
             wp_send_json_error(['message' => __('Invalid cart item.', 'superwoo')], 400);
         }
 
         $previous_offer_state = $this->get_offer_state();
 
-        if (!WC()->cart->set_quantity($cart_item_key, $quantity, true)) {
+        if (!WC()->cart->set_quantity($cart_item_key, $quantity, false)) {
             superwoo_log('Cart drawer quantity update failed', ['quantity' => $quantity], 'error');
             wp_send_json_error(['message' => __('This item could not be updated.', 'superwoo')], 400);
         }
 
-        WC()->cart->calculate_totals();
-        $this->persist_cart_session();
-
-        $this->send_fragments($previous_offer_state);
+        $this->send_fragments($previous_offer_state, null, null, [$cart_item_key => $quantity]);
     }
 
     public function ajax_remove_cart_item() {
@@ -224,9 +221,6 @@ class SuperWoo_Cart_Drawer {
             wp_send_json_error(['message' => __('This item could not be removed from the cart.', 'superwoo')], 400);
         }
 
-        WC()->cart->calculate_totals();
-        $this->persist_cart_session();
-
         // A cart removal is already a complete WooCommerce state change. Do
         // not restore a SuperWoo quantity snapshot afterwards.
         $this->send_fragments($previous_offer_state);
@@ -237,6 +231,11 @@ class SuperWoo_Cart_Drawer {
      */
     public function ajax_refresh_cart_drawer() {
         $this->verify_ajax();
+        // A product-page Buy Now uses a temporary one-item cart. Opening the
+        // normal drawer after checkout restores the shopper's saved cart.
+        if (class_exists('SuperWoo_Buy_Now_Cart')) {
+            SuperWoo_Buy_Now_Cart::restore_pending();
+        }
         superwoo_log('Cart drawer refresh requested', ['cart_count' => superwoo_cart_count()]);
         $this->send_fragments();
     }

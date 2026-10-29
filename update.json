@@ -1,12 +1,12 @@
 {
   "name": "SuperWoo",
   "slug": "superwoo",
-  "version": "1.6.1",
+  "version": "1.6.6",
   "requires": "6.2",
   "requires_php": "7.4",
-  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.6.1.zip",
-  "sha256": "dd11fd28db048d336afba2d171260d6e6f7050887777ad5ea15a3b3fffeeb12c",
-  "package_size": 283187,
+  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.6.6.zip",
+  "sha256": "786f153380bfe1758c0dd445b00f1872b8dbcd8a987592a1f4ccdf48023e097b",
+  "package_size": 289594,
   "homepage": "https://digtize.com/plugins/superwoo/",
-  "description": "SuperWoo 1.6.1 fixes product price display, cart recommendation scrolling, and sale-item offer discounts."
+  "description": "SuperWoo 1.6.6 shows the regular-price cart subtotal, discount savings, shipping, and payable total."
 }

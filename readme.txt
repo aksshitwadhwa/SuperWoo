@@ -4,7 +4,7 @@ Tags: woocommerce, cart drawer, product benefits, faq, bundle discounts
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.6.1
+Stable tag: 1.6.6
 License: GPLv2 or later
 
 SuperWoo adds WooCommerce product benefit icons, how-to content, product FAQs, shoppable videos, bundle offer rules, cart notices, and an AJAX cart drawer.
@@ -57,6 +57,25 @@ Elementor:
 5. Configure offer rules under WooCommerce > Offers.
 
 == Changelog ==
+
+= 1.6.6 =
+* Show the cart drawer subtotal at regular merchandise prices, with sale, offer, coupon and gift savings on a separate green Discount line.
+* Keep the payable Total sourced from WooCommerce and show applicable tax or fee rows so the summary reconciles.
+
+= 1.6.5 =
+* Send cart quantity increase, decrease, and line removal through the same WordPress AJAX route used by working add-to-cart actions.
+* Refresh the drawer's item quantities and totals from the saved WooCommerce cart response.
+
+= 1.6.4 =
+* Keep existing cart items and coupons when Razorpay Magic Checkout Buy Now is used from a product page.
+* Build the Buy Now draft order from only the selected product and restore the saved cart when the shopper returns to the storefront or opens the cart drawer.
+
+= 1.6.3 =
+* Update cart drawer quantities through AJAX and refresh the line price, subtotal, shipping, and total together.
+* Keep requested quantities stable during cart recalculation and restore the previous input if an AJAX request fails.
+
+= 1.6.2 =
+* Make cart recommendation arrows move exactly one product card per click on desktop and mobile, including after drawer updates.
 
 = 1.6.1 =
 * Add working previous/next controls and scrolling for cart recommendations on desktop and mobile.

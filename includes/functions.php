@@ -392,17 +392,35 @@ function superwoo_cart_total_html() {
         return '';
     }
 
+    $summary = superwoo_cart_summary_amounts($cart);
+
     ob_start();
     ?>
     <div class="superwoo-cart-total">
         <div class="superwoo-cart-total__row">
             <span><?php esc_html_e('Subtotal', 'superwoo'); ?></span>
-            <strong><?php echo wp_kses_post($cart->get_cart_subtotal()); ?></strong>
+            <strong><?php echo wp_kses_post(wc_price($summary['subtotal'])); ?></strong>
+        </div>
+        <div class="superwoo-cart-total__row superwoo-cart-total__row--discount">
+            <span><?php esc_html_e('Discount', 'superwoo'); ?></span>
+            <strong><?php echo wp_kses_post(wc_price(-$summary['discount'])); ?></strong>
         </div>
         <div class="superwoo-cart-total__row">
             <span><?php esc_html_e('Shipping', 'superwoo'); ?></span>
             <strong><?php echo wp_kses_post($cart->get_cart_shipping_total()); ?></strong>
         </div>
+        <?php if ($summary['fees'] > 0) : ?>
+            <div class="superwoo-cart-total__row">
+                <span><?php esc_html_e('Fees', 'superwoo'); ?></span>
+                <strong><?php echo wp_kses_post(wc_price($summary['fees'])); ?></strong>
+            </div>
+        <?php endif; ?>
+        <?php if ($summary['tax'] > 0) : ?>
+            <div class="superwoo-cart-total__row">
+                <span><?php esc_html_e('Tax', 'superwoo'); ?></span>
+                <strong><?php echo wp_kses_post(wc_price($summary['tax'])); ?></strong>
+            </div>
+        <?php endif; ?>
         <div class="superwoo-cart-total__row superwoo-cart-total__row--grand-total">
             <span><?php esc_html_e('Total', 'superwoo'); ?></span>
             <strong><?php echo wp_kses_post(wc_price((float) $cart->get_total('edit'))); ?></strong>
@@ -410,6 +428,59 @@ function superwoo_cart_total_html() {
     </div>
     <?php
     return ob_get_clean();
+}
+
+/**
+ * Display merchandise at regular prices, while keeping WooCommerce's payable
+ * cart totals authoritative. Sale, offer, coupon and free-gift savings are
+ * combined because WooCommerce does not include sale prices in coupon totals.
+ */
+function superwoo_cart_summary_amounts($cart) {
+    $including_tax = $cart->display_prices_including_tax();
+    $subtotal = 0.0;
+
+    foreach ($cart->get_cart() as $item) {
+        $product = $item['data'] ?? null;
+        if (!$product instanceof WC_Product) {
+            continue;
+        }
+
+        $quantity = max(1, (int) ($item['quantity'] ?? 1));
+        $regular = $product->get_regular_price('edit');
+        if ('' === $regular || null === $regular) {
+            $regular = $product->get_price('edit');
+        }
+        $regular = (float) $regular;
+        if (function_exists('superwoo_currency') && superwoo_currency()->is_enabled()) {
+            $regular = superwoo_currency()->convert_product_price($product, $regular);
+        }
+
+        $regular_display = (float) wc_get_price_to_display($product, ['price' => $regular, 'qty' => $quantity]);
+        $payable_line = array_key_exists('line_total', $item)
+            ? (float) $item['line_total'] + ($including_tax ? (float) ($item['line_tax'] ?? 0) : 0.0)
+            : (float) wc_get_price_to_display($product, ['price' => $product->get_price('edit'), 'qty' => $quantity]);
+        // A custom cart price can legitimately exceed the catalog regular
+        // price. Never display a negative discount for that line.
+        $subtotal += max($regular_display, $payable_line);
+    }
+
+    $payable_merchandise = (float) $cart->get_cart_contents_total()
+        + ($including_tax ? (float) $cart->get_cart_contents_tax() : 0.0);
+    $subtotal = max($subtotal, $payable_merchandise);
+    $discount = max(0.0, $subtotal - $payable_merchandise);
+
+    $fees = (float) $cart->get_fee_total() + ($including_tax ? (float) $cart->get_fee_tax() : 0.0);
+    if ($fees < 0) {
+        $discount += -$fees;
+        $fees = 0.0;
+    }
+
+    return [
+        'subtotal' => round($subtotal, wc_get_price_decimals()),
+        'discount' => round($discount, wc_get_price_decimals()),
+        'fees' => round($fees, wc_get_price_decimals()),
+        'tax' => $including_tax ? 0.0 : round((float) $cart->get_total_tax(), wc_get_price_decimals()),
+    ];
 }
 
 function superwoo_razorpay_magic_checkout_available() {
