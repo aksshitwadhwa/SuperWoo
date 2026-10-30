@@ -26,7 +26,8 @@ const html = `<!doctype html><html><head><meta charset="utf-8"></head><body>
       <span class="superwoo-cart-item__price">INR1998</span>
     </div>
     <div class="superwoo-cross-sells" data-test-recommendation style="height:140px">Recommended products</div></div>
-    <div class="superwoo-cart-total">INR1998</div><div class="superwoo-cart-primary">INR1998</div>
+    <div class="superwoo-cart-total">INR1998</div>
+    <div class="superwoo-cart-drawer__footer"><div class="superwoo-privacy-consent"><input type="checkbox" data-superwoo-privacy-consent><label>Privacy Policy</label></div><p class="superwoo-privacy-consent__error" hidden>Please acknowledge the Privacy Policy to continue.</p><a class="superwoo-cart-primary checkout" href="#checkout">INR1998</a></div>
   </div></div>
 </div><pre id="result">PENDING</pre>
 <script src="${pathToFileURL(jquery).href}"></script>
@@ -96,6 +97,16 @@ function price() { return document.querySelector('.superwoo-cart-item__price').t
 function total() { return document.querySelector('.superwoo-cart-total').textContent; }
 async function run() {
   await wait(120);
+  var checkout=document.querySelector('.superwoo-cart-primary.checkout');
+  var checkbox=document.querySelector('[data-superwoo-privacy-consent]');
+  var checkoutClicks=0;
+  checkout.addEventListener('click',function(){checkoutClicks+=1;});
+  checkout.click();
+  assert(checkoutClicks===0 && !document.querySelector('.superwoo-privacy-consent__error').hidden && document.activeElement===checkbox,'checkout was not held for privacy acknowledgement');
+  checkbox.checked=true;
+  checkbox.dispatchEvent(new Event('change',{bubbles:true}));
+  checkout.click();
+  assert(checkoutClicks===1 && document.querySelector('.superwoo-privacy-consent__error').hidden,'acknowledged shopper could not proceed to checkout');
   document.querySelector('[data-superwoo-cart-scroll]').scrollTop = 30;
   document.querySelector('[data-superwoo-qty-plus]').click();
   assert(qty() === '3' && total() === 'INR1998', 'quantity did not respond immediately or price changed before WooCommerce confirmed it');

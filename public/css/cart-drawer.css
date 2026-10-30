@@ -807,17 +807,49 @@ body.superwoo-cart-open .superwoo-mobile-bottom-nav {
     box-shadow: 0 -10px 28px rgba(15, 23, 42, 0.05);
 }
 
-.superwoo-cart-shell .superwoo-privacy-notice {
+.superwoo-cart-shell .superwoo-privacy-consent {
+    align-items: flex-start;
     color: var(--superwoo-drawer-muted) !important;
+    display: flex;
     font-size: 12px !important;
+    gap: 7px;
     line-height: 1.5;
     margin: 0 0 11px !important;
 }
 
-.superwoo-cart-shell .superwoo-privacy-notice a {
-    color: var(--superwoo-drawer-accent);
-    text-decoration: underline;
+.superwoo-cart-shell .superwoo-privacy-consent input[type="checkbox"] {
+    accent-color: var(--superwoo-drawer-accent);
+    flex: 0 0 14px;
+    height: 14px !important;
+    margin: 2px 0 0 !important;
+    min-height: 14px !important;
+    min-width: 14px !important;
+    width: 14px !important;
+}
+
+.superwoo-cart-shell .superwoo-privacy-consent label {
+    color: inherit !important;
+    cursor: pointer;
+    font-size: inherit !important;
+    font-weight: inherit !important;
+    line-height: inherit !important;
+}
+
+.superwoo-cart-shell .superwoo-privacy-consent a,
+.superwoo-cart-shell .superwoo-privacy-consent a:hover,
+.superwoo-cart-shell .superwoo-privacy-consent a:focus-visible {
+    color: inherit !important;
+    font-size: inherit !important;
+    font-weight: inherit !important;
+    line-height: inherit !important;
+    text-decoration: underline !important;
     text-underline-offset: 2px;
+}
+
+.superwoo-cart-shell .superwoo-privacy-consent__error {
+    color: #b42318;
+    font-size: 12px;
+    margin: -5px 0 10px;
 }
 
 .superwoo-cart-total { display: grid; gap: 7px; margin-bottom: 14px; }

@@ -31,6 +31,35 @@
         return shell().find('.superwoo-cart-drawer').first();
     }
 
+    window.addEventListener('click', function (event) {
+        var control = event.target.closest && event.target.closest('.superwoo-cart-primary.checkout');
+        var footer = control && control.closest('.superwoo-cart-drawer__footer');
+        var checkbox = footer && footer.querySelector('[data-superwoo-privacy-consent]');
+
+        if (!checkbox || checkbox.checked) {
+            return;
+        }
+
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        checkbox.setAttribute('aria-invalid', 'true');
+        var error = footer.querySelector('.superwoo-privacy-consent__error');
+        if (error) {
+            error.hidden = false;
+        }
+        checkbox.focus();
+    }, true);
+
+    $(document).on('change', '[data-superwoo-privacy-consent]', function () {
+        if (this.checked) {
+            this.removeAttribute('aria-invalid');
+            var error = this.closest('.superwoo-cart-drawer__footer').querySelector('.superwoo-privacy-consent__error');
+            if (error) {
+                error.hidden = true;
+            }
+        }
+    });
+
     function isDashboardUrl() {
         var path = window.location && window.location.pathname ? window.location.pathname.toLowerCase() : '';
 

@@ -140,11 +140,15 @@
 
     <div class="superwoo-cart-drawer__footer">
         <?php echo superwoo_cart_total_html(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-        <p class="superwoo-privacy-notice">
-            <?php esc_html_e('By proceeding to checkout, you acknowledge our', 'superwoo'); ?>
-            <a href="<?php echo esc_url(home_url('/privacy-policy/')); ?>"><?php esc_html_e('Privacy Policy', 'superwoo'); ?></a>
-            <?php esc_html_e('and agree to the processing of your personal information for order processing, payment, delivery, and customer support.', 'superwoo'); ?>
-        </p>
+        <div class="superwoo-privacy-consent">
+            <input type="checkbox" id="superwoo-privacy-consent" data-superwoo-privacy-consent required aria-describedby="superwoo-privacy-consent-error">
+            <label for="superwoo-privacy-consent">
+                <?php esc_html_e('By proceeding to checkout, you acknowledge our', 'superwoo'); ?>
+                <a href="<?php echo esc_url(home_url('/privacy-policy/')); ?>"><?php esc_html_e('Privacy Policy', 'superwoo'); ?></a>
+                <?php esc_html_e('and agree to the processing of your personal information for order processing, payment, delivery, and customer support.', 'superwoo'); ?>
+            </label>
+        </div>
+        <p class="superwoo-privacy-consent__error" id="superwoo-privacy-consent-error" role="alert" hidden><?php esc_html_e('Please acknowledge the Privacy Policy to continue.', 'superwoo'); ?></p>
         <?php echo superwoo_cart_primary_button_html(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
     </div>
 <?php endif; ?>

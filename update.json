@@ -1,12 +1,12 @@
 {
   "name": "SuperWoo",
   "slug": "superwoo",
-  "version": "1.6.21",
+  "version": "1.6.22",
   "requires": "6.2",
   "requires_php": "7.4",
-  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.6.21.zip",
-  "sha256": "13dc1f702e20b1496f2320d9f9dd6ab275a148ac7f2d94d5a61cf99d369f4a65",
-  "package_size": 296714,
+  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.6.22.zip",
+  "sha256": "fa516584d1aac4f98020daa50ddf6fc57703b7927c6ec90e17e5c497c051ec22",
+  "package_size": 297238,
   "homepage": "https://digtize.com/plugins/superwoo/",
-  "description": "SuperWoo 1.6.21 replaces the cart drawer WhatsApp checkbox with a linked Privacy Policy notice before checkout."
+  "description": "SuperWoo 1.6.22 restores the cart privacy acknowledgement checkbox and sizes the Privacy Policy link to match its text."
 }
