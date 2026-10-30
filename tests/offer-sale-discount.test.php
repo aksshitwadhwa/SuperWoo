@@ -4,7 +4,15 @@ define('ABSPATH', __DIR__ . '/');
 
 function is_admin() { return false; }
 function absint($value) { return abs((int) $value); }
-function wc_get_price_decimals() { return 2; }
+$GLOBALS['offer_test_price_decimals'] = 2;
+function wc_get_price_decimals() { return $GLOBALS['offer_test_price_decimals']; }
+class Offer_Test_Session {
+    public $values = ['cart_totals' => ['total' => 3153]];
+    public function get($key) { return $this->values[$key] ?? null; }
+    public function set($key, $value) { $this->values[$key] = $value; }
+}
+$GLOBALS['offer_test_session'] = new Offer_Test_Session();
+function WC() { return (object) ['session' => $GLOBALS['offer_test_session']]; }
 
 class WC_Product {
     private $id;
@@ -91,6 +99,16 @@ if (isset($restored_item['_superwoo_offer_base_price'])) {
     fwrite(STDERR, "FAIL: old offer base survived cart session restore\n");
     exit(1);
 }
+if (WC()->session->get('cart_totals') !== null) {
+    fwrite(STDERR, "FAIL: saved pre-offer base was reset without invalidating stale WooCommerce totals\n");
+    exit(1);
+}
+WC()->session->set('cart_totals', ['total' => 3504]);
+$offers->reset_offer_base_price_from_session(['product_id' => 11, 'quantity' => 2, 'data' => $updated_sale]);
+if (WC()->session->get('cart_totals')['total'] !== 3504) {
+    fwrite(STDERR, "FAIL: a cart item without saved offer data unnecessarily invalidated WooCommerce totals\n");
+    exit(1);
+}
 $updated_cart = new Offer_Test_Cart(['sale' => $restored_item]);
 $offers->apply_discounts($updated_cart);
 expect_amount($updated_sale->get_price(), 225, 'offer did not use the updated catalog sale price');
@@ -109,4 +127,59 @@ expect_amount($sale->get_price(), 0, 'full discount on sale item');
 expect_amount($regular->get_price(), 0, 'full discount on regular item');
 expect_amount($other->get_price(), 50, 'unrelated item unchanged at full discount');
 
-echo "PASS: sale and regular items use sale-price discounts; restored sessions use current sale prices; totals are stable and reversible\n";
+// The reported Partial Pack cart must use its WooCommerce sale price, even
+// though the regular price is much higher. Exercise both quantity directions.
+$partial_pack = new WC_Product(11, 2070, 1298);
+$reference_cart = new Offer_Test_Cart([
+    'partial-pack' => ['product_id' => 11, 'variation_id' => 11, 'quantity' => 1, 'data' => $partial_pack],
+]);
+$reference_offer = new Offer_Test_Offers();
+foreach ([1, 2, 3, 4, 3, 2, 1] as $quantity) {
+    $reference_cart->set_quantity('partial-pack', $quantity, false);
+    $reference_offer->apply_discounts($reference_cart);
+    expect_amount($reference_offer->get_cart_subtotal_excluding_gifts($reference_cart), 1298 * $quantity, "Partial Pack sale subtotal at quantity $quantity");
+    expect_amount($reference_cart->subtotal(), 1168.20 * $quantity, "Partial Pack payable total at quantity $quantity");
+    $reference_offer->apply_discounts($reference_cart);
+    expect_amount($reference_cart->subtotal(), 1168.20 * $quantity, "Partial Pack repeated totals at quantity $quantity");
+}
+$reference_cart->set_quantity('partial-pack', 3, false);
+$reference_offer->apply_discounts($reference_cart);
+expect_amount(1298 * 3 - $reference_cart->subtotal(), 389.40, 'reported Partial Pack discount must be 10% of the sale subtotal');
+expect_amount($reference_cart->subtotal(), 3504.60, 'reported Partial Pack payable total before other adjustments');
+$GLOBALS['offer_test_price_decimals'] = 0;
+$reference_offer->apply_discounts($reference_cart);
+expect_amount($reference_cart->subtotal(), 3504, 'whole-rupee store must apply the offer once');
+$reference_offer->apply_discounts($reference_cart);
+expect_amount($reference_cart->subtotal(), 3504, 'whole-rupee store must not compound the offer on recalculation');
+$GLOBALS['offer_test_price_decimals'] = 2;
+
+class Offer_Test_Actual_Tiers extends SuperWoo_Bundle_Offers {
+    public function get_rules() {
+        return [
+            ['id' => 'ten', 'enabled' => true, 'priority' => 3, 'offer_type' => 'price_discount', 'applies_to' => 'global', 'min_amount' => 3000, 'max_amount' => 7000, 'discount' => 10],
+            ['id' => 'fifteen', 'enabled' => true, 'priority' => 2, 'offer_type' => 'price_discount', 'applies_to' => 'global', 'min_amount' => 7001, 'max_amount' => 14000, 'discount' => 15],
+        ];
+    }
+}
+$tier_product = new WC_Product(4968, 2070, 1298);
+$tier_cart = new Offer_Test_Cart(['partial-pack' => ['product_id' => 4900, 'variation_id' => 4968, 'quantity' => 1, 'data' => $tier_product]]);
+$actual_tiers = new Offer_Test_Actual_Tiers();
+foreach ([[1, 1298], [2, 2596], [3, 3504.60], [4, 4672.80], [5, 5841], [6, 6619.80], [4, 4672.80], [2, 2596]] as [$quantity, $expected]) {
+    $tier_cart->set_quantity('partial-pack', $quantity, false);
+    $actual_tiers->apply_discounts($tier_cart);
+    expect_amount($tier_cart->subtotal(), $expected, "configured tier payable total at quantity $quantity");
+}
+$tier_cart->set_quantity('partial-pack', 3, false);
+$actual_tiers->apply_discounts($tier_cart);
+$selected = $actual_tiers->get_selected_offer($tier_cart);
+if (($selected['rule']['id'] ?? '') !== 'ten') { fwrite(STDERR, "FAIL: screenshot's 10% tier was not selected at 3894\n"); exit(1); }
+expect_amount(7001 - $actual_tiers->get_cart_subtotal_excluding_gifts($tier_cart), 3107, '15% progress amount');
+$GLOBALS['offer_test_price_decimals'] = 0;
+$actual_tiers->apply_discounts($tier_cart);
+expect_amount($tier_cart->subtotal(), 3504, 'actual INR zero-decimal 10% tier total');
+$tier_cart->set_quantity('partial-pack', 6, false);
+$actual_tiers->apply_discounts($tier_cart);
+expect_amount($tier_cart->subtotal(), 6618, 'actual INR zero-decimal 15% tier total');
+$GLOBALS['offer_test_price_decimals'] = 2;
+
+echo "PASS: Partial Pack sale pricing, configured 10%/15% tiers, quantity changes, session refresh and zero-decimal INR rounding\n";

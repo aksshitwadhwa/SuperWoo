@@ -23,11 +23,11 @@ const html = `<!doctype html><html><head><meta charset="utf-8"></head><body>
       <button type="button" data-superwoo-qty-minus>-</button>
       <input data-superwoo-qty-input data-superwoo-qty-committed="2" value="2">
       <button type="button" data-superwoo-qty-plus>+</button>
-      <span class="superwoo-cart-item__price">INR1998</span>
+      <span class="superwoo-cart-item__price">INR1555</span>
     </div>
     <div class="superwoo-cross-sells" data-test-recommendation style="height:140px">Recommended products</div></div>
-    <div class="superwoo-cart-total">INR1998</div>
-    <div class="superwoo-cart-drawer__footer"><div class="superwoo-privacy-consent"><input type="checkbox" data-superwoo-privacy-consent><label>Privacy Policy</label></div><p class="superwoo-privacy-consent__error" hidden>Please acknowledge the Privacy Policy to continue.</p><a class="superwoo-cart-primary checkout" href="#checkout">INR1998</a></div>
+    <div class="superwoo-cart-total">INR1555</div>
+    <div class="superwoo-cart-drawer__footer"><div class="superwoo-privacy-consent"><input type="checkbox" data-superwoo-privacy-consent><label>Privacy Policy</label></div><p class="superwoo-privacy-consent__error" hidden>Please acknowledge the Privacy Policy to continue.</p><a class="superwoo-cart-primary checkout" href="#checkout">INR1555</a></div>
   </div></div>
 </div><pre id="result">PENDING</pre>
 <script src="${pathToFileURL(jquery).href}"></script>
@@ -40,7 +40,7 @@ window.SuperWooCart = {
     cartItems:'Cart items', chooseOptions:'Choose options'
   }
 };
-window.browserTest = {phase:'ok', calls:[], refreshes:0, nonceRequests:0, storeCartFetches:0};
+window.browserTest = {phase:'ok', calls:[], refreshes:0, nonceRequests:0, storeCartFetches:0, initialDrawerRefreshes:0};
 window.fetch = function () {
   browserTest.storeCartFetches += 1;
   return Promise.resolve({ok:true,headers:{get:function(){return ''}},json:function(){return Promise.resolve({items_count:2})}});
@@ -69,6 +69,10 @@ jQuery.ajax = function (options) {
   if (action === 'superwoo_refresh_cart_nonce') {
     browserTest.nonceRequests += 1;
     setTimeout(function () { deferred.resolve({success:true,data:{nonce:'fresh'}}); }, 20);
+  } else if (action === 'superwoo_refresh_cart_drawer') {
+    browserTest.initialDrawerRefreshes += 1;
+    var currentInner = document.querySelector('.superwoo-cart-drawer__inner').outerHTML.replace(/INR1555/g, 'INR1998');
+    setTimeout(function () { deferred.resolve({success:true,data:{fragments:{'.superwoo-cart-drawer__inner':currentInner},count:2,offerState:{discounts:{},gifts:{}}}}); }, 10);
   } else if (action === 'superwoo_update_cart_item') {
     browserTest.calls.push({qty:options.data.quantity,nonce:options.data.nonce,url:options.url});
     setTimeout(function () {
@@ -97,6 +101,8 @@ function price() { return document.querySelector('.superwoo-cart-item__price').t
 function total() { return document.querySelector('.superwoo-cart-total').textContent; }
 async function run() {
   await wait(120);
+  assert(browserTest.initialDrawerRefreshes === 1, 'initial drawer was not refreshed from the server exactly once');
+  assert(price() === 'INR1998' && total() === 'INR1998', 'stale initial prices were not replaced with server totals');
   var checkout=document.querySelector('.superwoo-cart-primary.checkout');
   var checkbox=document.querySelector('[data-superwoo-privacy-consent]');
   var checkoutClicks=0;
@@ -116,7 +122,7 @@ async function run() {
   assert(document.querySelector('[data-superwoo-cart-scroll]').scrollTop === 30, 'cart jumped to the top after quantity update');
   assert(browserTest.refreshes === 0, 'duplicate Woo fragments request raced with the cart response');
   assert(browserTest.calls[0].url === 'mock-wc-ajax-update', 'quantity update did not use the faster WooCommerce AJAX endpoint');
-  assert(browserTest.storeCartFetches === 1, 'cart update caused a redundant Store API cart-count request');
+  assert(browserTest.storeCartFetches === 0, 'cart update caused a redundant Store API cart-count request');
 
   browserTest.phase = 'nonce';
   document.querySelector('[data-superwoo-qty-plus]').click();

@@ -1,12 +1,12 @@
 {
   "name": "SuperWoo",
   "slug": "superwoo",
-  "version": "1.6.22",
+  "version": "1.6.24",
   "requires": "6.2",
   "requires_php": "7.4",
-  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.6.22.zip",
-  "sha256": "fa516584d1aac4f98020daa50ddf6fc57703b7927c6ec90e17e5c497c051ec22",
-  "package_size": 297238,
+  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.6.24.zip",
+  "sha256": "0e8ef1e9f194f19e42791901e3f61eeb3e34ed4d0ab128e549e8373e5c985250",
+  "package_size": 297473,
   "homepage": "https://digtize.com/plugins/superwoo/",
-  "description": "SuperWoo 1.6.22 restores the cart privacy acknowledgement checkbox and sizes the Privacy Policy link to match its text."
+  "description": "SuperWoo 1.6.24 recalculates restored offer carts and refreshes stale cart drawer totals from WooCommerce."
 }

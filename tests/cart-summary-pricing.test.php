@@ -139,11 +139,8 @@ $cart->merchandise = 1998;
 $cart->total = 1998;
 $paid_subtotal = superwoo_cart_item_subtotal_amount($cart->items['paid']);
 $gift_subtotal = superwoo_cart_item_subtotal_amount($cart->items['gift']);
-$gift_shares = superwoo_cart_gift_subtotal_shares($cart);
 $summary = superwoo_cart_summary_amounts($cart);
 check($paid_subtotal === 1998.0 && $gift_subtotal === 639.0, 'paid item and free gift subtotal amounts were mixed');
-check(abs($gift_shares['paid'] - 639.0) < 0.001, 'free-gift value was not assigned to the paid card');
-check($paid_subtotal + $gift_shares['paid'] === 2637.0 && 2472.0 + $gift_shares['paid'] === 3111.0, 'sale and crossed-out regular prices did not use the same gift share');
 check($summary['subtotal'] === $paid_subtotal + $gift_subtotal && $summary['discount'] === $gift_subtotal && abs($summary['subtotal'] - $summary['discount'] - $cart->total) < 0.001, 'item subtotals, gift saving and cart total do not reconcile');
 
 $cart->items = [
@@ -153,9 +150,26 @@ $cart->items = [
 ];
 $cart->merchandise = 300;
 $cart->total = 300;
-$gift_shares = superwoo_cart_gift_subtotal_shares($cart);
 $summary = superwoo_cart_summary_amounts($cart);
-check(abs($gift_shares['first'] - 30.0) < 0.001 && abs($gift_shares['second'] - 60.0) < 0.001, 'gift value was not distributed once across paid cards');
+check(superwoo_cart_item_subtotal_amount($cart->items['first']) === 100.0 && superwoo_cart_item_subtotal_amount($cart->items['second']) === 200.0, 'gift value changed a paid product subtotal');
 check($summary['subtotal'] === 390.0 && $summary['discount'] === 90.0 && abs($summary['subtotal'] - $summary['discount'] - 300.0) < 0.001, 'multiple paid cards and free gift do not reconcile with the cart summary');
+
+// The drawer derives its Discount row from WooCommerce's calculated payable
+// merchandise total. It does not apply the advertised percentage itself.
+$cart->items = ['partial-pack' => [
+    'data' => new WC_Product(2070, 1168.20),
+    '_superwoo_offer_base_price' => 1298,
+    'quantity' => 3,
+    'line_total' => 3504.60,
+]];
+$cart->merchandise = 3504.60;
+$cart->total = 3504.60;
+$summary = superwoo_cart_summary_amounts($cart);
+check($summary['subtotal'] === 3894.0 && abs($summary['discount'] - 389.40) < 0.001, 'Partial Pack 10% offer did not reconcile from sale-price subtotal');
+$cart->items['partial-pack']['line_total'] = 3153;
+$cart->merchandise = 3153;
+$cart->total = 3153;
+$summary = superwoo_cart_summary_amounts($cart);
+check($summary['discount'] === 741.0, 'reported 741 discount was not the WooCommerce payable-total difference');
 
 echo "PASS: item and cart subtotals reconcile across sale, offer, coupon, gift, tax, fees, currency and quantity\n";

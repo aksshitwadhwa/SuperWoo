@@ -748,6 +748,13 @@ class SuperWoo_Bundle_Offers {
 
     /** A new cart session must use the product's current sale price. */
     public function reset_offer_base_price_from_session($cart_item) {
+        if (isset($cart_item['_superwoo_offer_base_price']) && WC()->session) {
+            // WooCommerce restores cart_totals before this filter and normally
+            // skips recalculation when they exist. Clearing the saved totals
+            // makes its session loader run one fresh totals pass using the
+            // rehydrated catalog sale price and current offer rules.
+            WC()->session->set('cart_totals', null);
+        }
         unset($cart_item['_superwoo_offer_base_price']);
         return $cart_item;
     }

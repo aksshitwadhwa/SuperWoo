@@ -438,6 +438,7 @@
     }
 
     var restoringBuyNowCart = false;
+    var initialDrawerRefresh = null;
 
     function openCart() {
         var pending = false;
@@ -448,7 +449,11 @@
         }
 
         if (!pending) {
-            showCart();
+            if (initialDrawerRefresh) {
+                initialDrawerRefresh.always(showCart);
+            } else {
+                showCart();
+            }
             return;
         }
         if (restoringBuyNowCart) {
@@ -2037,7 +2042,10 @@
         syncCartTriggerBadges();
         syncCrossSellNavigation();
         startTriggerObserver();
-        fetchCartCount();
+        // A cached page can contain an older drawer total. Refresh the full
+        // drawer once from the same WooCommerce session instead of fetching
+        // only its count and leaving stale prices visible.
+        initialDrawerRefresh = post('superwoo_refresh_cart_drawer', {}, null).fail(fetchCartCount);
         prepareInlineProductActions();
         syncProductQuantityFromDrawer();
         syncStickyBuyNow();

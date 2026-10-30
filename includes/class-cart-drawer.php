@@ -412,9 +412,19 @@ class SuperWoo_Cart_Drawer {
             return '';
         }
 
+        // The configured amount is a promotional milestone, not a shipping
+        // method. Only describe delivery as free when WooCommerce has selected
+        // a real zero-cost rate for this cart and destination.
+        if (!WC()->cart->needs_shipping() || !WC()->cart->has_calculated_shipping() || !WC()->cart->get_shipping_methods()) {
+            return '';
+        }
+        if ((float) WC()->cart->get_shipping_total() <= 0 && (float) WC()->cart->get_shipping_tax() <= 0) {
+            return __('Free delivery is applied to this order.', 'superwoo');
+        }
+
         $subtotal = $this->get_notice_cart_subtotal();
         if ($subtotal >= $threshold) {
-            return __('Free delivery unlocked on this order.', 'superwoo');
+            return '';
         }
 
         $remaining = max(0, $threshold - $subtotal);

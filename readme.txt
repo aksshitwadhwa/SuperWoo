@@ -4,7 +4,7 @@ Tags: woocommerce, cart drawer, product benefits, faq, bundle discounts
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.6.22
+Stable tag: 1.6.24
 License: GPLv2 or later
 
 SuperWoo adds WooCommerce product benefit icons, how-to content, product FAQs, shoppable videos, bundle offer rules, cart notices, and an AJAX cart drawer.
@@ -57,6 +57,14 @@ Elementor:
 5. Configure offer rules under WooCommerce > Offers.
 
 == Changelog ==
+
+= 1.6.24 =
+* Invalidate saved WooCommerce cart totals when restoring an offer base from the session, so the current sale price and offer rule are recalculated together.
+* Refresh the cart drawer once on page load from the server, replacing stale cached prices before customers open it.
+
+= 1.6.23 =
+* Show paid cart items at their pre-offer WooCommerce prices without allocating free-gift value to product rows.
+* Keep offer savings in the separate cart Discount row and show free delivery only when WooCommerce has calculated a free shipping rate.
 
 = 1.6.22 =
 * Restore a required privacy acknowledgement checkbox in the cart drawer and keep the Privacy Policy link underlined at the same text size.

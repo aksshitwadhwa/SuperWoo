@@ -20,6 +20,9 @@ class Test_Drawer_Cart {
     public $session_calls = 0;
     public $last_refresh_totals = null;
     public $total = 269;
+    public $shipping_total = 75;
+    public $shipping_calculated = true;
+    public $shipping_methods = ['flat-rate'];
     public function get_cart() { return $this->cart_contents; }
     public function set_quantity($key, $quantity, $refresh_totals = true) {
         $this->last_refresh_totals = $refresh_totals;
@@ -39,6 +42,12 @@ class Test_Drawer_Cart {
     public function remove_cart_item($key) { if (!isset($this->cart_contents[$key])) { return false; } unset($this->cart_contents[$key]); return true; }
     public function get_cart_hash() { return 'cart-hash'; }
     public function get_cart_contents_count() { return $this->cart_contents['item-key']['quantity'] ?? 0; }
+    public function is_empty() { return !$this->cart_contents; }
+    public function needs_shipping() { return true; }
+    public function has_calculated_shipping() { return $this->shipping_calculated; }
+    public function get_shipping_methods() { return $this->shipping_methods; }
+    public function get_shipping_total() { return $this->shipping_total; }
+    public function get_shipping_tax() { return 0; }
 }
 
 $GLOBALS['test_cart_hooks'] = [];
@@ -55,6 +64,10 @@ function nocache_headers() {}
 function __($message, $domain = '') { return $message; }
 function superwoo_log($message, $data = [], $level = '') {}
 function superwoo_get_settings() { return ['enable_cart_drawer' => true]; }
+function get_option($key, $default = null) { return $key === 'superwoo_offer_free_delivery_threshold' ? 300 : $default; }
+function superwoo_cart_offer_state() { return ['discounts' => [], 'gifts' => []]; }
+function superwoo_format_selected_currency_amount($amount) { return 'INR' . $amount; }
+function wp_strip_all_tags($value) { return strip_tags($value); }
 function wc_clear_notices() {}
 function add_action($hook, $callback, $priority = 10) {
     $GLOBALS['registered_hooks'][$hook][] = $callback;
@@ -138,4 +151,14 @@ WC()->session->drop_cart_writes = false;
 check(isset($GLOBALS['registered_hooks']['wp_ajax_superwoo_update_cart_item'], $GLOBALS['registered_hooks']['wp_ajax_nopriv_superwoo_update_cart_item']), 'quantity AJAX routes were not registered');
 check(isset($GLOBALS['registered_hooks']['wp_ajax_superwoo_refresh_cart_nonce'], $GLOBALS['registered_hooks']['wp_ajax_nopriv_superwoo_refresh_cart_nonce']), 'nonce refresh routes were not registered');
 
-echo "PASS: AJAX increase, decrease, remove at one, totals, session, rerun, gift guard, key and nonce checks\n";
+$drawer = new SuperWoo_Cart_Drawer();
+WC()->cart->cart_contents['item-key']['line_subtotal'] = 350;
+check($drawer->get_cart_notice_message() === '', 'paid shipping was falsely described as unlocked free delivery');
+WC()->cart->cart_contents['item-key']['line_subtotal'] = 200;
+check(strpos($drawer->get_cart_notice_message(), 'INR100') !== false, 'delivery progress did not use the current pre-offer subtotal');
+WC()->cart->shipping_total = 0;
+check($drawer->get_cart_notice_message() === 'Free delivery is applied to this order.', 'calculated free shipping was not reflected in the notice');
+WC()->cart->shipping_calculated = false;
+check($drawer->get_cart_notice_message() === '', 'uncalculated shipping was presented as free');
+
+echo "PASS: AJAX increase, decrease, remove at one, totals, session, rerun, gift guard, nonce and shipping notice checks\n";
