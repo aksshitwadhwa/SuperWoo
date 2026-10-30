@@ -349,12 +349,12 @@ function superwoo_cart_drawer_fragments($calculate_totals = true) {
     ];
 }
 
-function superwoo_cart_drawer_inner_fragment_html($cart_drawer = null) {
+function superwoo_cart_drawer_inner_fragment_html($cart_drawer = null, $include_cross_sells = true) {
     if (!$cart_drawer instanceof SuperWoo_Cart_Drawer) {
         $cart_drawer = new SuperWoo_Cart_Drawer();
     }
 
-    return '<div class="superwoo-cart-drawer__inner">' . $cart_drawer->get_inner_html() . '</div>';
+    return '<div class="superwoo-cart-drawer__inner">' . $cart_drawer->get_inner_html($include_cross_sells) . '</div>';
 }
 
 function superwoo_cart_offer_notices_html() {
@@ -392,17 +392,35 @@ function superwoo_cart_total_html() {
         return '';
     }
 
+    $summary = superwoo_cart_summary_amounts($cart);
+
     ob_start();
     ?>
     <div class="superwoo-cart-total">
         <div class="superwoo-cart-total__row">
             <span><?php esc_html_e('Subtotal', 'superwoo'); ?></span>
-            <strong><?php echo wp_kses_post($cart->get_cart_subtotal()); ?></strong>
+            <strong><?php echo wp_kses_post(wc_price($summary['subtotal'])); ?></strong>
+        </div>
+        <div class="superwoo-cart-total__row superwoo-cart-total__row--discount">
+            <span><?php esc_html_e('Discount', 'superwoo'); ?></span>
+            <strong><?php echo wp_kses_post(wc_price(-$summary['discount'])); ?></strong>
         </div>
         <div class="superwoo-cart-total__row">
             <span><?php esc_html_e('Shipping', 'superwoo'); ?></span>
             <strong><?php echo wp_kses_post($cart->get_cart_shipping_total()); ?></strong>
         </div>
+        <?php if ($summary['fees'] > 0) : ?>
+            <div class="superwoo-cart-total__row">
+                <span><?php esc_html_e('Fees', 'superwoo'); ?></span>
+                <strong><?php echo wp_kses_post(wc_price($summary['fees'])); ?></strong>
+            </div>
+        <?php endif; ?>
+        <?php if ($summary['tax'] > 0) : ?>
+            <div class="superwoo-cart-total__row">
+                <span><?php esc_html_e('Tax', 'superwoo'); ?></span>
+                <strong><?php echo wp_kses_post(wc_price($summary['tax'])); ?></strong>
+            </div>
+        <?php endif; ?>
         <div class="superwoo-cart-total__row superwoo-cart-total__row--grand-total">
             <span><?php esc_html_e('Total', 'superwoo'); ?></span>
             <strong><?php echo wp_kses_post(wc_price((float) $cart->get_total('edit'))); ?></strong>
@@ -410,6 +428,97 @@ function superwoo_cart_total_html() {
     </div>
     <?php
     return ob_get_clean();
+}
+
+/** Return the cart item's price before a SuperWoo offer, in the display currency. */
+function superwoo_cart_item_pre_offer_price($cart_item) {
+    $product = $cart_item['data'] ?? null;
+    if (!$product instanceof WC_Product) {
+        return 0.0;
+    }
+
+    // The currency integration records the catalog price before conversion.
+    // Bundle offers also save their starting price before changing set_price().
+    foreach (['_superwoo_base_inr_price', '_superwoo_offer_base_price'] as $key) {
+        if (isset($cart_item[$key])) {
+            $price = (float) $cart_item[$key];
+            if (function_exists('superwoo_currency') && superwoo_currency()->is_enabled()) {
+                $price = superwoo_currency()->convert_product_price($product, $price);
+            }
+            return $price;
+        }
+    }
+
+    return (float) $product->get_price('edit');
+}
+
+/** Return one cart row's subtotal, including its free-gift value when present. */
+function superwoo_cart_item_subtotal_amount($item, $including_tax = false) {
+    $product = $item['data'] ?? null;
+    if (!$product instanceof WC_Product) {
+        return 0.0;
+    }
+
+    $quantity = max(1, (int) ($item['quantity'] ?? 1));
+    if (!empty($item['superwoo_free_gift'])) {
+        $base_price = $product->get_regular_price('edit');
+        if ('' === $base_price || null === $base_price) {
+            $base_price = $product->get_price('edit');
+        }
+        $base_price = (float) $base_price;
+        if (function_exists('superwoo_currency') && superwoo_currency()->is_enabled()) {
+            $base_price = superwoo_currency()->convert_product_price($product, $base_price);
+        }
+    } else {
+        $base_price = superwoo_cart_item_pre_offer_price($item);
+    }
+
+    $base_display = (float) wc_get_price_to_display($product, ['price' => $base_price, 'qty' => $quantity]);
+    $payable_line = array_key_exists('line_total', $item)
+        ? (float) $item['line_total'] + ($including_tax ? (float) ($item['line_tax'] ?? 0) : 0.0)
+        : (float) wc_get_price_to_display($product, ['price' => $product->get_price('edit'), 'qty' => $quantity]);
+
+    // A custom cart price can exceed the saved base. Keep the row subtotal
+    // at least as high as its payable amount, without inventing a discount.
+    return max($base_display, $payable_line);
+}
+
+/**
+ * Use the price before the cart offer as the subtotal. This is the catalog
+ * sale price when a product is on sale, so the discount row measures the
+ * additional cart savings rather than counting the catalog sale twice.
+ * Free gifts keep their regular value in the subtotal.
+ */
+function superwoo_cart_summary_amounts($cart) {
+    $including_tax = $cart->display_prices_including_tax();
+    $subtotal = 0.0;
+
+    foreach ($cart->get_cart() as $item) {
+        $product = $item['data'] ?? null;
+        if (!$product instanceof WC_Product) {
+            continue;
+        }
+
+        $subtotal += superwoo_cart_item_subtotal_amount($item, $including_tax);
+    }
+
+    $payable_merchandise = (float) $cart->get_cart_contents_total()
+        + ($including_tax ? (float) $cart->get_cart_contents_tax() : 0.0);
+    $subtotal = max($subtotal, $payable_merchandise);
+    $discount = max(0.0, $subtotal - $payable_merchandise);
+
+    $fees = (float) $cart->get_fee_total() + ($including_tax ? (float) $cart->get_fee_tax() : 0.0);
+    if ($fees < 0) {
+        $discount += -$fees;
+        $fees = 0.0;
+    }
+
+    return [
+        'subtotal' => round($subtotal, wc_get_price_decimals()),
+        'discount' => round($discount, wc_get_price_decimals()),
+        'fees' => round($fees, wc_get_price_decimals()),
+        'tax' => $including_tax ? 0.0 : round((float) $cart->get_total_tax(), wc_get_price_decimals()),
+    ];
 }
 
 function superwoo_razorpay_magic_checkout_available() {

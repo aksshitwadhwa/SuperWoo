@@ -19,6 +19,7 @@ class SuperWoo_Bundle_Offers {
         add_action('admin_post_superwoo_save_offer_settings', [$this, 'save_offer_settings']);
         // Apply qualifying offer rules while WooCommerce calculates the cart.
         // This keeps free-gift notices and the actual cart contents aligned.
+        add_filter('woocommerce_get_cart_item_from_session', [$this, 'reset_offer_base_price_from_session'], 20, 1);
         add_action('woocommerce_before_calculate_totals', [$this, 'apply_discounts'], 20);
         add_action('woocommerce_cart_item_removed', [$this, 'sync_gifts_after_item_removed'], 20, 2);
         add_action('woocommerce_checkout_create_order_line_item', [$this, 'record_free_gift_order_line'], 30, 4);
@@ -700,14 +701,15 @@ class SuperWoo_Bundle_Offers {
                 continue;
             }
 
-            $regular_price = (float) $product->get_regular_price();
             $current_price = (float) $product->get_price();
 
-            if ($regular_price <= 0 || $current_price <= 0) {
+            if ($current_price <= 0) {
                 continue;
             }
 
-            $bundle_price = round($regular_price * (1 - $discount / 100), wc_get_price_decimals());
+            // The restored base is the price this customer would otherwise pay,
+            // including an existing sale. Never calculate an offer from MRP.
+            $bundle_price = round($current_price * (1 - $discount / 100), wc_get_price_decimals());
             if ($bundle_price < $current_price) {
                 $product->set_price($bundle_price);
             }
@@ -742,6 +744,19 @@ class SuperWoo_Bundle_Offers {
         }
         $item->add_meta_data('_superwoo_free_gift', 'yes', true);
         $item->add_meta_data('_superwoo_gift_id', $gift_id, true);
+    }
+
+    /** A new cart session must use the product's current sale price. */
+    public function reset_offer_base_price_from_session($cart_item) {
+        if (isset($cart_item['_superwoo_offer_base_price']) && WC()->session) {
+            // WooCommerce restores cart_totals before this filter and normally
+            // skips recalculation when they exist. Clearing the saved totals
+            // makes its session loader run one fresh totals pass using the
+            // rehydrated catalog sale price and current offer rules.
+            WC()->session->set('cart_totals', null);
+        }
+        unset($cart_item['_superwoo_offer_base_price']);
+        return $cart_item;
     }
 
     /** Restore pre-offer line prices so repeated totals passes cannot compound discounts. */

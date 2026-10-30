@@ -8,6 +8,7 @@
 </div>
 
 <div class="superwoo-cart-live" aria-live="polite"></div>
+<div class="superwoo-cart-error" data-superwoo-cart-error role="alert" hidden></div>
 
 <?php if ($cart->is_empty()) : ?>
     <div class="superwoo-cart-empty">
@@ -42,19 +43,19 @@
                 $product_id = absint($cart_item['product_id']);
                 $permalink = $product->is_visible() ? $product->get_permalink($cart_item) : '';
                 $is_free_gift = !empty($cart_item['superwoo_free_gift']);
-                $item_price_html = $cart->get_product_price($product);
+                $quantity = max(1, absint($cart_item['quantity'] ?? 1));
+                $line_subtotal = superwoo_cart_item_subtotal_amount($cart_item, $cart->display_prices_including_tax());
+                $item_price_html = wc_price($line_subtotal);
                 $regular_price = (float) $product->get_regular_price('edit');
-                $current_price = (float) $product->get_price();
 
-                // WC_Cart formats only the current price. Build a sale-price
-                // display from the product's regular price when it is higher.
-                if (!$is_free_gift && $regular_price > $current_price && $current_price >= 0) {
-                    if (function_exists('superwoo_currency') && superwoo_currency()->is_enabled()) {
-                        $regular_price = superwoo_currency()->convert_product_price($product, $regular_price);
+                if (function_exists('superwoo_currency') && superwoo_currency()->is_enabled()) {
+                    $regular_price = superwoo_currency()->convert_product_price($product, $regular_price);
+                }
+                if (!$is_free_gift && $regular_price > 0) {
+                    $regular_display_price = wc_get_price_to_display($product, ['price' => $regular_price, 'qty' => $quantity]);
+                    if ($regular_display_price > $line_subtotal) {
+                        $item_price_html = wc_format_sale_price(wc_price($regular_display_price), $item_price_html);
                     }
-
-                    $regular_display_price = wc_get_price_to_display($product, ['price' => $regular_price]);
-                    $item_price_html = wc_format_sale_price(wc_price($regular_display_price), $item_price_html);
                 }
                 ?>
                 <div class="superwoo-cart-item"
@@ -77,8 +78,10 @@
                         </div>
                         <div class="superwoo-cart-item__price">
                             <?php if ($is_free_gift) : ?>
+                                <?php if ($line_subtotal > 0) : ?><del class="superwoo-cart-item__gift-worth"><?php echo wp_kses_post($item_price_html); ?></del><?php endif; ?>
                                 <span class="superwoo-free-gift-badge"><strong><?php esc_html_e('Free', 'superwoo'); ?></strong></span>
                             <?php else : ?>
+                                <span class="superwoo-cart-item__price-label"><?php esc_html_e('Subtotal', 'superwoo'); ?></span>
                                 <?php echo wp_kses_post($item_price_html); ?>
                             <?php endif; ?>
                         </div>
@@ -89,7 +92,7 @@
                         <?php else : ?>
                             <div class="superwoo-qty" aria-label="<?php esc_attr_e('Update quantity', 'superwoo'); ?>">
                                 <button type="button" data-superwoo-qty-minus aria-label="<?php esc_attr_e('Decrease quantity', 'superwoo'); ?>">−</button>
-                                <input type="number" min="1" step="1" value="<?php echo esc_attr(max(1, absint($cart_item['quantity']))); ?>" data-superwoo-qty-input>
+                                <input type="number" min="1" step="1" value="<?php echo esc_attr(max(1, absint($cart_item['quantity']))); ?>" data-superwoo-qty-committed="<?php echo esc_attr(max(1, absint($cart_item['quantity']))); ?>" data-superwoo-qty-input>
                                 <button type="button" data-superwoo-qty-plus aria-label="<?php esc_attr_e('Increase quantity', 'superwoo'); ?>">+</button>
                             </div>
                             <button type="button" class="superwoo-remove-item" data-superwoo-remove-item aria-label="<?php esc_attr_e('Remove item', 'superwoo'); ?>">×</button>
@@ -101,8 +104,20 @@
 
         <?php if (!empty($crosssell)) : ?>
             <div class="superwoo-cross-sells">
-                <h3><?php esc_html_e('You may also like', 'superwoo'); ?></h3>
-                <div class="superwoo-cross-sells__row">
+                <div class="superwoo-cross-sells__header">
+                    <h3><?php esc_html_e('You may also like', 'superwoo'); ?></h3>
+                    <?php if (count($crosssell) > 1) : ?>
+                        <div class="superwoo-cross-sells__controls" aria-label="<?php esc_attr_e('Browse recommended products', 'superwoo'); ?>">
+                            <button type="button" class="superwoo-cross-sells__arrow" data-superwoo-cross-sell-nav="previous" aria-controls="superwoo-cross-sells-list" aria-label="<?php esc_attr_e('Previous recommended products', 'superwoo'); ?>">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m15 18-6-6 6-6"/></svg>
+                            </button>
+                            <button type="button" class="superwoo-cross-sells__arrow" data-superwoo-cross-sell-nav="next" aria-controls="superwoo-cross-sells-list" aria-label="<?php esc_attr_e('Next recommended products', 'superwoo'); ?>">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m9 18 6-6-6-6"/></svg>
+                            </button>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <div class="superwoo-cross-sells__row" id="superwoo-cross-sells-list" role="region" aria-label="<?php esc_attr_e('Recommended products', 'superwoo'); ?>" tabindex="0">
                     <?php foreach ($crosssell as $product) : ?>
                         <div class="superwoo-cross-sell">
                             <a href="<?php echo esc_url($product->get_permalink()); ?>" class="superwoo-cross-sell__image">
@@ -120,10 +135,15 @@
 
     <div class="superwoo-cart-drawer__footer">
         <?php echo superwoo_cart_total_html(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
-        <label class="superwoo-whatsapp-consent">
-            <input type="checkbox" data-superwoo-whatsapp-consent <?php checked($drawer->has_whatsapp_order_updates_consent()); ?>>
-            <span><?php esc_html_e('Get order updates on WhatsApp', 'superwoo'); ?></span>
-        </label>
+        <div class="superwoo-privacy-consent">
+            <input type="checkbox" id="superwoo-privacy-consent" data-superwoo-privacy-consent required aria-describedby="superwoo-privacy-consent-error">
+            <label for="superwoo-privacy-consent">
+                <?php esc_html_e('By proceeding to checkout, you acknowledge our', 'superwoo'); ?>
+                <a href="<?php echo esc_url(home_url('/privacy-policy/')); ?>"><?php esc_html_e('Privacy Policy', 'superwoo'); ?></a>
+                <?php esc_html_e('and agree to the processing of your personal information for order processing, payment, delivery, and customer support.', 'superwoo'); ?>
+            </label>
+        </div>
+        <p class="superwoo-privacy-consent__error" id="superwoo-privacy-consent-error" role="alert" hidden><?php esc_html_e('Please acknowledge the Privacy Policy to continue.', 'superwoo'); ?></p>
         <?php echo superwoo_cart_primary_button_html(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
     </div>
 <?php endif; ?>

@@ -44,6 +44,44 @@
     --superwoo-variation-text: var(--superwoo-body-text);
 }
 
+/* WooCommerce marks a sale item's regular price with <del>. Keep that MRP
+ * visibly crossed out in product cards on every page, even when a theme
+ * resets text decoration on the nested price amount. */
+body .product .price del,
+body .product .price del *,
+body .woocommerce .product .price del,
+body .woocommerce .product .price del *,
+body .elementor .product .price del,
+body .elementor .product .price del *,
+body .wc-block-grid__product-price del,
+body .wc-block-grid__product-price del *,
+body .wc-block-components-product-price del,
+body .wc-block-components-product-price del *,
+body .superwoo-cross-sell__price del,
+body .superwoo-cross-sell__price del *,
+body .superwoo-cart-item__price del,
+body .superwoo-cart-item__price del *,
+body .superwoo-video-product del,
+body .superwoo-video-product del *,
+body .superwoo-variation-card__price del,
+body .superwoo-variation-card__price del * {
+    text-decoration-line: line-through !important;
+    text-decoration-thickness: 1.5px !important;
+    text-decoration-color: currentColor !important;
+}
+
+body .product .price ins,
+body .woocommerce .product .price ins,
+body .elementor .product .price ins,
+body .wc-block-grid__product-price ins,
+body .wc-block-components-product-price ins,
+body .superwoo-cross-sell__price ins,
+body .superwoo-cart-item__price ins,
+body .superwoo-video-product ins,
+body .superwoo-variation-card__price ins {
+    text-decoration: none !important;
+}
+
 /* Review-specific colors are emitted from the Review Section Colors settings. */
 .superwoo-reviews {
     --superwoo-review-star: var(--superwoo-star, #ffb400);

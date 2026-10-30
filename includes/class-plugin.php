@@ -48,6 +48,7 @@ class SuperWoo_Plugin {
         // This module only observes checkout UI when explicitly enabled. It
         // does not register WooCommerce payment or order-processing hooks.
         (new SuperWoo_Meta_Tracking())->hooks();
+        (new SuperWoo_Buy_Now_Cart())->hooks();
 
         // Ordinary wp-admin screens only need SuperWoo's administration
         // modules. Loading cart, pricing, shortcode and display integrations

@@ -4,12 +4,12 @@ Tags: woocommerce, cart drawer, product benefits, faq, bundle discounts
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.6.5
+Stable tag: 1.6.25
 License: GPLv2 or later
 
 SuperWoo adds WooCommerce product benefit icons, how-to content, product FAQs, shoppable videos, bundle offer rules, cart notices, and an AJAX cart drawer.
 
-SuperWoo does not implement a payment gateway. Its cart and currency features can update WooCommerce cart totals according to the configured offers and currency settings; WooCommerce and the active gateway handle checkout and payment. Order Recovery can create an approved, payment-only WooCommerce review order from a captured payment reported in an imported Razorpay CSV. The CSV status is not live-verified. Such a record contains no reconstructed product lines and is not ready for fulfillment.
+SuperWoo does not implement a payment gateway. Its cart and currency features can update WooCommerce cart totals according to configured offers and currency settings; WooCommerce and the active gateway handle checkout and payment. Order Recovery supports individually approved payment-only review orders from captured-payment records, including CSV-reported payments when live verification is unavailable. Administrators can enrich matching records and add catalog items only after recording evidence and reconciling line totals to the payment. Orders without reviewed product lines are not fulfillment-ready.
 
 When Shoppable Videos is enabled, SuperWoo stores pseudonymous, on-site video engagement events (views, product clicks, add-to-cart actions, and completions) for 90 days. It does not send those events to an external service. If Multi-Currency location detection or an exchange-rate provider is enabled, the site administrator is responsible for reviewing that provider's privacy policy and informing visitors as required.
 
@@ -58,39 +58,103 @@ Elementor:
 
 == Changelog ==
 
+= 1.6.25 =
+* Combine the latest cart and offer improvements, including Buy Now cart preservation, cross-sells, reliable quantity updates, and refreshed WooCommerce totals.
+* Improve payment recovery from matched Razorpay CSV exports and allow evidence-reviewed product lines on payment-only review orders with amount and duplicate safeguards.
+
+= 1.6.24 =
+* Invalidate saved WooCommerce cart totals when restoring an offer base from the session, so the current sale price and offer rule are recalculated together.
+* Refresh the cart drawer once on page load from the server, replacing stale cached prices before customers open it.
+
+= 1.6.23 =
+* Show paid cart items at their pre-offer WooCommerce prices without allocating free-gift value to product rows.
+* Keep offer savings in the separate cart Discount row and show free delivery only when WooCommerce has calculated a free shipping rate.
+
+= 1.6.22 =
+* Restore a required privacy acknowledgement checkbox in the cart drawer and keep the Privacy Policy link underlined at the same text size.
+
+= 1.6.21 =
+* Replace the cart drawer WhatsApp updates checkbox with a linked Privacy Policy acknowledgement before checkout.
+
+= 1.6.20 =
+* Show crossed-out regular and sale subtotals on paid cart cards using the same free-gift value included in the bottom subtotal; leave the discount and checkout total unchanged.
+
+= 1.6.19 =
+* Restore crossed-out regular and pre-offer sale prices on paid cart cards; keep free-gift savings in the cart summary.
+
+= 1.6.18 =
+* Show the full pre-discount subtotal on paid cart cards when a free gift adds value to the cart subtotal, without changing checkout prices.
+
+= 1.6.17 =
+* Show each cart item's subtotal beside its quantity controls and show free-gift value on the gift row so item subtotals reconcile with the cart summary.
+
+= 1.6.16 =
+* Calculate the cart summary discount from pre-offer sale prices so catalog sale savings are not counted again.
+* Refresh offer base prices when a cart session is restored, so a changed sale price receives the correct offer.
+
+= 1.6.15 =
+* Let customers swipe cart recommendations horizontally on mobile while preserving vertical cart scrolling.
+* Show the pre-offer sale price on cart items; keep offer savings in the cart summary.
+
+= 1.6.14 =
+* Make cart recommendation arrows work independently of cached cart scripts and advance one product card per click.
+
+= 1.6.13 =
+* Save and verify the existing WooCommerce cart before Razorpay product-page Buy Now starts.
+* Hydrate carts created late during admin AJAX, restore the saved cart for normal cart reads, and block Buy Now with a visible error if preservation fails.
+
+= 1.6.12 =
+* Confirm quantity changes were saved in the WooCommerce session before reporting success; show a clear error otherwise.
+
+= 1.6.11 =
+* Send compact, authoritative quantity responses without rebuilding recommendation products or duplicate cart fragments.
+* Keep cart scroll position, combine rapid clicks, and serialize cart writes so stale responses cannot replace newer quantities.
+
+= 1.6.10 =
+* Use WooCommerce's storefront AJAX route for cart quantity and removal updates, avoiding the admin bootstrap.
+* Show requested quantities immediately, restore them on failure, and use WooCommerce's confirmed response for all prices and totals.
+* Avoid a redundant Store API cart-count request after SuperWoo has already received the updated count.
+
+= 1.6.9 =
+* Restore the original WooCommerce cart immediately after Razorpay product-page Buy Now creates its draft order, and after later gateway callbacks.
+* Preserve the original coupons and logged-in persistent cart, including when the original cart was empty.
+
+= 1.6.8 =
+* Make cart recommendations show two complete cards so each arrow moves exactly one product on desktop and mobile.
+
+= 1.6.7 =
+* Keep cart quantity and prices at their last confirmed values until the AJAX update completes, then refresh them together.
+* Retry an expired cart nonce once on cached pages and show a visible error if an update is rejected.
+* Avoid a second WooCommerce fragment request that could replace freshly calculated cart prices.
+
+= 1.6.6 =
+* Show the cart drawer subtotal at regular merchandise prices, with sale, offer, coupon and gift savings on a separate green Discount line.
+* Keep the payable Total sourced from WooCommerce and show applicable tax or fee rows so the summary reconciles.
+
 = 1.6.5 =
-* Add an administrator-reviewed product-line form for existing recovery orders, including zero-priced gifts and exact catalog variation IDs.
-* Require a recorded item evidence source, reconcile line totals to the captured payment, and prevent duplicate additions while keeping Recovery review status.
+* Send cart quantity increase, decrease, and line removal through the same WordPress AJAX route used by working add-to-cart actions.
+* Refresh the drawer's item quantities and totals from the saved WooCommerce cart response.
 
 = 1.6.4 =
-* Match captured-payment reconciliation, payment report and payment transaction ledger by payment ID, Razorpay order, historical WooCommerce ID, currency and amount before applying CSV details.
-* Add payment method, contact, gateway charges, shipping method name and settlement evidence to existing recovered review orders; save matching details for later recoveries.
-* Keep absent products, free gifts, shipping charges and addresses out of payment-only orders.
+* Keep existing cart items and coupons when Razorpay Magic Checkout Buy Now is used from a product page.
+* Build the Buy Now draft order from only the selected product and restore the saved cart when the shopper returns to the storefront or opens the cart drawer.
 
 = 1.6.3 =
-* Add a CSV enrichment action for existing payment-only recovery orders, matching payment ID, original WooCommerce ID, currency and amount before updating.
-* Preserve available Razorpay payment method, description, gateway fee and tax, shipping method name and contact details without inventing missing item or address data.
+* Update cart drawer quantities through AJAX and refresh the line price, subtotal, shipping, and total together.
+* Keep requested quantities stable during cart recalculation and restore the previous input if an AJAX request fails.
 
 = 1.6.2 =
-* Allow individually approved and selected bulk payment-only recovery from imported captured-payment CSV rows without Razorpay API credentials.
-* Label recovered payment status as CSV-reported, while retaining duplicate, Workshop, refund, amount and current WooCommerce order checks.
+* Make cart recommendation arrows move exactly one product card per click on desktop and mobile, including after drawer updates.
 
 = 1.6.1 =
-* Add selected bulk recovery with fresh per-payment Razorpay verification and individual skip results.
-* Show the verified Razorpay status on recovered WooCommerce orders and remove recovered records from the missing-order view.
+* Add working previous/next controls and scrolling for cart recommendations on desktop and mobile.
+* Restore regular-price strike-through styling across product cards.
+* Apply eligible percentage offers to the current sale price in cart and checkout totals without compounding on repeated calculations.
 
 = 1.6.0 =
 * Improve order recovery and reconciliation, including individually approved payment-only review orders for verified captured Razorpay payments with duplicate and Workshop safeguards.
 * Recognize additional Razorpay reconciliation exports, support day-first dates, and allow safe refresh of imported CSV records without duplicate order creation.
 * Preserve zero-priced gift identity on normal WooCommerce order lines and improve order filtering by original order ID.
-
-= 1.5.9 =
-* Add selected bulk recovery with fresh per-payment Razorpay verification and individual skip results.
-* Show the verified Razorpay status on recovered WooCommerce orders and remove recovered records from the missing-order view.
-
-= 1.5.8 =
-* Add a missing WooCommerce orders filter that requires an original order ID and hides Workshop-related payments.
-* Show the original WooCommerce order ID prominently and allow administrators to refresh previously imported CSV records without creating orders.
 
 = 1.5.7 =
 * Add individually approved payment-only WooCommerce recovery review orders for verified captured Razorpay payments, with duplicate and Workshop safeguards.

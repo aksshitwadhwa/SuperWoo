@@ -1,12 +1,12 @@
 {
   "name": "SuperWoo",
   "slug": "superwoo",
-  "version": "1.6.4",
+  "version": "1.6.25",
   "requires": "6.2",
   "requires_php": "7.4",
-  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.6.4.zip",
-  "sha256": "813be5ac4444796f324beed94fd7357bcabd7eeb30209daaedebce4241baa77c",
-  "package_size": 297397,
+  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.6.25.zip",
+  "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "package_size": 1,
   "homepage": "https://digtize.com/plugins/superwoo/",
-  "description": "SuperWoo 1.6.4 improves reconciliation matching and payment-only order enrichment."
+  "description": "SuperWoo 1.6.25 combines the latest cart improvements and order-recovery safeguards."
 }

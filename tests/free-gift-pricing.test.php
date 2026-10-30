@@ -25,6 +25,7 @@ class WC_Product {
     public function set_price($price) {
         $this->price = (float) $price;
     }
+    public function get_id() { return 12; }
 }
 
 class WC_Order_Item_Product {
@@ -55,6 +56,7 @@ class Test_Cart {
 }
 
 require_once dirname(__DIR__) . '/includes/class-bundle-offers.php';
+function wc_get_price_decimals() { return 2; }
 
 class Test_Free_Gift_Bundle_Offers extends SuperWoo_Bundle_Offers {
     public function get_selected_offer($cart) {
@@ -100,4 +102,29 @@ $paid_item = new WC_Order_Item_Product(100, 100);
 $offers->record_free_gift_order_line($paid_item, 'gift-row', $cart->get_cart()['gift-row'], null);
 if ($paid_item->metadata) { fwrite(STDERR, "FAIL: a priced item was marked as a free gift\n"); exit(1); }
 
-echo "PASS: selected free gift is priced at zero in the cart calculation\n";
+class Test_Quantity_Bundle_Offers extends SuperWoo_Bundle_Offers {
+    public function get_selected_offer($cart) {
+        $item = $cart->get_cart()['paid-row'];
+        return $item['quantity'] >= 2
+            ? ['rule' => ['offer_type' => 'product_discount'], 'tier' => ['discount' => 10]]
+            : null;
+    }
+    public function rule_applies_to_product($rule, $product_id, $variation_id = 0) { return true; }
+}
+
+$sale_product = new WC_Product(80);
+$offer_cart = new Test_Cart(['paid-row' => ['product_id' => 12, 'quantity' => 1, 'data' => $sale_product]]);
+$quantity_offer = new Test_Quantity_Bundle_Offers();
+$offer_cart->set_quantity('paid-row', 2, false);
+$quantity_offer->apply_discounts($offer_cart);
+if ($sale_product->get_price() !== 72.0) { fwrite(STDERR, "FAIL: quantity increase did not apply 10% once to the sale price\n"); exit(1); }
+$quantity_offer->apply_discounts($offer_cart);
+if ($sale_product->get_price() !== 72.0) { fwrite(STDERR, "FAIL: repeated totals compounded the offer discount\n"); exit(1); }
+$offer_cart->set_quantity('paid-row', 1, false);
+$quantity_offer->apply_discounts($offer_cart);
+if ($sale_product->get_price() !== 80.0) { fwrite(STDERR, "FAIL: quantity decrease did not restore the sale price\n"); exit(1); }
+$offer_cart->set_quantity('paid-row', 2, false);
+$quantity_offer->apply_discounts($offer_cart);
+if ($sale_product->get_price() !== 72.0) { fwrite(STDERR, "FAIL: requalified offer used a previously discounted price\n"); exit(1); }
+
+echo "PASS: free gift and quantity offer pricing remain stable across recalculations\n";
