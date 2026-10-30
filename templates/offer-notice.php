@@ -33,7 +33,7 @@ if ('product_discount' === $rule['offer_type']) {
                 </div>
                 <strong><?php echo esc_html(sprintf(__('Buy %1$s+', 'superwoo'), $min_qty)); ?></strong>
             </div>
-            <div class="superwoo-bundle-progress">
+            <div class="superwoo-bundle-progress" role="progressbar" aria-label="<?php esc_attr_e('Offer quantity progress', 'superwoo'); ?>" aria-valuemin="0" aria-valuemax="<?php echo esc_attr($min_qty); ?>" aria-valuenow="<?php echo esc_attr(min($qty, $min_qty)); ?>">
                 <span class="superwoo-bundle-progress__fill" style="width:<?php echo esc_attr(max(0, min(100, ($qty / $min_qty) * 100))); ?>%;"></span>
                 <div class="superwoo-bundle-progress__labels">
                     <span class="superwoo-bundle-progress__current"><?php echo esc_html($qty); ?></span>
@@ -87,7 +87,7 @@ if ('price_discount' === $rule['offer_type']) {
                 </div>
                 <strong><?php echo wp_kses_post(superwoo_format_selected_currency_amount($min)); ?>+</strong>
             </div>
-            <div class="superwoo-bundle-progress">
+            <div class="superwoo-bundle-progress" role="progressbar" aria-label="<?php esc_attr_e('Offer progress', 'superwoo'); ?>" aria-valuemin="0" aria-valuemax="<?php echo esc_attr($min); ?>" aria-valuenow="<?php echo esc_attr(min($subtotal, $min)); ?>">
                 <span class="superwoo-bundle-progress__fill" style="width:<?php echo esc_attr($progress); ?>%;"></span>
                 <div class="superwoo-bundle-progress__labels">
                     <span class="superwoo-bundle-progress__current"><?php echo wp_kses_post(superwoo_format_selected_currency_amount($subtotal)); ?></span>
@@ -149,7 +149,7 @@ if ('price_gift' === $rule['offer_type']) {
                 </div>
                 <strong><?php echo wp_kses_post(superwoo_format_selected_currency_amount($min)); ?>+</strong>
             </div>
-            <div class="superwoo-bundle-progress">
+            <div class="superwoo-bundle-progress" role="progressbar" aria-label="<?php esc_attr_e('Free gift progress', 'superwoo'); ?>" aria-valuemin="0" aria-valuemax="<?php echo esc_attr($min); ?>" aria-valuenow="<?php echo esc_attr(min($subtotal, $min)); ?>">
                 <span class="superwoo-bundle-progress__fill" style="width:<?php echo esc_attr($min > 0 ? max(0, min(100, ($subtotal / $min) * 100)) : 100); ?>%;"></span>
                 <div class="superwoo-bundle-progress__labels">
                     <span class="superwoo-bundle-progress__current"><?php echo wp_kses_post(superwoo_format_selected_currency_amount($subtotal)); ?></span>

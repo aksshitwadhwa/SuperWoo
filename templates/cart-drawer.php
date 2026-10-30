@@ -2,6 +2,7 @@
 <div class="superwoo-cart-shell" data-superwoo-cart-shell aria-hidden="true">
     <div class="superwoo-cart-backdrop" data-superwoo-close-cart></div>
     <aside class="superwoo-cart-drawer" role="dialog" aria-modal="true" aria-label="<?php esc_attr_e('Shopping cart', 'superwoo'); ?>" tabindex="-1">
+        <div class="superwoo-cart-pending" data-superwoo-cart-pending role="status" hidden><?php esc_html_e('Loading your cart…', 'superwoo'); ?></div>
         <div class="superwoo-cart-drawer__inner">
             <?php echo $drawer->get_inner_html(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
         </div>

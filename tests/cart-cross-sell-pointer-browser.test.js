@@ -5,7 +5,7 @@ const path = require('path');
 const { spawn } = require('child_process');
 const { pathToFileURL } = require('url');
 
-const chrome = process.env.SUPERWOO_TEST_CHROME || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const chrome = process.env.SUPERWOO_TEST_CHROME || (fs.existsSync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome') ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' : 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe');
 if (!fs.existsSync(chrome)) {
     console.error('UNVERIFIED: Chrome is unavailable');
     process.exit(2);
@@ -18,7 +18,7 @@ const css = pathToFileURL(path.resolve(__dirname, '../public/css/cart-drawer.css
 const js = pathToFileURL(path.resolve(__dirname, '../public/js/cart-cross-sell.js')).href;
 fs.writeFileSync(fixture, `<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="${css}"><style>*,*::before,*::after{box-sizing:border-box}body{margin:0}.superwoo-cart-shell,.superwoo-cart-drawer{width:440px!important;max-width:none!important;position:static!important;display:block!important;transform:none!important}.superwoo-cart-drawer__inner{display:block!important}</style></head><body><div data-superwoo-cart-shell class="superwoo-cart-shell is-open"><div class="superwoo-cart-drawer"><div class="superwoo-cart-drawer__inner"><div class="superwoo-cross-sells"><div class="superwoo-cross-sells__header"><h3>You may also like</h3><div class="superwoo-cross-sells__controls"><button type="button" class="superwoo-cross-sells__arrow" data-superwoo-cross-sell-nav="previous" aria-label="Previous"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></svg></button><button type="button" class="superwoo-cross-sells__arrow" data-superwoo-cross-sell-nav="next" aria-label="Next"><svg viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></svg></button></div></div><div class="superwoo-cross-sells__row"><div class="superwoo-cross-sell">One</div><div class="superwoo-cross-sell">Two</div><div class="superwoo-cross-sell">Three</div><div class="superwoo-cross-sell">Four</div></div></div></div></div></div><script>window.__superwooCartDrawerInitialized=true;</script><script src="${js}"></script></body></html>`, 'utf8');
 
-const browser = spawn(chrome, ['--headless=new', '--no-sandbox', '--disable-gpu', '--disable-background-networking', '--remote-allow-origins=*', '--remote-debugging-port=0', '--user-data-dir=' + profile, 'about:blank'], { stdio: 'ignore', windowsHide: true });
+const browser = spawn(chrome, ['--headless=new', '--disable-gpu', '--disable-background-networking', '--remote-allow-origins=*', '--remote-debugging-port=0', '--user-data-dir=' + profile, 'about:blank'], { stdio: 'ignore', windowsHide: true });
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 let socket;
 let nextId = 0;

@@ -73,7 +73,7 @@ body.single-product.superwoo-variation-cards-enabled form.variations_form .rtwpv
     align-items: stretch;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 12px;
+    gap: 10px;
     margin: 0 0 8px;
     max-width: 100%;
     overflow-x: visible;
@@ -81,6 +81,15 @@ body.single-product.superwoo-variation-cards-enabled form.variations_form .rtwpv
     padding: 0 0 4px;
     scrollbar-width: thin;
     width: 100%;
+}
+
+.superwoo-variation-cards__heading {
+    color: var(--superwoo-variation-text);
+    font-size: 16px;
+    font-weight: 700;
+    grid-column: 1 / -1;
+    line-height: 1.3;
+    margin: 0 0 2px;
 }
 
 .superwoo-variation-card,
@@ -93,10 +102,11 @@ button.superwoo-variation-card {
     color: var(--superwoo-variation-text) !important;
     cursor: pointer;
     display: grid;
-    gap: 8px;
+    gap: 5px;
     box-sizing: border-box;
-    min-height: 78px;
-    padding: 14px 16px !important;
+    min-height: 108px;
+    padding: 12px !important;
+    position: relative;
     text-align: left;
     margin: 0 !important;
 }
@@ -118,6 +128,24 @@ button.superwoo-variation-card {
     box-shadow: inset 0 0 0 1px var(--superwoo-variation-accent) !important;
 }
 
+.superwoo-variation-card.is-selected::after {
+    align-items: center;
+    background: var(--superwoo-variation-accent);
+    border-radius: 50%;
+    color: #fff;
+    content: "✓";
+    display: flex;
+    font-size: 13px;
+    font-weight: 700;
+    height: 22px;
+    justify-content: center;
+    line-height: 1;
+    position: absolute;
+    right: 7px;
+    top: 7px;
+    width: 22px;
+}
+
 .superwoo-variation-card.is-disabled {
     cursor: not-allowed;
     opacity: 0.45;
@@ -126,16 +154,25 @@ button.superwoo-variation-card {
 .superwoo-variation-card__title {
     color: var(--superwoo-variation-text);
     display: block;
-    font-size: 16px;
+    font-size: 15px;
     line-height: 1.2;
 }
+
+.superwoo-variation-card__description {
+    color: var(--superwoo-variation-muted);
+    display: block;
+    font-size: 13px;
+    line-height: 1.25;
+}
+
+.superwoo-variation-card__description[hidden] { display: none; }
 
 .superwoo-variation-card__price {
     align-items: baseline;
     color: var(--superwoo-variation-text);
     display: flex;
     flex-wrap: wrap;
-    font-size: 18px;
+    font-size: 17px;
     font-weight: 700;
     gap: 6px;
     line-height: 1.15;
@@ -222,55 +259,25 @@ body.single-product.superwoo-variation-cards-enabled form.variations_form .quant
     }
 
     .superwoo-variation-cards {
-        display: flex;
-        flex-wrap: wrap;
-        /* align-items: stretch; */
-        /* display: flex; */
-        /* flex-wrap: nowrap; */
-        /* gap: 10px; */
-        /* max-width: 100%; */
-        /* overflow-x: auto; */
-        /* overflow-y: hidden; */
-        /* overscroll-behavior-inline: contain; */
-        /* padding-bottom: 0; */
-        /* scroll-snap-type: inline proximity; */
-        /* scrollbar-width: none; */
-        /* width: 100%; */
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .superwoo-variation-cards::-webkit-scrollbar {
-        display: none;
+        gap: 7px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
     .superwoo-variation-card {
-        margin: 0;
-        /* align-self: stretch; */
-        /* flex: 0 0 200px; */
-        /* grid-template-rows: auto auto; */
-        /* height: 88px; */
-        /* inline-size: 200px; */
-        /* justify-content: stretch; */
-        /* justify-items: start; */
-        /* justify-self: stretch; */
-        /* margin-left: 0; */
-        /* margin-right: 0; */
-        /* min-height: 88px; */
-        /* padding: 12px; */
-        /* place-items: start stretch; */
-        /* scroll-snap-align: start; */
-        /* text-align: left; */
-        /* width: 200px; */
+        min-height: 104px;
+        padding: 10px 8px !important;
     }
 
-    .superwoo-variation-card__title,
+    .superwoo-variation-card__title { font-size: 13px; padding-right: 13px; }
+    .superwoo-variation-card__description { font-size: 11px; }
     .superwoo-variation-card__price {
         font-size: 15px;
-        justify-content: flex-start;
-        justify-self: start;
+        gap: 3px;
         margin: 0;
         max-width: 100%;
         padding: 0;
         text-align: left;
     }
+
+    .superwoo-variation-card.is-selected::after { height: 18px; right: 5px; top: 5px; width: 18px; font-size: 11px; }
 }

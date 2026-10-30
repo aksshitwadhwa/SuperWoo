@@ -57,6 +57,7 @@ class Test_Cart {
 
 require_once dirname(__DIR__) . '/includes/class-bundle-offers.php';
 function wc_get_price_decimals() { return 2; }
+function wc_get_rounding_precision() { return 6; }
 
 class Test_Free_Gift_Bundle_Offers extends SuperWoo_Bundle_Offers {
     public function get_selected_offer($cart) {

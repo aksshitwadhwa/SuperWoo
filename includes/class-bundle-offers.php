@@ -2,6 +2,8 @@
 defined('ABSPATH') || exit;
 
 class SuperWoo_Bundle_Offers {
+    private $calculating_carts = [];
+
     public function hooks() {
         $settings = superwoo_get_settings();
         if (empty($settings['enable_bundle_offers'])) {
@@ -665,6 +667,21 @@ class SuperWoo_Bundle_Offers {
             return;
         }
 
+        // WooCommerce recalculates totals when gift lines are added/removed.
+        // Let the outer pass finish reconciliation and pricing exactly once.
+        $cart_key = spl_object_hash($cart);
+        if (isset($this->calculating_carts[$cart_key])) {
+            return;
+        }
+        $this->calculating_carts[$cart_key] = true;
+        try {
+            $this->apply_cart_offer($cart);
+        } finally {
+            unset($this->calculating_carts[$cart_key]);
+        }
+    }
+
+    private function apply_cart_offer($cart) {
         $this->restore_offer_base_prices($cart);
         $customer_quantities = $this->get_customer_cart_quantities($cart);
         $selected = $this->get_selected_offer($cart);
@@ -701,7 +718,9 @@ class SuperWoo_Bundle_Offers {
                 continue;
             }
 
-            $current_price = (float) $product->get_price();
+            // Gift callbacks may have run a nested totals pass. Always price
+            // from the saved pre-offer base, never the mutated product object.
+            $current_price = $this->get_offer_base_price($cart_item);
 
             if ($current_price <= 0) {
                 continue;
@@ -709,7 +728,9 @@ class SuperWoo_Bundle_Offers {
 
             // The restored base is the price this customer would otherwise pay,
             // including an existing sale. Never calculate an offer from MRP.
-            $bundle_price = round($current_price * (1 - $discount / 100), wc_get_price_decimals());
+            // Retain unit precision until WooCommerce rounds line/cart totals;
+            // rounding each unit to display decimals exaggerates bulk savings.
+            $bundle_price = round($current_price * (1 - $discount / 100), wc_get_rounding_precision());
             if ($bundle_price < $current_price) {
                 $product->set_price($bundle_price);
             }
@@ -748,15 +769,29 @@ class SuperWoo_Bundle_Offers {
 
     /** A new cart session must use the product's current sale price. */
     public function reset_offer_base_price_from_session($cart_item) {
-        if (isset($cart_item['_superwoo_offer_base_price']) && WC()->session) {
+        $had_saved_price = false;
+        foreach (['_superwoo_offer_base_price', '_superwoo_base_inr_price', '_superwoo_current_inr_price', '_superwoo_currency'] as $key) {
+            $had_saved_price = $had_saved_price || isset($cart_item[$key]);
+            unset($cart_item[$key]);
+        }
+        if ($had_saved_price && WC()->session) {
             // WooCommerce restores cart_totals before this filter and normally
             // skips recalculation when they exist. Clearing the saved totals
             // makes its session loader run one fresh totals pass using the
             // rehydrated catalog sale price and current offer rules.
             WC()->session->set('cart_totals', null);
         }
-        unset($cart_item['_superwoo_offer_base_price']);
         return $cart_item;
+    }
+
+    /** One authoritative pre-offer amount for pricing and tier qualification. */
+    private function get_offer_base_price($cart_item) {
+        foreach (['_superwoo_base_inr_price', '_superwoo_offer_base_price', '_superwoo_current_inr_price'] as $key) {
+            if (isset($cart_item[$key])) {
+                return (float) $cart_item[$key];
+            }
+        }
+        return (float) $cart_item['data']->get_price('edit');
     }
 
     /** Restore pre-offer line prices so repeated totals passes cannot compound discounts. */
@@ -766,17 +801,8 @@ class SuperWoo_Bundle_Offers {
                 continue;
             }
 
-            if (isset($cart_item['_superwoo_base_inr_price'])) {
-                $base_price = (float) $cart_item['_superwoo_base_inr_price'];
-            } elseif (isset($cart_item['_superwoo_offer_base_price'])) {
-                $base_price = (float) $cart_item['_superwoo_offer_base_price'];
-            } elseif (isset($cart_item['_superwoo_current_inr_price'])) {
-                $base_price = (float) $cart_item['_superwoo_current_inr_price'];
-                $cart->cart_contents[$cart_item_key]['_superwoo_offer_base_price'] = $base_price;
-            } else {
-                $base_price = (float) $cart_item['data']->get_price('edit');
-                $cart->cart_contents[$cart_item_key]['_superwoo_offer_base_price'] = $base_price;
-            }
+            $base_price = $this->get_offer_base_price($cart_item);
+            $cart->cart_contents[$cart_item_key]['_superwoo_offer_base_price'] = $base_price;
 
             $cart_item['data']->set_price($base_price);
         }
@@ -836,6 +862,9 @@ class SuperWoo_Bundle_Offers {
      */
     public function sync_gifts_after_item_removed($removed_cart_item_key, $cart) {
         if (!$cart || !is_object($cart) || !method_exists($cart, 'get_cart')) {
+            return;
+        }
+        if (isset($this->calculating_carts[spl_object_hash($cart)])) {
             return;
         }
 
@@ -1270,6 +1299,14 @@ class SuperWoo_Bundle_Offers {
         }
 
         $syncing = true;
+        try {
+            $this->reconcile_free_gifts($cart, $gift_rules);
+        } finally {
+            $syncing = false;
+        }
+    }
+
+    private function reconcile_free_gifts($cart, $gift_rules) {
         $desired = [];
 
         foreach ($gift_rules as $rule) {
@@ -1316,7 +1353,6 @@ class SuperWoo_Bundle_Offers {
             ]);
         }
 
-        $syncing = false;
     }
 
     private function get_customer_cart_quantities($cart) {
@@ -1420,15 +1456,7 @@ class SuperWoo_Bundle_Offers {
                 }
             }
 
-            if (isset($item['_superwoo_base_inr_price'])) {
-                $price = (float) $item['_superwoo_base_inr_price'];
-            } elseif (isset($item['_superwoo_offer_base_price'])) {
-                $price = (float) $item['_superwoo_offer_base_price'];
-            } elseif (isset($item['_superwoo_current_inr_price'])) {
-                $price = (float) $item['_superwoo_current_inr_price'];
-            } else {
-                $price = (float) $item['data']->get_price();
-            }
+            $price = $this->get_offer_base_price($item);
 
             $subtotal += $price * absint($item['quantity'] ?? 0);
         }

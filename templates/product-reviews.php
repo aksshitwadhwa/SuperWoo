@@ -23,7 +23,7 @@ $icon = static function ($name) {
     return '<svg class="superwoo-review-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">' . ($paths[$name] ?? '') . '</svg>';
 };
 ?>
-<section class="superwoo-reviews" data-superwoo-reviews data-product-id="<?php echo esc_attr($product->get_id()); ?>">
+<section id="reviews" class="superwoo-reviews" data-superwoo-reviews data-product-id="<?php echo esc_attr($product->get_id()); ?>" tabindex="-1">
     <div class="superwoo-review-notice" data-superwoo-review-notice role="status" tabindex="-1" hidden>
         <strong><?php esc_html_e('Thank you for your review!', 'superwoo'); ?></strong>
         <span><?php esc_html_e('Your review has been submitted successfully.', 'superwoo'); ?></span>

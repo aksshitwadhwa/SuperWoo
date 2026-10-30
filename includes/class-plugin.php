@@ -286,6 +286,7 @@ class SuperWoo_Plugin {
             'shop_filter_show_rating', 'shop_filter_show_sort', 'enable_bundle_offers',
             'enable_cart_drawer', 'enable_elementor_products_carousel', 'cart_auto_open',
             'cart_drawer_crosssell', 'enable_add_to_cart_diagnostics', 'enable_logging',
+            'cart_trust_enabled',
             'enable_meta_tracking', 'meta_tracking_kill_switch', 'meta_tracking_diagnostics',
             'show_discount_percentage', 'enable_multi_currency', 'currency_auto_detect',
         ];
@@ -366,7 +367,12 @@ class SuperWoo_Plugin {
             'cart_auto_open'        => !empty($_POST['cart_auto_open']),
             'mobile_bottom_nav_hidden_pages' => isset($_POST['mobile_bottom_nav_hidden_pages']) && is_array($_POST['mobile_bottom_nav_hidden_pages']) ? array_values(array_unique(array_filter(array_map('absint', wp_unslash($_POST['mobile_bottom_nav_hidden_pages']))))) : [],
             'cart_drawer_crosssell' => !empty($_POST['cart_drawer_crosssell']),
-            'cart_drawer_coupon'    => isset($_POST['cart_drawer_coupon']) && 'disabled' === $_POST['cart_drawer_coupon'] ? 'disabled' : 'checkout_link',
+            'cart_drawer_coupon'    => in_array($_POST['cart_drawer_coupon'] ?? '', ['inline', 'checkout_link', 'disabled'], true) ? sanitize_key(wp_unslash($_POST['cart_drawer_coupon'])) : 'checkout_link',
+            'cart_recommendation_heading' => isset($_POST['cart_recommendation_heading']) && is_scalar($_POST['cart_recommendation_heading'])
+                ? sanitize_text_field(wp_unslash((string) $_POST['cart_recommendation_heading']))
+                : __('Frequently bought together', 'superwoo'),
+            'cart_trust_enabled' => !empty($_POST['cart_trust_enabled']),
+            'cart_trust_items' => $this->sanitize_cart_trust_items(isset($_POST['cart_trust_items']) ? wp_unslash($_POST['cart_trust_items']) : []),
             'enable_add_to_cart_diagnostics' => !empty($_POST['enable_add_to_cart_diagnostics']),
             'enable_logging'        => !empty($_POST['enable_logging']),
             'enable_meta_tracking' => !empty($_POST['enable_meta_tracking']),
@@ -495,6 +501,30 @@ class SuperWoo_Plugin {
     }
 
     /** Accept only a numeric Meta Pixel ID; malformed input disables dispatch. */
+    private function sanitize_cart_trust_items($items) {
+        if (!is_array($items)) {
+            return [];
+        }
+
+        $sanitized = [];
+        $allowed_icons = ['shipping', 'secure', 'returns', 'support', 'info'];
+        foreach (['shipping', 'secure', 'returns', 'support'] as $key) {
+            $item = isset($items[$key]) && is_array($items[$key]) ? $items[$key] : [];
+            $url = isset($item['url']) && is_scalar($item['url']) ? esc_url_raw(trim((string) $item['url'])) : '';
+            $icon = isset($item['icon']) && is_string($item['icon']) && in_array($item['icon'], $allowed_icons, true)
+                ? sanitize_key($item['icon']) : $key;
+            $sanitized[$key] = [
+                'enabled' => !empty($item['enabled']),
+                'icon' => $icon,
+                'heading' => isset($item['heading']) && is_scalar($item['heading']) ? sanitize_text_field($item['heading']) : '',
+                'description' => isset($item['description']) && is_scalar($item['description']) ? sanitize_text_field($item['description']) : '',
+                'url' => $url,
+            ];
+        }
+
+        return $sanitized;
+    }
+
     private function sanitize_meta_pixel_id($value) {
         $value = is_scalar($value) ? trim((string) $value) : '';
         return preg_match('/^[0-9]{1,32}$/D', $value) ? $value : '';

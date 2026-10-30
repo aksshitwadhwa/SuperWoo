@@ -56,7 +56,7 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'
 
         <nav class="nav-tab-wrapper superwoo-settings-tabs" aria-label="<?php esc_attr_e('SuperWoo settings tabs', 'superwoo'); ?>">
             <a href="#superwoo-general-settings" class="nav-tab <?php echo 'general' === $active_tab ? 'nav-tab-active' : ''; ?>" data-superwoo-settings-tab="general"><?php esc_html_e('Product Page', 'superwoo'); ?></a>
-            <a href="#superwoo-cart-settings" class="nav-tab <?php echo 'cart' === $active_tab ? 'nav-tab-active' : ''; ?>" data-superwoo-settings-tab="cart"><?php esc_html_e('Cart', 'superwoo'); ?></a>
+            <a href="#superwoo-cart-settings" class="nav-tab <?php echo 'cart' === $active_tab ? 'nav-tab-active' : ''; ?>" data-superwoo-settings-tab="cart"><?php esc_html_e('Smart Cart', 'superwoo'); ?></a>
             <a href="#superwoo-appearance-settings" class="nav-tab <?php echo 'appearance' === $active_tab ? 'nav-tab-active' : ''; ?>" data-superwoo-settings-tab="appearance"><?php esc_html_e('Colors & Style', 'superwoo'); ?></a>
             <a href="#superwoo-currency-settings" class="nav-tab <?php echo 'currency' === $active_tab ? 'nav-tab-active' : ''; ?>" data-superwoo-settings-tab="currency"><?php esc_html_e('Multi-Currency', 'superwoo'); ?></a>
             <a href="#superwoo-meta-tracking-settings" class="nav-tab <?php echo 'meta_tracking' === $active_tab ? 'nav-tab-active' : ''; ?>" data-superwoo-settings-tab="meta_tracking"><?php esc_html_e('Meta Tracking', 'superwoo'); ?></a>
@@ -230,11 +230,32 @@ $active_tab = in_array($active_tab, ['general', 'cart', 'appearance', 'currency'
                             <label>
                                 <?php esc_html_e('Coupon row:', 'superwoo'); ?>
                                 <select name="cart_drawer_coupon">
+                                    <option value="inline" <?php selected($settings['cart_drawer_coupon'], 'inline'); ?>><?php esc_html_e('Apply in cart drawer', 'superwoo'); ?></option>
                                     <option value="checkout_link" <?php selected($settings['cart_drawer_coupon'], 'checkout_link'); ?>><?php esc_html_e('Link to checkout', 'superwoo'); ?></option>
                                     <option value="disabled" <?php selected($settings['cart_drawer_coupon'], 'disabled'); ?>><?php esc_html_e('Disabled', 'superwoo'); ?></option>
                                 </select>
                             </label>
                             <br>
+                            <label><?php esc_html_e('Recommendation heading:', 'superwoo'); ?> <input type="text" name="cart_recommendation_heading" value="<?php echo esc_attr($settings['cart_recommendation_heading'] ?? ''); ?>" maxlength="80"></label>
+                            <p class="description"><?php esc_html_e('This heading is used only for explicit WooCommerce cross-sells. Fallback related products keep a truthful “Related products” heading.', 'superwoo'); ?></p>
+                            <label><input type="checkbox" name="cart_trust_enabled" value="1" <?php checked(!empty($settings['cart_trust_enabled'])); ?>> <?php esc_html_e('Show merchant-provided trust information', 'superwoo'); ?></label>
+                            <div class="superwoo-cart-trust-settings">
+                                <?php
+                                $trust_items = is_array($settings['cart_trust_items'] ?? null) ? $settings['cart_trust_items'] : [];
+                                foreach (['shipping' => __('Shipping', 'superwoo'), 'secure' => __('Secure checkout', 'superwoo'), 'returns' => __('Returns', 'superwoo'), 'support' => __('Customer support', 'superwoo')] as $trust_key => $trust_label) :
+                                    $trust = is_array($trust_items[$trust_key] ?? null) ? $trust_items[$trust_key] : [];
+                                ?>
+                                    <fieldset style="border:1px solid #c3c4c7; margin:10px 0; max-width:720px; padding:10px;">
+                                        <legend><?php echo esc_html($trust_label); ?></legend>
+                                        <label><input type="checkbox" name="cart_trust_items[<?php echo esc_attr($trust_key); ?>][enabled]" value="1" <?php checked(!empty($trust['enabled'])); ?>> <?php esc_html_e('Show this item', 'superwoo'); ?></label><br>
+                                        <label><?php esc_html_e('Heading', 'superwoo'); ?> <input type="text" name="cart_trust_items[<?php echo esc_attr($trust_key); ?>][heading]" value="<?php echo esc_attr($trust['heading'] ?? ''); ?>" maxlength="50"></label>
+                                        <label><?php esc_html_e('Description', 'superwoo'); ?> <input type="text" name="cart_trust_items[<?php echo esc_attr($trust_key); ?>][description]" value="<?php echo esc_attr($trust['description'] ?? ''); ?>" maxlength="100"></label>
+                                        <label><?php esc_html_e('Link (optional)', 'superwoo'); ?> <input type="url" name="cart_trust_items[<?php echo esc_attr($trust_key); ?>][url]" value="<?php echo esc_attr($trust['url'] ?? ''); ?>" maxlength="200"></label>
+                                        <input type="hidden" name="cart_trust_items[<?php echo esc_attr($trust_key); ?>][icon]" value="<?php echo esc_attr($trust_key); ?>">
+                                    </fieldset>
+                                <?php endforeach; ?>
+                            </div>
+                            <p class="description"><?php esc_html_e('Only enabled items with both a heading and description are displayed. Enter store-approved wording; SuperWoo does not invent delivery, warranty, security or returns claims.', 'superwoo'); ?></p>
                             <label><input type="checkbox" name="enable_add_to_cart_diagnostics" value="1" <?php checked(!empty($settings['enable_add_to_cart_diagnostics'])); ?>> <?php esc_html_e('Temporarily log product Add to Cart diagnostics', 'superwoo'); ?></label>
                             <br>
                             <label><input type="checkbox" name="show_discount_percentage" value="1" <?php checked(!empty($settings['show_discount_percentage'])); ?>> <?php esc_html_e('Show sale discount percentage', 'superwoo'); ?></label>

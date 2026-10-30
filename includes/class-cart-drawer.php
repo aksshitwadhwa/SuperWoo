@@ -3,6 +3,8 @@ defined('ABSPATH') || exit;
 
 class SuperWoo_Cart_Drawer {
     private $active_add_protection = [];
+    private $recommendation_heading = '';
+    private $recommendation_is_explicit = false;
 
     public function hooks() {
         $settings = superwoo_get_settings();
@@ -20,10 +22,19 @@ class SuperWoo_Cart_Drawer {
         add_action('wp_ajax_nopriv_superwoo_refresh_cart_nonce', [$this, 'ajax_refresh_cart_nonce']);
         add_action('wp_ajax_superwoo_remove_cart_item', [$this, 'ajax_remove_cart_item']);
         add_action('wp_ajax_nopriv_superwoo_remove_cart_item', [$this, 'ajax_remove_cart_item']);
+        add_action('wp_ajax_superwoo_apply_cart_coupon', [$this, 'ajax_apply_cart_coupon']);
+        add_action('wp_ajax_nopriv_superwoo_apply_cart_coupon', [$this, 'ajax_apply_cart_coupon']);
+        add_action('wp_ajax_superwoo_remove_cart_coupon', [$this, 'ajax_remove_cart_coupon']);
+        add_action('wp_ajax_nopriv_superwoo_remove_cart_coupon', [$this, 'ajax_remove_cart_coupon']);
+        add_action('wc_ajax_superwoo_apply_cart_coupon', [$this, 'ajax_apply_cart_coupon']);
+        add_action('wc_ajax_superwoo_remove_cart_coupon', [$this, 'ajax_remove_cart_coupon']);
         add_action('wp_ajax_superwoo_refresh_cart_drawer', [$this, 'ajax_refresh_cart_drawer']);
         add_action('wp_ajax_nopriv_superwoo_refresh_cart_drawer', [$this, 'ajax_refresh_cart_drawer']);
         add_action('wc_ajax_superwoo_update_cart_item', [$this, 'ajax_update_cart_item']);
         add_action('wc_ajax_superwoo_remove_cart_item', [$this, 'ajax_remove_cart_item']);
+        add_action('wc_ajax_superwoo_add_product_to_cart', [$this, 'ajax_add_product_to_cart']);
+        add_action('wc_ajax_superwoo_add_cross_sell', [$this, 'ajax_add_cross_sell']);
+        add_action('wc_ajax_superwoo_refresh_cart_drawer', [$this, 'ajax_refresh_cart_drawer']);
         add_action('wp_ajax_superwoo_add_cross_sell', [$this, 'ajax_add_cross_sell']);
         add_action('wp_ajax_nopriv_superwoo_add_cross_sell', [$this, 'ajax_add_cross_sell']);
         add_action('wp_ajax_superwoo_add_product_to_cart', [$this, 'ajax_add_product_to_cart']);
@@ -56,6 +67,11 @@ class SuperWoo_Cart_Drawer {
             'wcAjaxUrls'    => class_exists('WC_AJAX') ? [
                 'superwoo_update_cart_item' => WC_AJAX::get_endpoint('superwoo_update_cart_item'),
                 'superwoo_remove_cart_item' => WC_AJAX::get_endpoint('superwoo_remove_cart_item'),
+                'superwoo_apply_cart_coupon' => WC_AJAX::get_endpoint('superwoo_apply_cart_coupon'),
+                'superwoo_remove_cart_coupon' => WC_AJAX::get_endpoint('superwoo_remove_cart_coupon'),
+                'superwoo_add_product_to_cart' => WC_AJAX::get_endpoint('superwoo_add_product_to_cart'),
+                'superwoo_add_cross_sell' => WC_AJAX::get_endpoint('superwoo_add_cross_sell'),
+                'superwoo_refresh_cart_drawer' => WC_AJAX::get_endpoint('superwoo_refresh_cart_drawer'),
             ] : [],
             'nonce'         => wp_create_nonce('superwoo_cart_nonce'),
             'cartUrl'       => wc_get_cart_url(),
@@ -73,6 +89,8 @@ class SuperWoo_Cart_Drawer {
                 'quantityNotSaved' => __('The requested quantity was not saved. The cart shows the current quantity and price.', 'superwoo'),
                 'cartItems'     => __('Cart items', 'superwoo'),
                 'chooseOptions' => __('Please choose product options before adding this product to your cart.', 'superwoo'),
+                'adding'       => __('Adding to your cart…', 'superwoo'),
+                'loading'      => __('Loading your cart…', 'superwoo'),
             ],
         ]);
     }
@@ -156,6 +174,17 @@ class SuperWoo_Cart_Drawer {
             wp_send_json_error(['message' => __('Invalid cart item.', 'superwoo')], 400);
         }
 
+        $product = $cart_item['data'] ?? null;
+        if ($product instanceof WC_Product) {
+            if ($product->is_sold_individually() && $quantity > 1) {
+                wp_send_json_error(['message' => __('This product can only be purchased one at a time.', 'superwoo')], 400);
+            }
+            $max_quantity = (int) $product->get_max_purchase_quantity();
+            if ($max_quantity >= 0 && $quantity > $max_quantity) {
+                wp_send_json_error(['message' => __('The requested quantity is not available in stock.', 'superwoo')], 400);
+            }
+        }
+
         $previous_offer_state = $this->get_offer_state();
 
         if (!WC()->cart->set_quantity($cart_item_key, $quantity, false)) {
@@ -194,6 +223,53 @@ class SuperWoo_Cart_Drawer {
         $this->send_fragments($previous_offer_state);
     }
 
+    /** Apply a coupon through WooCommerce's native cart validation. */
+    public function ajax_apply_cart_coupon() {
+        $this->verify_ajax();
+
+        if (!function_exists('wc_coupons_enabled') || !wc_coupons_enabled()) {
+            wp_send_json_error(['message' => __('Coupons are not available.', 'superwoo')], 400);
+        }
+
+        $posted_code = isset($_POST['coupon_code']) && is_scalar($_POST['coupon_code'])
+            ? (string) wp_unslash($_POST['coupon_code']) : '';
+        $code = '' !== $posted_code ? wc_format_coupon_code($posted_code) : '';
+        if ('' === $code || strlen($code) > 100) {
+            wp_send_json_error(['message' => __('Enter a valid coupon code.', 'superwoo')], 400);
+        }
+
+        $previous_offer_state = $this->get_offer_state();
+        wc_clear_notices();
+        if (!WC()->cart->apply_coupon($code)) {
+            $notices = wc_get_notices('error');
+            $message = !empty($notices[0]['notice']) ? wp_strip_all_tags($notices[0]['notice']) : __('This coupon could not be applied.', 'superwoo');
+            wc_clear_notices();
+            wp_send_json_error(['message' => $message], 400);
+        }
+
+        $this->send_fragments($previous_offer_state, null, null, [], null, __('Coupon applied.', 'superwoo'));
+    }
+
+    /** Remove an applied coupon through WooCommerce's native cart API. */
+    public function ajax_remove_cart_coupon() {
+        $this->verify_ajax();
+
+        $posted_code = isset($_POST['coupon_code']) && is_scalar($_POST['coupon_code'])
+            ? (string) wp_unslash($_POST['coupon_code']) : '';
+        $code = '' !== $posted_code ? wc_format_coupon_code($posted_code) : '';
+        $applied = WC()->cart->get_applied_coupons();
+        if ('' === $code || !in_array($code, $applied, true)) {
+            wp_send_json_error(['message' => __('That coupon is not applied to this cart.', 'superwoo')], 400);
+        }
+
+        $previous_offer_state = $this->get_offer_state();
+        if (!WC()->cart->remove_coupon($code)) {
+            wp_send_json_error(['message' => __('This coupon could not be removed.', 'superwoo')], 400);
+        }
+
+        $this->send_fragments($previous_offer_state, null, null, [], null, __('Coupon removed.', 'superwoo'));
+    }
+
     /**
      * Read-only endpoint used after WooCommerce Store API cart mutations.
      */
@@ -228,8 +304,6 @@ class SuperWoo_Cart_Drawer {
 
         $allowed_quantities = $this->get_customer_cart_quantities();
 
-        WC()->cart->calculate_totals();
-        WC()->cart->set_session();
         $this->send_fragments($previous_offer_state, $allowed_quantities);
     }
 
@@ -367,6 +441,8 @@ class SuperWoo_Cart_Drawer {
         }
 
         $ids = array_values(array_unique(array_filter(array_map('absint', $ids))));
+        $has_explicit_cross_sells = !empty($ids);
+        $this->recommendation_is_explicit = $has_explicit_cross_sells;
         if (empty($ids)) {
             $cart_product_ids = array_map(static function ($item) {
                 return absint($item['product_id'] ?? 0);
@@ -378,14 +454,28 @@ class SuperWoo_Cart_Drawer {
         $ids = array_slice($ids, 0, 6);
         $products = [];
 
+        $cart_product_ids = array_map(static function ($item) {
+            return absint($item['product_id'] ?? 0);
+        }, WC()->cart->get_cart());
         foreach ($ids as $id) {
             $product = wc_get_product($id);
-            if ($product && $product->is_visible() && $product->is_purchasable() && $product->is_in_stock() && 'simple' === $product->get_type()) {
+            if ($product && !in_array($id, $cart_product_ids, true) && $product->is_visible() && $product->is_purchasable() && $product->is_in_stock() && 'simple' === $product->get_type()) {
                 $products[] = $product;
             }
         }
 
+        $this->recommendation_heading = $has_explicit_cross_sells
+            ? __('You may also like', 'superwoo')
+            : __('Related products', 'superwoo');
         return $products;
+    }
+
+    public function get_recommendation_heading($custom_heading = '') {
+        if ($this->recommendation_is_explicit && is_string($custom_heading) && '' !== trim($custom_heading)) {
+            return sanitize_text_field($custom_heading);
+        }
+
+        return $this->recommendation_heading ?: __('You may also like', 'superwoo');
     }
 
     public function get_free_shipping_message() {
@@ -407,32 +497,38 @@ class SuperWoo_Cart_Drawer {
             }
         }
 
+        return '';
+    }
+
+    /** Delivery belongs to the shared progress card, never the top banner. */
+    public function get_delivery_progress() {
         $threshold = $this->get_free_delivery_threshold();
         if ($threshold <= 0 || !WC()->cart || WC()->cart->is_empty()) {
-            return '';
+            return [];
         }
 
         // The configured amount is a promotional milestone, not a shipping
         // method. Only describe delivery as free when WooCommerce has selected
         // a real zero-cost rate for this cart and destination.
         if (!WC()->cart->needs_shipping() || !WC()->cart->has_calculated_shipping() || !WC()->cart->get_shipping_methods()) {
-            return '';
+            return [];
         }
+        $subtotal = $this->get_notice_cart_subtotal();
         if ((float) WC()->cart->get_shipping_total() <= 0 && (float) WC()->cart->get_shipping_tax() <= 0) {
-            return __('Free delivery is applied to this order.', 'superwoo');
+            return ['message' => __('Free delivery is applied to this order.', 'superwoo'), 'current' => $subtotal, 'target' => $threshold, 'applied' => true];
         }
 
-        $subtotal = $this->get_notice_cart_subtotal();
         if ($subtotal >= $threshold) {
-            return '';
+            return [];
         }
 
         $remaining = max(0, $threshold - $subtotal);
         /* translators: %s: amount remaining before free delivery is unlocked. */
-        return sprintf(
+        $message = sprintf(
             __('Add %1$s more to unlock free delivery.', 'superwoo'),
             wp_strip_all_tags(superwoo_format_selected_currency_amount($remaining))
         );
+        return ['message' => $message, 'current' => $subtotal, 'target' => $threshold, 'applied' => false];
     }
 
     private function get_free_delivery_threshold() {
@@ -799,7 +895,7 @@ class SuperWoo_Cart_Drawer {
         }
     }
 
-    private function send_fragments($previous_offer_state = null, $allowed_quantities = null, $diagnostic = null, $protected_quantities = [], $updated_item_key = null) {
+    private function send_fragments($previous_offer_state = null, $allowed_quantities = null, $diagnostic = null, $protected_quantities = [], $updated_item_key = null, $cart_notice = '') {
         wc_clear_notices();
 
         // Some third-party callbacks run during calculate_totals().  Run one
@@ -854,12 +950,9 @@ class SuperWoo_Cart_Drawer {
 
         $is_quantity_update = null !== $updated_item_key;
         $response = [
-            // Quantity updates keep the recommendation DOM already on the
-            // page. Rendering it here repeatedly runs unrelated product
-            // queries and sends duplicate footer/notice HTML.
-            'fragments'   => $is_quantity_update
-                ? ['.superwoo-cart-drawer__inner' => superwoo_cart_drawer_inner_fragment_html($this, false)]
-                : superwoo_cart_drawer_fragments(false),
+            // The inner fragment already contains notices, totals and checkout.
+            // Render it once. Quantity edits retain existing recommendations.
+            'fragments'   => ['.superwoo-cart-drawer__inner' => superwoo_cart_drawer_inner_fragment_html($this, !$is_quantity_update)],
             'preserveCrossSells' => $is_quantity_update,
             'cart_hash'   => WC()->cart->get_cart_hash(),
             'count'       => superwoo_cart_count(),
@@ -870,6 +963,10 @@ class SuperWoo_Cart_Drawer {
         if (null !== $updated_item_key) {
             $updated_item = $this->get_cart_item($updated_item_key);
             $response['updatedQuantity'] = $updated_item ? absint($updated_item['quantity'] ?? 0) : 0;
+        }
+
+        if ('' !== $cart_notice) {
+            $response['cartNotice'] = sanitize_text_field($cart_notice);
         }
 
         if (is_array($diagnostic)) {

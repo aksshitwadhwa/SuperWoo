@@ -95,7 +95,10 @@ function superwoo_get_settings() {
         'cart_auto_open'        => true,
         'mobile_bottom_nav_hidden_pages' => [],
         'cart_drawer_crosssell' => true,
-        'cart_drawer_coupon'    => 'checkout_link',
+        'cart_drawer_coupon'    => 'inline',
+        'cart_recommendation_heading' => __('Frequently bought together', 'superwoo'),
+        'cart_trust_enabled' => false,
+        'cart_trust_items' => [],
         'enable_add_to_cart_diagnostics' => false,
         'enable_logging'        => false,
         // Meta tracking is disabled by default and is browser-only when opted in.
@@ -359,14 +362,18 @@ function superwoo_cart_drawer_inner_fragment_html($cart_drawer = null, $include_
 
 function superwoo_cart_offer_notices_html() {
     $cart = superwoo_get_cart();
+    $offer_html = class_exists('SuperWoo_Bundle_Offers') && $cart
+        ? (new SuperWoo_Bundle_Offers())->get_notices_html() : '';
+    $delivery = class_exists('SuperWoo_Cart_Drawer') && $cart
+        ? (new SuperWoo_Cart_Drawer())->get_delivery_progress() : [];
 
     ob_start();
     ?>
     <div class="superwoo-cart-offer-notices">
         <?php
-        if (class_exists('SuperWoo_Bundle_Offers') && $cart) {
-            echo (new SuperWoo_Bundle_Offers())->get_notices_html(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-        }
+        echo $delivery
+            ? superwoo_template('cart-progress.php', ['delivery' => $delivery, 'offer_html' => $offer_html])
+            : $offer_html; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
         ?>
     </div>
     <?php

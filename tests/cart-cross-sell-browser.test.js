@@ -5,8 +5,9 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const { pathToFileURL } = require('url');
 
-const chrome = process.env.SUPERWOO_TEST_CHROME || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-const jquery = process.env.SUPERWOO_TEST_JQUERY || 'C:\\Users\\Rakes\\Local Sites\\ggm2\\app\\public\\wp-includes\\js\\jquery\\jquery.min.js';
+const chrome = process.env.SUPERWOO_TEST_CHROME || (fs.existsSync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome') ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' : 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe');
+const localJquery = path.join(os.homedir(), 'superwoo-meta-test', 'wp-includes', 'js', 'jquery', 'jquery.min.js');
+const jquery = process.env.SUPERWOO_TEST_JQUERY || (fs.existsSync(localJquery) ? localJquery : 'C:\\Users\\Rakes\\Local Sites\\ggm2\\app\\public\\wp-includes\\js\\jquery\\jquery.min.js');
 if (!fs.existsSync(chrome) || !fs.existsSync(jquery)) {
     console.error('UNVERIFIED: Chrome or local WordPress jQuery is unavailable');
     process.exit(2);
@@ -76,12 +77,13 @@ setTimeout(function(){try{
 }catch(e){document.getElementById('result').textContent='FAIL: '+e.message}},150);
 </script></body></html>`;
 const fixture = path.join(os.tmpdir(), `superwoo-cross-sell-${process.pid}.html`);
+const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'superwoo-cross-sell-profile-'));
 try {
     for (const [mode, source] of [['stale cart bundle', html], ['current cart bundle', html.replace('window.__superwooCartDrawerInitialized=true;', 'window.__testTouch=true;')]]) {
         fs.writeFileSync(fixture, source, 'utf8');
-        const output = execFileSync(chrome, ['--headless=new', '--no-sandbox', '--disable-gpu', '--disable-background-networking', '--allow-file-access-from-files', '--no-first-run', '--virtual-time-budget=3000', '--dump-dom', pathToFileURL(fixture).href], { encoding:'utf8', windowsHide:true, timeout:20000, maxBuffer:1024*1024*10 });
+        const output = execFileSync(chrome, ['--headless=new', '--disable-gpu', '--disable-background-networking', '--allow-file-access-from-files', '--no-first-run', '--user-data-dir=' + profile, '--virtual-time-budget=3000', '--dump-dom', pathToFileURL(fixture).href], { encoding:'utf8', windowsHide:true, timeout:20000, maxBuffer:1024*1024*10 });
         const result = output.match(/<pre id="result">([^<]*)<\/pre>/);
         if (!result || !result[1].startsWith('PASS:')) { console.error(mode + ': ' + (result ? result[1] : 'FAIL: browser result missing')); process.exitCode=1; }
         else { console.log(mode + ': ' + result[1]); }
     }
-} finally { if (fs.existsSync(fixture)) fs.unlinkSync(fixture); }
+} finally { if (fs.existsSync(fixture)) fs.unlinkSync(fixture); fs.rmSync(profile, { recursive:true, force:true, maxRetries:10, retryDelay:200 }); }

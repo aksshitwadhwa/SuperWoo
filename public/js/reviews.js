@@ -359,7 +359,51 @@
         update();
     }
 
-    document.addEventListener('DOMContentLoaded', function () {
+    function bindProductReviewLinks() {
+        document.addEventListener('click', function (event) {
+            var link = event.target.closest('.woocommerce-review-link, a[href="#reviews"], a[href="#tab-reviews"]');
+            var product;
+            var reviews;
+            var tab;
+            var destination;
+
+            if (!link || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) {
+                return;
+            }
+
+            destination = new URL(link.href, window.location.href);
+            if (destination.origin !== window.location.origin || destination.pathname !== window.location.pathname || !['#reviews', '#tab-reviews'].includes(destination.hash)) {
+                return;
+            }
+
+            product = link.closest('.product') || document;
+            reviews = product.querySelector('[data-superwoo-reviews]') || document.querySelector('[data-superwoo-reviews]');
+            if (!reviews) {
+                return;
+            }
+
+            event.preventDefault();
+            tab = product.querySelector('.wc-tabs a[href="#tab-reviews"], .woocommerce-tabs .reviews_tab a[href="#tab-reviews"]')
+                || document.querySelector('.wc-tabs a[href="#tab-reviews"], .woocommerce-tabs .reviews_tab a[href="#tab-reviews"]');
+            if (tab) {
+                tab.click();
+            }
+
+            window.setTimeout(function () {
+                reviews.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+                reviews.focus({ preventScroll: true });
+            }, 100);
+        });
+    }
+
+    function init() {
+        bindProductReviewLinks();
         toArray(document.querySelectorAll('[data-superwoo-reviews]')).forEach(setupReviews);
-    });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init, { once: true });
+    } else {
+        init();
+    }
 })();

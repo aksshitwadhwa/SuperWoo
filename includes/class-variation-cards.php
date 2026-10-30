@@ -30,6 +30,7 @@ class SuperWoo_Variation_Cards {
             'i18n'              => [
                 'unavailable' => __('Unavailable', 'superwoo'),
                 'from'        => __('From', 'superwoo'),
+                'choosePack'  => __('Choose your pack', 'superwoo'),
             ],
         ]);
     }

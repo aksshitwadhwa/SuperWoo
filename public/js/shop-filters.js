@@ -25,6 +25,13 @@
                 var open = shell.classList.toggle('is-open');
                 toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
             });
+            shell.addEventListener('click', function (event) {
+                if (event.target === shell && shell.classList.contains('is-open')) {
+                    shell.classList.remove('is-open');
+                    toggle.setAttribute('aria-expanded', 'false');
+                    toggle.focus();
+                }
+            });
             shell.addEventListener('keydown', function (event) {
                 if ('Escape' === event.key && shell.classList.contains('is-open')) {
                     shell.classList.remove('is-open');

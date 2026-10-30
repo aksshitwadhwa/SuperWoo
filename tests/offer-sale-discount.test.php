@@ -6,6 +6,7 @@ function is_admin() { return false; }
 function absint($value) { return abs((int) $value); }
 $GLOBALS['offer_test_price_decimals'] = 2;
 function wc_get_price_decimals() { return $GLOBALS['offer_test_price_decimals']; }
+function wc_get_rounding_precision() { return max(6, wc_get_price_decimals() + 2); }
 class Offer_Test_Session {
     public $values = ['cart_totals' => ['total' => 3153]];
     public function get($key) { return $this->values[$key] ?? null; }
@@ -148,9 +149,9 @@ expect_amount(1298 * 3 - $reference_cart->subtotal(), 389.40, 'reported Partial 
 expect_amount($reference_cart->subtotal(), 3504.60, 'reported Partial Pack payable total before other adjustments');
 $GLOBALS['offer_test_price_decimals'] = 0;
 $reference_offer->apply_discounts($reference_cart);
-expect_amount($reference_cart->subtotal(), 3504, 'whole-rupee store must apply the offer once');
+expect_amount($reference_cart->subtotal(), 3504.60, 'whole-rupee store preserves unit precision for WooCommerce total rounding');
 $reference_offer->apply_discounts($reference_cart);
-expect_amount($reference_cart->subtotal(), 3504, 'whole-rupee store must not compound the offer on recalculation');
+expect_amount($reference_cart->subtotal(), 3504.60, 'whole-rupee store must not compound the offer on recalculation');
 $GLOBALS['offer_test_price_decimals'] = 2;
 
 class Offer_Test_Actual_Tiers extends SuperWoo_Bundle_Offers {
@@ -176,10 +177,10 @@ if (($selected['rule']['id'] ?? '') !== 'ten') { fwrite(STDERR, "FAIL: screensho
 expect_amount(7001 - $actual_tiers->get_cart_subtotal_excluding_gifts($tier_cart), 3107, '15% progress amount');
 $GLOBALS['offer_test_price_decimals'] = 0;
 $actual_tiers->apply_discounts($tier_cart);
-expect_amount($tier_cart->subtotal(), 3504, 'actual INR zero-decimal 10% tier total');
+expect_amount($tier_cart->subtotal(), 3504.60, 'actual INR zero-decimal 10% tier keeps unrounded unit values');
 $tier_cart->set_quantity('partial-pack', 6, false);
 $actual_tiers->apply_discounts($tier_cart);
-expect_amount($tier_cart->subtotal(), 6618, 'actual INR zero-decimal 15% tier total');
+expect_amount($tier_cart->subtotal(), 6619.80, 'actual INR zero-decimal 15% tier keeps unrounded unit values');
 $GLOBALS['offer_test_price_decimals'] = 2;
 
 echo "PASS: Partial Pack sale pricing, configured 10%/15% tiers, quantity changes, session refresh and zero-decimal INR rounding\n";

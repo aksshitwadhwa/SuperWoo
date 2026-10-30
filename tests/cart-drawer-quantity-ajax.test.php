@@ -82,7 +82,7 @@ function superwoo_cart_drawer_fragments($calculate_totals = true) {
     return ['.superwoo-cart-drawer__inner' => WC()->cart->get_cart_contents_count() . '|' . WC()->cart->total];
 }
 function superwoo_cart_drawer_inner_fragment_html($drawer = null, $include_cross_sells = true) {
-    if ($include_cross_sells) { throw new Exception('Quantity response rebuilt the recommendation cards.'); }
+    if ($include_cross_sells && !WC()->cart->is_empty()) { throw new Exception('Quantity response rebuilt the recommendation cards.'); }
     return WC()->cart->get_cart_contents_count() . '|' . WC()->cart->total;
 }
 function superwoo_cart_count() { return WC()->cart->get_cart_contents_count(); }
@@ -150,15 +150,17 @@ WC()->session->drop_cart_writes = false;
 (new SuperWoo_Cart_Drawer())->hooks();
 check(isset($GLOBALS['registered_hooks']['wp_ajax_superwoo_update_cart_item'], $GLOBALS['registered_hooks']['wp_ajax_nopriv_superwoo_update_cart_item']), 'quantity AJAX routes were not registered');
 check(isset($GLOBALS['registered_hooks']['wp_ajax_superwoo_refresh_cart_nonce'], $GLOBALS['registered_hooks']['wp_ajax_nopriv_superwoo_refresh_cart_nonce']), 'nonce refresh routes were not registered');
+check(isset($GLOBALS['registered_hooks']['wc_ajax_superwoo_add_product_to_cart'], $GLOBALS['registered_hooks']['wc_ajax_superwoo_add_cross_sell'], $GLOBALS['registered_hooks']['wc_ajax_superwoo_refresh_cart_drawer']), 'storefront add/refresh routes were not registered');
 
 $drawer = new SuperWoo_Cart_Drawer();
 WC()->cart->cart_contents['item-key']['line_subtotal'] = 350;
-check($drawer->get_cart_notice_message() === '', 'paid shipping was falsely described as unlocked free delivery');
+check($drawer->get_delivery_progress() === [], 'paid shipping was falsely described as unlocked free delivery');
 WC()->cart->cart_contents['item-key']['line_subtotal'] = 200;
-check(strpos($drawer->get_cart_notice_message(), 'INR100') !== false, 'delivery progress did not use the current pre-offer subtotal');
+check(strpos($drawer->get_delivery_progress()['message'], 'INR100') !== false, 'delivery progress did not use the current pre-offer subtotal');
+check($drawer->get_cart_notice_message() === '', 'delivery message still appeared in the separate top banner');
 WC()->cart->shipping_total = 0;
-check($drawer->get_cart_notice_message() === 'Free delivery is applied to this order.', 'calculated free shipping was not reflected in the notice');
+check($drawer->get_delivery_progress()['message'] === 'Free delivery is applied to this order.', 'calculated free shipping was not reflected in the notice');
 WC()->cart->shipping_calculated = false;
-check($drawer->get_cart_notice_message() === '', 'uncalculated shipping was presented as free');
+check($drawer->get_delivery_progress() === [], 'uncalculated shipping was presented as free');
 
 echo "PASS: AJAX increase, decrease, remove at one, totals, session, rerun, gift guard, nonce and shipping notice checks\n";

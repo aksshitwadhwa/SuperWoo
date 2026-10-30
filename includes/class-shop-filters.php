@@ -108,9 +108,9 @@ class SuperWoo_Shop_Filters {
         ob_start();
         ?>
         <div class="superwoo-shop-filters-shell" data-superwoo-filter-shell>
-        <button class="superwoo-shop-filters__mobile-toggle" type="button" aria-expanded="false" aria-controls="<?php echo esc_attr($filter_id); ?>" data-superwoo-filter-toggle>
-            <span><?php esc_html_e('Filter products', 'superwoo'); ?></span>
-            <span class="superwoo-shop-filters__mobile-toggle-icon" aria-hidden="true"></span>
+        <button class="superwoo-shop-filters__mobile-toggle" type="button" aria-label="<?php esc_attr_e('Filter products', 'superwoo'); ?>" aria-expanded="false" aria-controls="<?php echo esc_attr($filter_id); ?>" data-superwoo-filter-toggle>
+            <svg class="superwoo-shop-filters__mobile-toggle-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 6h16M7 12h10m-7 6h4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="2"></path><circle cx="8" cy="6" r="2" fill="currentColor"></circle><circle cx="15" cy="12" r="2" fill="currentColor"></circle><circle cx="12" cy="18" r="2" fill="currentColor"></circle></svg>
+            <span><?php esc_html_e('Filter', 'superwoo'); ?></span>
         </button>
         <form id="<?php echo esc_attr($filter_id); ?>" class="superwoo-shop-filters" method="get" action="" data-superwoo-auto-apply>
             <?php if (!empty($args['show_title']) && '' !== trim((string) $args['title'])) : ?>

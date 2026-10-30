@@ -5,8 +5,9 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const { pathToFileURL } = require('url');
 
-const chrome = process.env.SUPERWOO_TEST_CHROME || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
-const jquery = process.env.SUPERWOO_TEST_JQUERY || 'C:\\Users\\Rakes\\Local Sites\\ggm2\\app\\public\\wp-includes\\js\\jquery\\jquery.min.js';
+const chrome = process.env.SUPERWOO_TEST_CHROME || (fs.existsSync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome') ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' : 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe');
+const localJquery = path.join(os.homedir(), 'superwoo-meta-test', 'wp-includes', 'js', 'jquery', 'jquery.min.js');
+const jquery = process.env.SUPERWOO_TEST_JQUERY || (fs.existsSync(localJquery) ? localJquery : 'C:\\Users\\Rakes\\Local Sites\\ggm2\\app\\public\\wp-includes\\js\\jquery\\jquery.min.js');
 if (!fs.existsSync(chrome) || !fs.existsSync(jquery)) {
     console.error('UNVERIFIED: Chrome or local WordPress jQuery is unavailable');
     process.exit(2);
@@ -181,11 +182,12 @@ run().catch(function (error) { document.getElementById('result').textContent = '
 </script></body></html>`;
 
 const fixture = path.join(os.tmpdir(), `superwoo-cart-browser-${process.pid}.html`);
+const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'superwoo-cart-browser-profile-'));
 try {
     fs.writeFileSync(fixture, html, 'utf8');
     const output = execFileSync(chrome, [
-        '--headless=new', '--no-sandbox', '--disable-gpu', '--disable-background-networking',
-        '--allow-file-access-from-files', '--no-first-run', '--virtual-time-budget=4000',
+        '--headless=new', '--disable-gpu', '--disable-background-networking',
+        '--allow-file-access-from-files', '--no-first-run', '--user-data-dir=' + profile, '--virtual-time-budget=4000',
         '--dump-dom', pathToFileURL(fixture).href
     ], { encoding:'utf8', windowsHide:true, timeout:20000, maxBuffer:1024*1024*10 });
     const result = output.match(/<pre id="result">([^<]*)<\/pre>/);
@@ -197,4 +199,5 @@ try {
     }
 } finally {
     if (fs.existsSync(fixture)) { fs.unlinkSync(fixture); }
+    fs.rmSync(profile, { recursive:true, force:true, maxRetries:10, retryDelay:200 });
 }

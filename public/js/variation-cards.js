@@ -151,6 +151,26 @@
         return option.textContent || option.innerText || option.value;
     }
 
+    function attributeLabel(select) {
+        var row = select.closest('tr');
+        var label = row && row.querySelector('th label, td.label label');
+        return label ? (label.textContent || '').trim() : '';
+    }
+
+    function isPackAttribute(select) {
+        return /pack|bundle/i.test((select.name || '') + ' ' + attributeLabel(select));
+    }
+
+    function variationDescription(variation) {
+        if (!variation || !variation.variation_description) {
+            return '';
+        }
+
+        var content = document.createElement('div');
+        content.innerHTML = variation.variation_description;
+        return (content.textContent || content.innerText || '').replace(/\s+/g, ' ').trim();
+    }
+
     function buildCards(form, select, variations) {
         if (select.dataset.superwooCardsReady === '1') {
             return;
@@ -165,13 +185,34 @@
         }
 
         var group = document.createElement('div');
+        var heading = null;
         group.className = 'superwoo-variation-cards';
         group.setAttribute('data-superwoo-attribute', select.name);
         group.setAttribute('role', 'radiogroup');
 
+        if (isPackAttribute(select)) {
+            heading = document.createElement('h3');
+            var label = attributeLabel(select);
+            heading.className = 'superwoo-variation-cards__heading';
+            heading.id = (select.id || select.name.replace(/[^a-z0-9_-]/gi, '-')) + '-pack-heading';
+            heading.textContent = config().i18n && config().i18n.choosePack ? config().i18n.choosePack : 'Choose your pack';
+            group.setAttribute('aria-labelledby', heading.id);
+            if (label) {
+                var row = select.closest('tr');
+                var sourceLabel = row && row.querySelector('th label, td.label label');
+                if (sourceLabel) {
+                    sourceLabel.classList.add('screen-reader-text');
+                }
+                if (row) {
+                    row.classList.add('superwoo-variation-pack-row');
+                }
+            }
+        }
+
         options.forEach(function (option) {
             var card = document.createElement('button');
             var title = document.createElement('span');
+            var description = document.createElement('span');
             var price = document.createElement('span');
             card.type = 'button';
             card.className = 'superwoo-variation-card';
@@ -181,8 +222,10 @@
             card.setAttribute('aria-checked', option.selected ? 'true' : 'false');
             title.className = 'superwoo-variation-card__title';
             title.textContent = optionLabel(option);
+            description.className = 'superwoo-variation-card__description';
             price.className = 'superwoo-variation-card__price';
             card.appendChild(title);
+            card.appendChild(description);
             card.appendChild(price);
 
             card.addEventListener('click', function (event) {
@@ -197,6 +240,9 @@
         });
 
         select.insertAdjacentElement('afterend', group);
+        if (heading) {
+            group.insertAdjacentElement('beforebegin', heading);
+        }
         select.dataset.superwooCardsReady = '1';
     }
 
@@ -212,6 +258,7 @@
             $(group).find('.superwoo-variation-card').each(function () {
                 var value = this.dataset.value || '';
                 var variation = findBestVariation(variations, attributeName, value, attrs);
+                var description = this.querySelector('.superwoo-variation-card__description');
                 var isSelected = currentValue === value;
                 var isAvailable = !!variation && variation.is_in_stock !== false && variation.is_purchasable !== false;
 
@@ -219,6 +266,10 @@
                 this.classList.toggle('is-disabled', !isAvailable);
                 this.setAttribute('aria-checked', isSelected ? 'true' : 'false');
                 this.disabled = !isAvailable;
+                if (description) {
+                    description.textContent = variationDescription(variation);
+                    description.hidden = !description.textContent;
+                }
                 this.querySelector('.superwoo-variation-card__price').innerHTML = priceMarkup(variation);
             });
         });

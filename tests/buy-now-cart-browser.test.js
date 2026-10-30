@@ -5,7 +5,7 @@ const path = require('path');
 const { execFileSync } = require('child_process');
 const { pathToFileURL } = require('url');
 
-const chrome = process.env.SUPERWOO_TEST_CHROME || 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe';
+const chrome = process.env.SUPERWOO_TEST_CHROME || (fs.existsSync('/Applications/Google Chrome.app/Contents/MacOS/Google Chrome') ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome' : 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe');
 if (!fs.existsSync(chrome)) {
     console.error('UNVERIFIED: Chrome is unavailable');
     process.exit(2);
@@ -53,10 +53,11 @@ async function run(){
 run().catch(function(error){document.getElementById('result').textContent='FAIL: '+error.message});
 </script></body></html>`;
 const fixture = path.join(os.tmpdir(), `superwoo-buy-now-${process.pid}.html`);
+const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'superwoo-buy-now-profile-'));
 try {
     fs.writeFileSync(fixture, html, 'utf8');
-    const output = execFileSync(chrome, ['--headless=new', '--no-sandbox', '--disable-gpu', '--disable-background-networking', '--allow-file-access-from-files', '--no-first-run', '--virtual-time-budget=3000', '--dump-dom', pathToFileURL(fixture).href], { encoding:'utf8', windowsHide:true, timeout:20000, maxBuffer:1024*1024*10 });
+    const output = execFileSync(chrome, ['--headless=new', '--disable-gpu', '--disable-background-networking', '--allow-file-access-from-files', '--no-first-run', '--user-data-dir=' + profile, '--virtual-time-budget=3000', '--dump-dom', pathToFileURL(fixture).href], { encoding:'utf8', windowsHide:true, timeout:20000, maxBuffer:1024*1024*10 });
     const result = output.match(/<pre id="result">([^<]*)<\/pre>/);
     if (!result || !result[1].startsWith('PASS:')) { console.error(result ? result[1] : 'FAIL: browser result missing'); process.exitCode=1; }
     else { console.log(result[1]); }
-} finally { if (fs.existsSync(fixture)) fs.unlinkSync(fixture); }
+} finally { if (fs.existsSync(fixture)) fs.unlinkSync(fixture); fs.rmSync(profile, { recursive:true, force:true, maxRetries:10, retryDelay:200 }); }
