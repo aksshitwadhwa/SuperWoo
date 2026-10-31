@@ -53,11 +53,10 @@ class SuperWoo_Buy_Now_Cart {
             wp_send_json_error(['code' => 'superwoo_buy_now_cart_unavailable'], 503);
         }
 
-        $saved = WC()->session->get(self::SESSION_KEY);
-        if (!is_array($saved) || !isset($saved['cart']) || !is_array($saved['cart'])) {
-            $saved = $this->snapshot();
-            WC()->session->set(self::SESSION_KEY, $saved);
-        }
+        // Refresh on each confirmed Buy Now click so cart edits made since a
+        // prior cancelled/returned flow are not lost to a stale snapshot.
+        $saved = $this->snapshot();
+        WC()->session->set(self::SESSION_KEY, $saved);
         $stored = WC()->session->get(self::SESSION_KEY);
         if (!is_array($stored) || !isset($stored['cart']) || $stored['cart'] !== $saved['cart']) {
             wp_send_json_error(['code' => 'superwoo_buy_now_snapshot_not_saved'], 503);

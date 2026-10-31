@@ -1416,6 +1416,7 @@ button.superwoo-cross-sell__add {
 .superwoo-cart-shell .superwoo-cart-offer-notices {
     display: grid;
     gap: 12px;
+    margin-top: 10px;
     padding: 0 24px 16px;
 }
 
@@ -1545,7 +1546,7 @@ button.superwoo-cross-sell__add {
     padding: 0 12px;
     font-size: 11px;
     font-weight: 600;
-    color: #fff;
+    color: #071120;
     position: absolute;
     top: 0;
     left: 50%;
@@ -1556,15 +1557,15 @@ button.superwoo-cross-sell__add {
 }
 
 .superwoo-cart-shell .superwoo-bundle-progress__current {
-    color: #fff;
+    color: #071120;
 }
 
 .superwoo-cart-shell .superwoo-bundle-progress__separator {
-    color: rgba(255, 255, 255, 0.8);
+    color: rgba(7, 17, 32, 0.72);
 }
 
 .superwoo-cart-shell .superwoo-bundle-progress__target {
-    color: rgba(255, 255, 255, 0.9);
+    color: rgba(7, 17, 32, 0.82);
 }
 
 .superwoo-cart-shell .superwoo-bundle-notice--success {
@@ -2362,4 +2363,18 @@ color-mix(in srgb, var(--superwoo-mobile-bottom-nav-active) 16%, #ffffff) !impor
 .superwoo-elementor-cart-trigger .superwoo-cart-icon-fill {
     fill: #0b3d4d !important;
     stroke: #0b3d4d !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .superwoo-cart-shell,
+    .superwoo-cart-shell *,
+    .superwoo-mobile-bottom-nav,
+    .superwoo-mobile-bottom-nav *,
+    .superwoo-mobile-search-sheet,
+    .superwoo-mobile-search-sheet * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+    }
 }

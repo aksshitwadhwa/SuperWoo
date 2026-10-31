@@ -161,6 +161,7 @@ check($drawer->get_cart_notice_message() === '', 'delivery message still appeare
 WC()->cart->shipping_total = 0;
 check($drawer->get_delivery_progress()['message'] === 'Free delivery is applied to this order.', 'calculated free shipping was not reflected in the notice');
 WC()->cart->shipping_calculated = false;
-check($drawer->get_delivery_progress() === [], 'uncalculated shipping was presented as free');
+$pending_delivery = $drawer->get_delivery_progress();
+check(!empty($pending_delivery) && empty($pending_delivery['applied']) && strpos($pending_delivery['message'], 'INR100') !== false, 'pending delivery progress disappeared before shipping rates were calculated');
 
 echo "PASS: AJAX increase, decrease, remove at one, totals, session, rerun, gift guard, nonce and shipping notice checks\n";

@@ -1,4 +1,4 @@
-/** Ensure Razorpay's product button cannot run before the original cart is saved. */
+/** Ensure product Buy Now controls cannot run before the original cart is saved. */
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -13,7 +13,8 @@ if (!fs.existsSync(chrome)) {
 
 const script = pathToFileURL(path.resolve(__dirname, '../public/js/buy-now-cart.js')).href;
 const html = `<!doctype html><html><head><meta charset="utf-8"></head><body>
-<button id="btn-1cc-pdp" type="button">Buy Now</button><pre id="result">PENDING</pre>
+<button id="btn-1cc-pdp" type="button">Buy Now</button>
+<button class="theme-buy-now" type="button" aria-label="Buy Now">Quick checkout</button><pre id="result">PENDING</pre>
 <script>
 window.SuperWooBuyNowCart={ajaxUrl:'mock-admin-ajax',nonce:'old',error:'Cart could not be saved'};
 window.browserTest={mode:'ok',gatewayClicks:0,requests:[]};
@@ -29,6 +30,7 @@ window.fetch=function(url,options){
  },35)});
 };
 document.getElementById('btn-1cc-pdp').addEventListener('click',function(){browserTest.gatewayClicks+=1});
+document.querySelector('.theme-buy-now').addEventListener('click',function(){browserTest.gatewayClicks+=1});
 </script>
 <script src="${script}"></script>
 <script>
@@ -42,13 +44,19 @@ async function run(){
  assert(browserTest.gatewayClicks===1,'confirmed snapshot did not start Razorpay exactly once');
  assert(browserTest.requests.length===1,'duplicate click sent duplicate snapshots');
  assert(sessionStorage.getItem('superwoo_buy_now_pending')==='1','cart restoration marker missing');
+ var themeButton=document.querySelector('.theme-buy-now');
+ themeButton.click();
+ assert(browserTest.gatewayClicks===1,'generic theme Buy Now ran before its cart snapshot completed');
+ await wait(110);
+ assert(browserTest.gatewayClicks===2,'generic theme Buy Now was not replayed after snapshot');
+ assert(browserTest.requests.length===2,'generic theme Buy Now did not save the current cart');
  browserTest.mode='fail';button.click();await wait(100);
- assert(browserTest.gatewayClicks===1,'Razorpay ran despite failed snapshot');
+ assert(browserTest.gatewayClicks===2,'Buy Now ran despite failed snapshot');
  assert(document.querySelector('[data-superwoo-buy-now-error]'),'failed snapshot had no visible error');
  browserTest.mode='nonce';button.click();await wait(150);
- assert(browserTest.gatewayClicks===2,'nonce refresh did not allow protected Buy Now');
+ assert(browserTest.gatewayClicks===3,'nonce refresh did not allow protected Buy Now');
  assert(browserTest.requests.slice(-3).map(function(item){return item.action}).join(',')==='superwoo_snapshot_buy_now_cart,superwoo_refresh_buy_now_nonce,superwoo_snapshot_buy_now_cart','nonce retry sequence incorrect');
- document.getElementById('result').textContent='PASS: Buy Now waits for snapshot, blocks failure, coalesces clicks and refreshes nonce';
+ document.getElementById('result').textContent='PASS: Razorpay and theme Buy Now wait for snapshot, block failure, coalesce clicks and refresh nonce';
 }
 run().catch(function(error){document.getElementById('result').textContent='FAIL: '+error.message});
 </script></body></html>`;

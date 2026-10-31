@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SuperWoo Smart Cart — final overnight evidence</title>
+<style>
+body{font:16px/1.5 system-ui,sans-serif;margin:0 auto;max-width:1200px;padding:24px;color:#102033;background:#f5f8fa}h1,h2{line-height:1.2}p{max-width:80ch}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}figure{margin:0;padding:12px;background:white;border:1px solid #dce4e9;border-radius:10px}img{display:block;width:100%;height:auto;border-radius:6px}figcaption{font-weight:600;margin-top:8px}small{display:block;color:#526174;font-weight:400}a{color:#075f7e}
+</style>
+</head>
+<body>
+<h1>SuperWoo Smart Cart — final overnight evidence</h1>
+<p>Local synthetic WooCommerce site, loopback only, Chromium 147.0.7727.15 with sandbox enabled. These captures are evidence from the Phase 14 run, copied here for the final report. Product artwork and cart contents are synthetic. No real order or payment was created.</p>
+<h2>Viewport comparison — one product</h2>
+<div class="grid">
+<figure><a href="one-product-1440.png"><img src="one-product-1440.png" alt="Cart drawer at 1440 pixels"></a><figcaption>1440 px desktop</figcaption></figure>
+<figure><a href="one-product-1280.png"><img src="one-product-1280.png" alt="Cart drawer at 1280 pixels"></a><figcaption>1280 px desktop</figcaption></figure>
+<figure><a href="one-product-1024.png"><img src="one-product-1024.png" alt="Cart drawer at 1024 pixels"></a><figcaption>1024 px tablet landscape</figcaption></figure>
+<figure><a href="one-product-768.png"><img src="one-product-768.png" alt="Cart drawer at 768 pixels"></a><figcaption>768 px tablet</figcaption></figure>
+<figure><a href="one-product-430.png"><img src="one-product-430.png" alt="Cart drawer at 430 pixels"></a><figcaption>430 px mobile</figcaption></figure>
+<figure><a href="one-product-390.png"><img src="one-product-390.png" alt="Cart drawer at 390 pixels"></a><figcaption>390 px mobile</figcaption></figure>
+<figure><a href="one-product-375.png"><img src="one-product-375.png" alt="Cart drawer at 375 pixels"></a><figcaption>375 px mobile</figcaption></figure>
+<figure><a href="one-product-320.png"><img src="one-product-320.png" alt="Cart drawer at 320 pixels"></a><figcaption>320 px mobile</figcaption></figure>
+<figure><a href="one-product-landscape-844x390.png"><img src="one-product-landscape-844x390.png" alt="Cart drawer in 844 by 390 landscape viewport"></a><figcaption>844 × 390 landscape</figcaption></figure>
+</div>
+<h2>Cart and checkout states — 390 px</h2>
+<div class="grid">
+<figure><a href="empty-390.png"><img src="empty-390.png" alt="Empty cart drawer"></a><figcaption>Empty cart</figcaption></figure>
+<figure><a href="multiple-products-390.png"><img src="multiple-products-390.png" alt="Cart with multiple synthetic products"></a><figcaption>Multiple products and recommendations</figcaption></figure>
+<figure><a href="gift-unlocked-390.png"><img src="gift-unlocked-390.png" alt="Cart after synthetic free gift unlock"></a><figcaption>Gift threshold reached</figcaption></figure>
+<figure><a href="offer-10pct-390.png"><img src="offer-10pct-390.png" alt="Cart with synthetic ten percent offer"></a><figcaption>10% offer and order summary</figcaption></figure>
+<figure><a href="coupon-applied-390.png"><img src="coupon-applied-390.png" alt="Cart with a synthetic coupon applied"></a><figcaption>Coupon applied</figcaption></figure>
+<figure><a href="checkout-populated-390.png"><img src="checkout-populated-390.png" alt="Populated checkout page before submission"></a><figcaption>Checkout opened; not submitted</figcaption></figure>
+</div>
+<h2>Bootstrap smoke</h2>
+<div class="grid"><figure><a href="bootstrap-smoke.png"><img src="bootstrap-smoke.png" alt="Local WordPress QA bootstrap smoke page"></a><figcaption>Loopback QA smoke page</figcaption></figure></div>
+<h2>Coverage limitation</h2>
+<p>Full state × viewport coverage was not captured. Loading/error, shipping-only, shipping-unlocked, combined milestones, invalid coupon, RTL, safe-area, and virtual-keyboard states do not each have a dedicated image at all widths. Gallery presence is not a PASS claim for those untested states.</p>
+</body>
+</html>

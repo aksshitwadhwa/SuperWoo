@@ -275,10 +275,11 @@ class SuperWoo_Cart_Drawer {
      */
     public function ajax_refresh_cart_drawer() {
         $this->verify_ajax();
-        // Keep the original cart visible even if a Razorpay callback runs
-        // while the customer is still on the product page.
+        // Opening the cart after Buy Now ends the isolated purchase flow.
+        // Restore and clear its snapshot so later callbacks cannot reapply an
+        // old cart over edits the shopper makes after cancelling checkout.
         if (class_exists('SuperWoo_Buy_Now_Cart')) {
-            SuperWoo_Buy_Now_Cart::restore_pending(false);
+            SuperWoo_Buy_Now_Cart::restore_pending(true);
         }
         superwoo_log('Cart drawer refresh requested', ['cart_count' => superwoo_cart_count()]);
         $this->send_fragments();
@@ -507,14 +508,13 @@ class SuperWoo_Cart_Drawer {
             return [];
         }
 
-        // The configured amount is a promotional milestone, not a shipping
-        // method. Only describe delivery as free when WooCommerce has selected
-        // a real zero-cost rate for this cart and destination.
-        if (!WC()->cart->needs_shipping() || !WC()->cart->has_calculated_shipping() || !WC()->cart->get_shipping_methods()) {
+        if (!WC()->cart->needs_shipping()) {
             return [];
         }
         $subtotal = $this->get_notice_cart_subtotal();
-        if ((float) WC()->cart->get_shipping_total() <= 0 && (float) WC()->cart->get_shipping_tax() <= 0) {
+        // Only announce unlocked delivery after WooCommerce has calculated a
+        // real zero-cost shipping rate for this cart and destination.
+        if (WC()->cart->has_calculated_shipping() && WC()->cart->get_shipping_methods() && (float) WC()->cart->get_shipping_total() <= 0 && (float) WC()->cart->get_shipping_tax() <= 0) {
             return ['message' => __('Free delivery is applied to this order.', 'superwoo'), 'current' => $subtotal, 'target' => $threshold, 'applied' => true];
         }
 

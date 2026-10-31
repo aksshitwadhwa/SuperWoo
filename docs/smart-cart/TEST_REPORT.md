@@ -36,3 +36,15 @@ Passing standalone tests and the isolated WooCommerce integration validate the c
 - Local isolated site GET: home/product/cart 200; empty checkout 302 to cart; populated checkout 200 was observed in local browser smoke. No checkout submit/payment/order occurred.
 
 See `PHASE_11_FINAL_QA.md` for current test details and release gate.
+
+## Phase 12 final acceptance addendum — 2026-10-31
+
+- Standalone PHP: **22 scripts passed**, including ten new static cart dialog accessibility guardrails.
+- Guarded WooCommerce offer integration: **129 assertions passed earlier in Phase 12** against `superwoo_offer_audit` / `superwoo-offer-audit.test`; later rerun was blocked before the test body because `/tmp/superwoo-phase10/mysql.sock` did not accept a connection. The guard was not weakened and no alternate database was substituted.
+- Meta Node suite: **28 passed**.
+- PHP lint: **96 files passed**. JavaScript syntax: **passed** for all public JS and test JS. `git diff --check`: **passed**.
+- Browser shopping journey: earlier Phase 12 run passed product/cart add, quantity up/down, coupon apply/remove, recommendation add, gift unlock, 10% offer totals, Store API parity, checkout navigation without submission, the eight requested widths, and landscape. Screenshots are in `evidence/phase-12/`.
+- Later rerun of the five browser suites: **blocked before page execution**; every Chromium launch failed while initializing the macOS browser sandbox (`SIGTRAP`, `Input/output error (5)`). The sandbox was not disabled. No connected browser backend was available.
+- The browser regression now asserts focus wrapping, Escape, and focus restoration. The new focus trap and reduced-motion CSS pass static guardrails, but their post-fix browser behavior is not verified due to the browser block.
+
+See `PHASE_12_FINAL_ACCEPTANCE.md` for the complete evidence, coverage limits, and remaining release gates. The release candidate remains unpublished and `PRODUCTION_READY=NO`.

@@ -183,4 +183,13 @@ catch (Buy_Now_Response $response) { $unsaved_snapshot = $response->payload; }
 check(isset($unsaved_snapshot) && !$unsaved_snapshot['success'] && $unsaved_snapshot['status'] === 503, 'snapshot endpoint claimed success without saving its evidence');
 $session->drop_snapshot_writes = false;
 
+// A later Buy Now click must refresh, not reuse, a snapshot from an older flow.
+$cart->items = ['latest-a' => ['product_id' => 3], 'latest-b' => ['product_id' => 4], 'latest-c' => ['product_id' => 5]];
+$session->set('cart', $cart->items);
+$_POST = ['nonce' => 'valid'];
+try { $module->ajax_snapshot_cart(); }
+catch (Buy_Now_Response $response) { $fresh_snapshot = $response->payload; }
+check(isset($fresh_snapshot['success']) && $fresh_snapshot['data']['count'] === 3, 'subsequent Buy Now did not replace a stale cart snapshot');
+check(count($session->get('superwoo_buy_now_saved_cart_v1')['cart']) === 3, 'refreshed Buy Now snapshot omitted updated cart items');
+
 echo "PASS: Buy Now order isolation, immediate cart restore, later callbacks, empty cart, coupon, nonce, variation, rerun\n";

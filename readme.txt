@@ -4,7 +4,7 @@ Tags: woocommerce, cart drawer, product benefits, faq, bundle discounts
 Requires at least: 6.2
 Tested up to: 7.1
 Requires PHP: 7.4
-Stable tag: 1.6.26
+Stable tag: 1.6.32
 License: GPLv2 or later
 
 SuperWoo adds WooCommerce product benefit icons, how-to content, product FAQs, shoppable videos, bundle offer rules, cart notices, and an AJAX cart drawer.
@@ -58,9 +58,27 @@ Elementor:
 
 == Changelog ==
 
-= Unreleased =
+= 1.6.32 =
+* Improve progress-bar label contrast across both the filled and unfilled track.
+
+= 1.6.31 =
+* Finalize and clear the Buy Now cart snapshot when the customer opens the cart after cancelling or returning from the isolated checkout.
+
+= 1.6.30 =
+* Show only the free-delivery message and progress bar until delivery is unlocked; then show the next configured offer progress.
+* Include the progress-priority template in the release package.
+
+= 1.6.29 =
+* Preserve the existing cart around product-page Buy Now flows, including recognized theme/gateway buttons, and refresh the saved cart snapshot on each Buy Now attempt.
+
+= 1.6.28 =
+* Show one cart progress bar at a time: free delivery takes priority until WooCommerce confirms it is unlocked, then the next configured offer appears.
+* Add top spacing to the shared cart progress card and show pending free-delivery progress before shipping rates are calculated.
+
+= 1.6.27 =
 * Move free-delivery information into the offer progress card and refine drawer typography and total spacing.
 * Open the drawer immediately during add-to-cart requests, show pending feedback until totals are confirmed, refresh cached carts on demand, and reduce duplicate rendering and count requests.
+* Keep keyboard focus inside the open cart dialog, honor reduced-motion preferences, and give cart quantity fields product-specific accessible names.
 
 = 1.6.26 =
 * Prevent percentage offers from applying twice when free-gift additions or removals trigger nested WooCommerce cart calculations.

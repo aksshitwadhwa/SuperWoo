@@ -15,9 +15,10 @@ if (!fs.existsSync(chrome) || !fs.existsSync(jquery)) {
 
 const drawerScript = pathToFileURL(path.resolve(__dirname, '../public/js/cart-drawer.js')).href;
 const html = `<!doctype html><html><head><meta charset="utf-8"></head><body>
+<a href="#superwoo-cart" data-superwoo-open-cart id="cart-opener">Open cart</a>
 <div data-superwoo-cart-shell class="superwoo-cart-shell is-open" aria-hidden="false">
-  <div class="superwoo-cart-drawer"><div class="superwoo-cart-drawer__inner">
-    <div class="superwoo-cart-drawer__header"><span class="superwoo-cart-count">2</span></div>
+  <div class="superwoo-cart-drawer" role="dialog" aria-modal="true" aria-label="Shopping cart" tabindex="-1"><div class="superwoo-cart-drawer__inner">
+    <div class="superwoo-cart-drawer__header"><button type="button" aria-label="Close cart" data-superwoo-close-cart>×</button><span class="superwoo-cart-count">2</span></div>
     <div class="superwoo-cart-live"></div><div data-superwoo-cart-error hidden></div>
     <div data-superwoo-cart-scroll style="height:80px;overflow:auto">
     <div class="superwoo-cart-item" data-cart-item-key="line-a">
@@ -104,6 +105,26 @@ async function run() {
   await wait(120);
   assert(browserTest.initialDrawerRefreshes === 1, 'initial drawer was not refreshed from the server exactly once');
   assert(price() === 'INR1998' && total() === 'INR1998', 'stale initial prices were not replaced with server totals');
+  var opener=document.getElementById('cart-opener');
+  opener.focus();
+  opener.click();
+  await wait(30);
+  var dialog=document.querySelector('.superwoo-cart-drawer');
+  var dialogButtons=dialog.querySelectorAll('button:not([disabled]), a[href], input:not([disabled])');
+  var firstFocusable=dialogButtons[0], lastFocusable=dialogButtons[dialogButtons.length-1];
+  lastFocusable.focus();
+  document.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true}));
+  assert(document.activeElement===firstFocusable,'Tab did not wrap from the final cart control to the first');
+  firstFocusable.focus();
+  document.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',shiftKey:true,bubbles:true,cancelable:true}));
+  assert(document.activeElement===lastFocusable,'Shift+Tab did not wrap from the first cart control to the final control');
+  opener.focus();
+  document.dispatchEvent(new KeyboardEvent('keydown',{key:'Tab',bubbles:true,cancelable:true}));
+  assert(document.activeElement===firstFocusable,'Tab did not bring escaped focus back into the open cart');
+  document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
+  assert(document.activeElement===opener && document.querySelector('[data-superwoo-cart-shell]').getAttribute('aria-hidden')==='true','Escape did not close the cart and restore trigger focus');
+  opener.click();
+  await wait(30);
   var checkout=document.querySelector('.superwoo-cart-primary.checkout');
   var checkbox=document.querySelector('[data-superwoo-privacy-consent]');
   var checkoutClicks=0;

@@ -95,7 +95,7 @@ final class SuperWoo_Update_Manifest {
         if (!self::is_version($manifest['version']) || !self::is_version($manifest['requires']) || !self::is_version($manifest['requires_php'])) {
             return false;
         }
-        if (!self::is_approved_package_url($manifest['package'], $host, $path_prefix) || !is_string($manifest['sha256']) || !preg_match('/\A[a-f0-9]{64}\z/', $manifest['sha256'])) {
+        if (!self::is_approved_package_url($manifest['package'], $host, $path_prefix) || basename((string) parse_url($manifest['package'], PHP_URL_PATH)) !== 'SuperWoo-' . $manifest['version'] . '.zip' || !is_string($manifest['sha256']) || !preg_match('/\A[a-f0-9]{64}\z/', $manifest['sha256'])) {
             return false;
         }
         if (!is_int($manifest['package_size']) || $manifest['package_size'] < 1 || $manifest['package_size'] > (int) $maximum_package_bytes || !is_int($manifest['sequence']) || $manifest['sequence'] < 1) {

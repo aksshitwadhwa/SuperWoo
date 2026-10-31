@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SuperWoo Phase 14 — Smart Cart QA Gallery</title>
+  <style>
+    :root { color-scheme: light; font: 16px/1.5 system-ui, sans-serif; color: #17212b; background: #f4f7f8; }
+    body { margin: 0 auto; max-width: 1440px; padding: 28px; }
+    h1, h2 { line-height: 1.2; }
+    p { max-width: 78ch; }
+    .note { padding: 12px 16px; border-left: 4px solid #147b35; background: #eaf7ed; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 16px; }
+    figure { margin: 0; padding: 10px; border: 1px solid #d8e0e4; border-radius: 8px; background: white; }
+    img { display: block; width: 100%; height: auto; background: #eef2f4; }
+    figcaption { padding-top: 8px; font-size: 14px; }
+    a { color: #005b7f; }
+    @media (max-width: 480px) { body { padding: 14px; } .grid { grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 10px; } }
+  </style>
+</head>
+<body>
+  <h1>SuperWoo Smart Cart — Phase 14 QA Gallery</h1>
+  <p class="note">Captured 2026-10-31 on the loopback-only synthetic WooCommerce storefront using sandbox-enabled Chromium 147. Checkout was opened for visual inspection but never submitted. Fixture artwork is generated placeholder artwork, not product photography. The approved reference image was not present as a local file, so this gallery is not a pixel-match claim.</p>
+
+  <h2>Responsive one-product drawer</h2>
+  <div class="grid">
+    <figure><a href="one-product-1440.png"><img src="one-product-1440.png" alt="Cart drawer at 1440 pixels"></a><figcaption>Desktop — 1440 × 900</figcaption></figure>
+    <figure><a href="one-product-1280.png"><img src="one-product-1280.png" alt="Cart drawer at 1280 pixels"></a><figcaption>Desktop — 1280 × 900</figcaption></figure>
+    <figure><a href="one-product-1024.png"><img src="one-product-1024.png" alt="Cart drawer at 1024 pixels"></a><figcaption>Tablet landscape — 1024 × 900</figcaption></figure>
+    <figure><a href="one-product-768.png"><img src="one-product-768.png" alt="Cart drawer at 768 pixels"></a><figcaption>Tablet — 768 × 844</figcaption></figure>
+    <figure><a href="one-product-430.png"><img src="one-product-430.png" alt="Cart drawer at 430 pixels"></a><figcaption>Mobile — 430 × 844</figcaption></figure>
+    <figure><a href="one-product-390.png"><img src="one-product-390.png" alt="Cart drawer at 390 pixels"></a><figcaption>Mobile — 390 × 844</figcaption></figure>
+    <figure><a href="one-product-375.png"><img src="one-product-375.png" alt="Cart drawer at 375 pixels"></a><figcaption>Mobile — 375 × 844</figcaption></figure>
+    <figure><a href="one-product-320.png"><img src="one-product-320.png" alt="Cart drawer at 320 pixels"></a><figcaption>Narrow mobile — 320 × 844</figcaption></figure>
+    <figure><a href="one-product-landscape-844x390.png"><img src="one-product-landscape-844x390.png" alt="Cart drawer in landscape"></a><figcaption>Landscape — 844 × 390</figcaption></figure>
+  </div>
+
+  <h2>Cart states and checkout handoff</h2>
+  <div class="grid">
+    <figure><a href="empty-390.png"><img src="empty-390.png" alt="Empty cart"></a><figcaption>Empty cart</figcaption></figure>
+    <figure><a href="multiple-products-390.png"><img src="multiple-products-390.png" alt="Multiple cart items"></a><figcaption>Multiple products and recommendation add</figcaption></figure>
+    <figure><a href="gift-unlocked-390.png"><img src="gift-unlocked-390.png" alt="Gift threshold reached"></a><figcaption>Gift threshold unlocked</figcaption></figure>
+    <figure><a href="offer-10pct-390.png"><img src="offer-10pct-390.png" alt="Ten percent offer applied"></a><figcaption>10% tier — ₹4,194.00 subtotal, ₹419.40 discount</figcaption></figure>
+    <figure><a href="coupon-applied-390.png"><img src="coupon-applied-390.png" alt="Coupon applied"></a><figcaption>Coupon applied</figcaption></figure>
+    <figure><a href="checkout-populated-390.png"><img src="checkout-populated-390.png" alt="Populated checkout page"></a><figcaption>Populated checkout opened; not submitted</figcaption></figure>
+    <figure><a href="bootstrap-smoke.png"><img src="bootstrap-smoke.png" alt="QA bootstrap browser smoke"></a><figcaption>QA bootstrap smoke screenshot</figcaption></figure>
+  </div>
+
+  <h2>Capture limits</h2>
+  <p>State captures for shipping-only, combined rewards, loading, error, coupon rejection, RTL, safe-area, and virtual-keyboard states were not produced in this phase. Automated tests cover some failure mechanics, but these images are intentionally not represented as captured.</p>
+</body>
+</html>

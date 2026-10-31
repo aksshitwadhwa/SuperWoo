@@ -1,12 +1,12 @@
 {
   "name": "SuperWoo",
   "slug": "superwoo",
-  "version": "1.6.26",
+  "version": "1.6.31",
   "requires": "6.2",
   "requires_php": "7.4",
-  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.6.26.zip",
-  "sha256": "bbb2538ddd1b2dc15ecf79baf62876edd2661830ec15a47d4efb1f449473d172",
-  "package_size": 312811,
+  "package": "https://digtize.com/plugins/superwoo/SuperWoo-1.6.31.zip",
+  "sha256": "2e97b04c68b3cc6de4d179518e44aa2c9b4e3ef103a32fc59d8d30457294f08e",
+  "package_size": 318112,
   "homepage": "https://digtize.com/plugins/superwoo/",
-  "description": "SuperWoo 1.6.26 fixes repeated percentage discounts when free gifts change and preserves accurate offer rounding."
+  "description": "SuperWoo 1.6.31 restores and finalizes the original cart when customers return from Buy Now."
 }

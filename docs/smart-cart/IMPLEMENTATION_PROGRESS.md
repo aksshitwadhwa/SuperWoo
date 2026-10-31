@@ -16,10 +16,15 @@
 | 9. Compatibility and regression QA | PARTIAL | Phase 10 reran all 21 standalone PHP tests; 129 real WooCommerce offer checks pass on isolated WP 7.1.3/WC 11.2.1. Historical pre-fix fixture reproduces ₹3,035 vs current ₹3,370.50 for ₹3,745 base. PHP lint (95 files), JS syntax (21 files), Meta Node suite (28 tests), and staged/unstaged diff checks pass. Browser launch failures block the five UI suites. Other compatibility combinations remain unverified. |
 | 10. Visual acceptance | PARTIAL | Phase 11 recovered sandbox-enabled headless Chromium; five browser suites passed and 12 screenshots were captured. Full visual/accessibility matrix and stable desktop captures remain incomplete. See Phase 11 reports. |
 | 11. Recovery and acceptance | PARTIAL | Local route and browser recovered; functional/regression coverage improved. Fresh guarded integration rerun and full visual/accessibility acceptance remain open; production remains NO-GO. |
+| 12. Final acceptance and release candidate | PARTIAL | Phase 12 browser journey and guarded 129-check offer integration passed earlier in the phase; 22 standalone PHP scripts, 28 Meta tests, 96-file PHP lint, JS syntax, and diff checks pass. Focus-trap, reduced-motion, and quantity-label fixes are implemented. Later browser/MariaDB reruns are blocked by local sandbox/service availability, so release readiness remains NO-GO. See `PHASE_12_FINAL_ACCEPTANCE.md`. |
 
 Phase 10 recreated an isolated MariaDB datadir and WordPress/WooCommerce site under `/tmp` with TCP disabled and synthetic data only. Both the archived pre-fix comparison and current 129-check suite passed. The disposable DB/site remain under `/tmp/superwoo-phase10`; MariaDB is socket-only. A loopback PHP server redirected to stale port 8088 even with SuperWoo deactivated; the temporary server/config changes were removed and database URL options restored to `.test`. That redirect must be understood and a local browser route established before visual QA. Existing XAMPP services/databases, production state, and merchant data were not changed. The archived source snapshot is not tied to a release commit, so the historical comparison is reproducible but should not be described as an official tagged release test.
 
 No production files, settings, database, or services were changed. Do not deploy based only on this progress report.
+
+## Phase 12 continuation — 2026-10-31
+
+Phase 12 captured the synthetic cart journey and eight required single-product widths, plus multiple products, coupon, reward, checkout navigation, and landscape evidence. The guarded offer integration passed 129 real WooCommerce assertions earlier in the phase. A later rerun could not connect to the disposable MariaDB socket; the connected browser is unavailable and sandboxed Chromium now exits before page execution. Implemented dialog focus containment and reduced-motion support, with a passing static guard and browser assertions pending runtime execution. See `PHASE_12_FINAL_ACCEPTANCE.md` and `PHASE_12_RELEASE_CANDIDATE.md`. Candidate remains unpublished and not ready for production.
 
 ## Phase 11 continuation — 2026-10-31
 

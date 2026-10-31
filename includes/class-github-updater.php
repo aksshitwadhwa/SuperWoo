@@ -1,20 +1,20 @@
 <?php
 defined('ABSPATH') || exit;
 
-/**
- * Retrieves the SuperWoo update offer from the Digtize HTTPS feed.
- *
- * Release metadata is not cryptographically signed. HTTPS, exact host/path
- * checks, redirect rejection, and package hash/layout checks reduce transport
- * and operational risk but do not protect against compromise of the feed host.
- */
+require_once __DIR__ . '/class-superwoo-update-manifest.php';
+
+/** Retrieves authenticated signed releases, or the explicitly transitional legacy feed. */
 class SuperWoo_GitHub_Updater {
     const API_URL = 'https://digtize.com/plugins/superwoo/update.json';
+    const SIGNED_API_URL = 'https://digtize.com/plugins/superwoo/update-signed.json';
     const CACHE_KEY = 'superwoo_server_latest_release';
     const PACKAGE_HOST = 'digtize.com';
     const PACKAGE_PATH = '/plugins/superwoo/';
     const MAX_METADATA_BYTES = 65536;
     const MAX_PACKAGE_BYTES = 52428800;
+    const SEQUENCE_OPTION = 'superwoo_update_sequence_state';
+    const SIGNED_MODE_OPTION = 'superwoo_update_signed_mode_required';
+    const CACHE_SCHEMA = 'superwoo-updater-cache-v2';
 
     private $temporary_package = '';
 
@@ -69,11 +69,7 @@ class SuperWoo_GitHub_Updater {
         ];
     }
 
-    /**
-     * Download the offered package over verified HTTPS and check its advertised
-     * hash and ZIP layout before returning it to WordPress. Since the feed is
-     * unsigned, the hash is not an independent authenticity guarantee.
-     */
+    /** Download only the exact HTTPS package bound to the accepted release metadata. */
     public function verified_package_download($reply, $package, $upgrader, $hook_extra) {
         if (!$this->is_superwoo_package_request($hook_extra)) {
             return $reply;
@@ -127,7 +123,7 @@ class SuperWoo_GitHub_Updater {
             return new WP_Error('superwoo_update_content_length_invalid', __('The SuperWoo update package response length did not match the update feed.', 'superwoo'));
         }
         $digest = hash_file('sha256', $filename);
-        if (!is_string($digest) || !hash_equals($release['sha256'], $digest) || !$this->is_expected_plugin_zip($filename)) {
+        if (!is_string($digest) || !hash_equals($release['sha256'], $digest) || !$this->is_expected_plugin_zip($filename, $release['version'])) {
             $this->cleanup_temporary_package();
             return new WP_Error('superwoo_update_integrity_failed', __('The SuperWoo update package failed its hash or ZIP validation.', 'superwoo'));
         }
@@ -143,16 +139,31 @@ class SuperWoo_GitHub_Updater {
     }
 
     private function latest_release() {
+        if (!$this->latch_signed_mode()) {
+            return [];
+        }
         $cached = get_site_transient(self::CACHE_KEY);
-        if (is_array($cached)) {
-            $validated = $this->validate_release($cached);
+        if (is_array($cached) && isset($cached['_cache_schema'], $cached['mode'])) {
+            $validated = false;
+            if (self::CACHE_SCHEMA === $cached['_cache_schema'] && 'signed' === $cached['mode']) {
+                $validated = isset($cached['envelope']) ? $this->validate_signed_envelope($cached['envelope']) : false;
+            } elseif (self::CACHE_SCHEMA === $cached['_cache_schema'] && 'legacy' === $cached['mode'] && !$this->signed_mode_required()) {
+                $validated = isset($cached['release']) ? $this->validate_legacy_release($cached['release']) : false;
+            }
+            if ($validated) {
+                return $validated;
+            }
+            delete_site_transient(self::CACHE_KEY);
+        } elseif (is_array($cached)) {
+            $validated = !$this->signed_mode_required() ? $this->validate_legacy_release($cached) : false;
             if ($validated) {
                 return $validated;
             }
             delete_site_transient(self::CACHE_KEY);
         }
 
-        $response = wp_safe_remote_get(self::API_URL, [
+        $metadata_url = $this->metadata_url();
+        $response = wp_safe_remote_get($metadata_url, [
             'timeout'             => 15,
             'redirection'         => 0,
             'sslverify'           => true,
@@ -169,26 +180,171 @@ class SuperWoo_GitHub_Updater {
         if (!is_string($body) || '' === $body || strlen($body) > self::MAX_METADATA_BYTES) {
             return [];
         }
-        $release = json_decode($body, true);
-        $release = is_array($release) ? $this->validate_release($release) : false;
+        $document = json_decode($body, true);
+        if (!is_array($document)) {
+            return [];
+        }
+        $is_signed_shaped = array_key_exists('manifest', $document) || array_key_exists('signature', $document);
+        if ($is_signed_shaped || $this->signed_mode_required()) {
+            if (!$is_signed_shaped) {
+                return [];
+            }
+            $release = $this->validate_signed_envelope($document, $body);
+            if (!$release) {
+                return [];
+            }
+            set_site_transient(self::CACHE_KEY, [
+                '_cache_schema' => self::CACHE_SCHEMA,
+                'mode'          => 'signed',
+                'envelope'      => $document,
+            ], 5 * MINUTE_IN_SECONDS);
+            return $release;
+        }
+
+        $release = $this->validate_legacy_release($document);
         if (!$release) {
             return [];
         }
-        set_site_transient(self::CACHE_KEY, $release, 5 * MINUTE_IN_SECONDS);
+        set_site_transient(self::CACHE_KEY, [
+            '_cache_schema' => self::CACHE_SCHEMA,
+            'mode'          => 'legacy',
+            'release'       => $release,
+        ], 5 * MINUTE_IN_SECONDS);
         return $release;
     }
 
-    private function validate_release($release) {
-        if (!is_array($release) || !isset($release['version'], $release['package']) || !$this->is_valid_version($release['version']) || !$this->is_approved_package_url($release['package'])) {
+    private function trust_anchor_configured() {
+        return defined('SUPERWOO_UPDATE_TRUSTED_PUBLIC_KEYS');
+    }
+
+    /** Once trust is provisioned, persist signed-only mode so accidental key removal cannot downgrade. */
+    private function latch_signed_mode() {
+        if (!$this->trust_anchor_configured()) {
+            return true;
+        }
+        if (!function_exists('get_site_option') || !function_exists('update_site_option')) {
             return false;
         }
-        if (isset($release['sha256']) || isset($release['package_size'])) {
-            if (!isset($release['sha256'], $release['package_size']) || !is_string($release['sha256']) || !preg_match('/\A[a-f0-9]{64}\z/', $release['sha256']) || !is_int($release['package_size']) || $release['package_size'] < 1 || $release['package_size'] > self::MAX_PACKAGE_BYTES) {
+        if ('required' === get_site_option(self::SIGNED_MODE_OPTION, false)) {
+            return true;
+        }
+        return true === update_site_option(self::SIGNED_MODE_OPTION, 'required');
+    }
+
+    private function signed_mode_required() {
+        if ($this->trust_anchor_configured()) {
+            return true;
+        }
+        if (!function_exists('get_site_option')) {
+            return false;
+        }
+        $state = get_site_option(self::SIGNED_MODE_OPTION, false);
+        return false !== $state && null !== $state && '' !== $state && 0 !== $state && '0' !== $state;
+    }
+
+    private function metadata_url() {
+        return $this->signed_mode_required() ? self::SIGNED_API_URL : self::API_URL;
+    }
+
+    private function trusted_public_keys() {
+        if (!$this->trust_anchor_configured()) {
+            return false;
+        }
+        $keys = constant('SUPERWOO_UPDATE_TRUSTED_PUBLIC_KEYS');
+        if (!is_array($keys) || !$keys) {
+            return false;
+        }
+        foreach ($keys as $key_id => $encoded) {
+            if (!is_string($key_id) || !preg_match('/\A[a-zA-Z0-9._-]{1,64}\z/', $key_id) || !is_string($encoded)) {
+                return false;
+            }
+            $decoded = base64_decode($encoded, true);
+            if (false === $decoded || 32 !== strlen($decoded) || base64_encode($decoded) !== $encoded) {
                 return false;
             }
         }
+        return $keys;
+    }
+
+    private function validate_signed_envelope($envelope, $raw_body = null) {
+        if (!class_exists('SuperWoo_Update_Manifest') || !SuperWoo_Update_Manifest::has_exact_keys($envelope, ['manifest', 'signature']) || !is_array($envelope['manifest']) || !is_string($envelope['signature'])) {
+            return false;
+        }
+        $keys = $this->trusted_public_keys();
+        if (false === $keys) {
+            return false;
+        }
+        $manifest = $envelope['manifest'];
+        $key_id = $manifest['key_id'] ?? null;
+        if (!is_string($key_id) || !array_key_exists($key_id, $keys)) {
+            return false;
+        }
+        $canonical_envelope = SuperWoo_Update_Manifest::canonical_json($envelope);
+        if (!is_string($canonical_envelope) || (null !== $raw_body && !hash_equals($canonical_envelope, $raw_body))) {
+            return false;
+        }
+        if (!SuperWoo_Update_Manifest::verify_manifest_signature($manifest, $envelope['signature'], $keys[$key_id])) {
+            return false;
+        }
+        if (!SuperWoo_Update_Manifest::validate_manifest($manifest, time(), self::PACKAGE_HOST, self::PACKAGE_PATH, self::MAX_PACKAGE_BYTES)) {
+            return false;
+        }
+        $canonical_manifest = SuperWoo_Update_Manifest::canonical_json($manifest);
+        $manifest_digest = is_string($canonical_manifest) ? hash('sha256', $canonical_manifest) : false;
+        if (!is_string($manifest_digest) || !$this->accept_sequence($manifest, $manifest_digest)) {
+            return false;
+        }
+        return [
+            'version'      => $manifest['version'],
+            'requires'     => $manifest['requires'],
+            'requires_php' => $manifest['requires_php'],
+            'package'      => $manifest['package'],
+            'sha256'       => $manifest['sha256'],
+            'package_size' => $manifest['package_size'],
+            'sequence'     => $manifest['sequence'],
+            'key_id'       => $manifest['key_id'],
+            'mode'         => 'signed',
+        ];
+    }
+
+    private function accept_sequence($manifest, $manifest_digest) {
+        if (!function_exists('get_site_option') || !function_exists('update_site_option')) {
+            return false;
+        }
+        $previous = get_site_option(self::SEQUENCE_OPTION, false);
+        if (false !== $previous && null !== $previous) {
+            if (!is_array($previous) || !isset($previous['sequence'], $previous['version'], $previous['manifest_sha256']) || !is_int($previous['sequence']) || !is_string($previous['version']) || !is_string($previous['manifest_sha256'])) {
+                return false;
+            }
+            if ($manifest['sequence'] < $previous['sequence'] || version_compare($manifest['version'], $previous['version'], '<')) {
+                return false;
+            }
+            if ($manifest['sequence'] === $previous['sequence']) {
+                return hash_equals($previous['manifest_sha256'], $manifest_digest);
+            }
+        }
+        $state = [
+            'sequence'        => $manifest['sequence'],
+            'version'         => $manifest['version'],
+            'manifest_sha256' => $manifest_digest,
+            'key_id'          => $manifest['key_id'],
+        ];
+        return true === update_site_option(self::SEQUENCE_OPTION, $state);
+    }
+
+    private function validate_legacy_release($release) {
+        if ($this->signed_mode_required() || !is_array($release) || array_key_exists('manifest', $release) || array_key_exists('signature', $release)) {
+            return false;
+        }
+        if (!is_array($release) || !isset($release['version'], $release['package']) || !$this->is_valid_version($release['version']) || !$this->is_approved_package_url($release['package'])) {
+            return false;
+        }
+        if (!isset($release['sha256'], $release['package_size']) || !is_string($release['sha256']) || !preg_match('/\A[a-f0-9]{64}\z/', $release['sha256']) || !is_int($release['package_size']) || $release['package_size'] < 1 || $release['package_size'] > self::MAX_PACKAGE_BYTES) {
+            return false;
+        }
         $release['requires'] = isset($release['requires']) && $this->is_valid_version($release['requires']) ? (string) $release['requires'] : '6.2';
         $release['requires_php'] = isset($release['requires_php']) && $this->is_valid_version($release['requires_php']) ? (string) $release['requires_php'] : '7.4';
+        $release['mode'] = 'legacy';
         return $release;
     }
 
@@ -217,13 +373,14 @@ class SuperWoo_GitHub_Updater {
         return 'superwoo' === strtolower(dirname($plugin)) || 'superwoo' === strtolower($plugin) || 'superwoo' === strtolower($slug);
     }
 
-    private function is_expected_plugin_zip($filename) {
+    private function is_expected_plugin_zip($filename, $expected_version) {
         $zip = new ZipArchive();
         if (true !== $zip->open($filename)) {
             return false;
         }
         $found_main_file = false;
         $valid = true;
+        $header_version = null;
         for ($index = 0; $index < $zip->numFiles; $index++) {
             $name = $zip->getNameIndex($index);
             if (!is_string($name) || 0 === strpos($name, '/') || false !== strpos($name, "\\") || false !== strpos($name, '//') || preg_match('#(?:^|/)\.{1,2}(?:/|$)#', $name) || 'superwoo' !== strtolower((string) strtok($name, '/'))) {
@@ -232,10 +389,14 @@ class SuperWoo_GitHub_Updater {
             }
             if (0 === strcasecmp($name, 'SuperWoo/superwoo.php')) {
                 $found_main_file = true;
+                $contents = $zip->getFromIndex($index);
+                if (is_string($contents) && preg_match('/^[ \t*#@]*Version:[ \t]*([^\r\n]+)/mi', $contents, $match)) {
+                    $header_version = trim($match[1]);
+                }
             }
         }
         $zip->close();
-        return $valid && $found_main_file;
+        return $valid && $found_main_file && is_string($expected_version) && is_string($header_version) && hash_equals($expected_version, $header_version);
     }
 
     private function get_update($release, $plugin_file) {
@@ -243,7 +404,7 @@ class SuperWoo_GitHub_Updater {
             return false;
         }
         return [
-            'id'           => self::API_URL,
+            'id'           => $this->metadata_url(),
             'slug'         => dirname($plugin_file),
             'plugin'       => $plugin_file,
             'new_version'  => $release['version'],

@@ -98,7 +98,7 @@
                         <?php else : ?>
                             <div class="superwoo-qty" aria-label="<?php esc_attr_e('Update quantity', 'superwoo'); ?>">
                                 <button type="button" data-superwoo-qty-minus aria-label="<?php esc_attr_e('Decrease quantity', 'superwoo'); ?>">−</button>
-                                <input type="number" min="1" step="1" value="<?php echo esc_attr(max(1, absint($cart_item['quantity']))); ?>" data-superwoo-qty-committed="<?php echo esc_attr(max(1, absint($cart_item['quantity']))); ?>" data-superwoo-qty-input>
+                                <input type="number" min="1" step="1" value="<?php echo esc_attr(max(1, absint($cart_item['quantity']))); ?>" aria-label="<?php echo esc_attr(sprintf(__('Quantity for %s', 'superwoo'), $product->get_name())); ?>" data-superwoo-qty-committed="<?php echo esc_attr(max(1, absint($cart_item['quantity']))); ?>" data-superwoo-qty-input>
                                 <button type="button" data-superwoo-qty-plus aria-label="<?php esc_attr_e('Increase quantity', 'superwoo'); ?>">+</button>
                             </div>
                             <button type="button" class="superwoo-remove-item" data-superwoo-remove-item aria-label="<?php esc_attr_e('Remove item', 'superwoo'); ?>">×</button>

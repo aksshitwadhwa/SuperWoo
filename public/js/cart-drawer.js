@@ -1751,6 +1751,47 @@
         }
     });
 
+    document.addEventListener('keydown', function (event) {
+        if (event.key !== 'Tab' || !shell().hasClass('is-open')) {
+            return;
+        }
+
+        var drawerNode = drawer().get(0);
+        if (!drawerNode) {
+            return;
+        }
+
+        var focusable = drawerNode.querySelectorAll(
+            'a[href], area[href], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), iframe, object, embed, [contenteditable="true"], [tabindex]:not([tabindex="-1"])'
+        );
+        var visibleFocusable = Array.prototype.filter.call(focusable, function (element) {
+            var style = window.getComputedStyle(element);
+            return element.getClientRects().length > 0
+                && style.display !== 'none'
+                && style.visibility !== 'hidden'
+                && style.visibility !== 'collapse'
+                && !element.closest('[hidden], [aria-hidden="true"]');
+        });
+
+        if (!visibleFocusable.length) {
+            event.preventDefault();
+            drawerNode.focus();
+            return;
+        }
+
+        var first = visibleFocusable[0];
+        var last = visibleFocusable[visibleFocusable.length - 1];
+        var active = document.activeElement;
+
+        if (!drawerNode.contains(active) || (event.shiftKey && (active === first || active === drawerNode))) {
+            event.preventDefault();
+            (event.shiftKey ? last : first).focus();
+        } else if (!event.shiftKey && active === last) {
+            event.preventDefault();
+            first.focus();
+        }
+    }, true);
+
     document.addEventListener('wheel', function (event) {
         var $shell = shell();
         if (!$shell.hasClass('is-open')) {

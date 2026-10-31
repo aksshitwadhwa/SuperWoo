@@ -1,5 +1,5 @@
 <?php
-/** Network-free regression tests for the temporary HTTPS-only updater. */
+/** Network-free regression tests for the unsigned legacy transition mode. */
 define('ABSPATH', __DIR__ . '/');
 define('MINUTE_IN_SECONDS', 60);
 define('SUPERWOO_VERSION', '1.5.6');
@@ -97,6 +97,7 @@ queue_update_metadata($release);
 $offer = $updater->inject_update((object) ['response' => []]);
 update_same('1.5.7', $offer->response['superwoo/superwoo.php']->new_version ?? null, 'valid HTTPS feed creates WordPress update offer');
 update_same($release['package'], $offer->response['superwoo/superwoo.php']->package ?? null, 'update offer uses approved package');
+update_same(SuperWoo_GitHub_Updater::API_URL, $test_http_calls[0][0] ?? null, 'unprovisioned client stays on the existing legacy metadata endpoint');
 update_same(0, $test_http_calls[0][1]['redirection'] ?? null, 'metadata redirects disabled');
 update_same(true, $test_http_calls[0][1]['sslverify'] ?? null, 'metadata TLS verification enabled');
 update_same(65537, $test_http_calls[0][1]['limit_response_size'] ?? null, 'metadata response bounded');
@@ -184,4 +185,4 @@ update_assert(false === $updater->verified_package_download($other_reply, 'https
 foreach ([$tmp . '/SuperWoo/superwoo.php', $zip_path] as $path) { if (file_exists($path)) { unlink($path); } }
 rmdir($tmp . '/SuperWoo');
 rmdir($tmp);
-fwrite(STDOUT, "PASS: {$assertions} HTTPS-only update assertions (unsigned feed; package hash is not an authenticity signature)\n");
+fwrite(STDOUT, "PASS: {$assertions} legacy update compatibility assertions (transitional unsigned feed; not authenticated)\n");

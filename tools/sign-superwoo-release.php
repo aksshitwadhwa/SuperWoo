@@ -40,8 +40,8 @@ if (file_exists($output_file)) {
     release_tool_fail('Output already exists; refusing to overwrite signed release metadata.');
 }
 $permissions = fileperms($key_file);
-if (false !== $permissions && (0 !== ($permissions & 0004) || 0 !== ($permissions & 0040))) {
-    release_tool_fail('Private key file is readable by group or others; require mode 0600.');
+if (false === $permissions || 0600 !== ($permissions & 0777)) {
+    release_tool_fail('Private key file must have exact filesystem mode 0600.');
 }
 $key_contents = file_get_contents($key_file);
 if (!is_string($key_contents)) {

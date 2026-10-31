@@ -3,6 +3,41 @@
 
     var preparing = false;
     var replaying = false;
+    var buyNowSelector = [
+        '#btn-1cc-pdp',
+        '.buy-now',
+        '.buy_now',
+        '.single_buy_now_button',
+        '.single-buynow-button',
+        '.wd-buy-now-btn',
+        '.woodmart-buy-now-btn',
+        'button[name="buy_now"]',
+        'button[name="buy-now"]',
+        'button[value="buy_now"]',
+        'button[value="buy-now"]',
+        'a[href*="buy-now"]'
+    ].join(',');
+
+    function findBuyNowButton(target) {
+        var element = target && target.nodeType === 1 ? target : (target && target.parentElement);
+        var button;
+        var label;
+
+        if (!element || !element.closest) {
+            return null;
+        }
+        button = element.closest(buyNowSelector);
+        if (button) {
+            return button;
+        }
+
+        button = element.closest('button, a, input[type="submit"], input[type="button"]');
+        if (!button) {
+            return null;
+        }
+        label = button.getAttribute('aria-label') || (button.matches('input') ? button.value : button.textContent) || '';
+        return /^buy\s*now\b/i.test(label.trim()) ? button : null;
+    }
 
     function showError(button, message) {
         var notice = document.querySelector('[data-superwoo-buy-now-error]');
@@ -57,7 +92,7 @@
     // Razorpay binds its own click listener to this button. Hold that click
     // until the original WooCommerce cart is safely saved on the server.
     document.addEventListener('click', function (event) {
-        var button = event.target && event.target.closest ? event.target.closest('#btn-1cc-pdp') : null;
+        var button = findBuyNowButton(event.target);
         if (!button || button.disabled || button.classList.contains('disabled')) {
             return;
         }
